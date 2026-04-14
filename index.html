@@ -33,6 +33,46 @@ button{font-family:inherit;cursor:pointer;}
 @keyframes spin-in{from{transform:scale(.85);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes slide-up{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
 @keyframes bar-flow{0%{left:-60%}100%{left:110%}}
+@keyframes sk-sweep{0%{background-position:-400px 0}100%{background-position:400px 0}}
+
+/* ═══════════════════════════════════════
+   SKELETON LOADER SYSTEM
+   ═══════════════════════════════════════ */
+.sk{
+  background:var(--bg3);
+  background-image:linear-gradient(90deg,var(--bg3) 0%,var(--bg4) 40%,var(--bg3) 80%);
+  background-size:400px 100%;
+  animation:sk-sweep 1.4s ease infinite;
+  border-radius:4px;
+  flex-shrink:0;
+}
+.sk-line   {height:10px;border-radius:4px;}
+.sk-line-sm{height:8px; border-radius:3px;}
+.sk-line-lg{height:14px;border-radius:5px;}
+.sk-pill   {height:16px;border-radius:8px;width:64px;}
+.sk-pill-sm{height:12px;border-radius:6px;width:48px;}
+.sk-circle {border-radius:50%;}
+.sk-block  {border-radius:var(--r-md);}
+.sk-wrap{
+  display:flex;flex-direction:column;gap:7px;
+  transition:opacity .3s ease,max-height .35s ease;
+  overflow:hidden;
+}
+.sk-wrap.sk-row{flex-direction:row;align-items:center;}
+.sk-wrap.sk-done{
+  opacity:0;
+  max-height:0 !important;
+  pointer-events:none;
+}
+.sk-content{
+  opacity:0;
+  transition:opacity .3s ease .05s;
+  pointer-events:none;
+}
+.sk-content.sk-ready{
+  opacity:1;
+  pointer-events:auto;
+}
 
 /* ═══════════════════════════════════════
    APP SHELL
@@ -1403,6 +1443,19 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
             <span class="home-block-arrow">›</span>
           </div>
           <div class="home-block-body">
+            <!-- skeleton -->
+            <div class="sk-wrap" id="sk-live" style="max-height:120px;">
+              <div class="sk-wrap sk-row" style="gap:8px;margin-bottom:2px;">
+                <div class="sk sk-line-lg" style="flex:1;"></div>
+                <div class="sk sk-line-lg" style="width:36px;"></div>
+                <div class="sk sk-line-lg" style="flex:1;"></div>
+              </div>
+              <div class="sk sk-line-sm" style="width:55%;align-self:center;"></div>
+              <div class="sk sk-line" style="width:100%;margin-top:2px;"></div>
+              <div class="sk sk-block" style="height:24px;width:100%;margin-top:2px;"></div>
+            </div>
+            <!-- real content -->
+            <div class="sk-content" id="skc-live">
             <div class="home-live-match">
               <span class="home-live-team" id="home-live-home">—</span>
               <span class="home-live-score" id="home-live-score">– –</span>
@@ -1434,6 +1487,7 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
               <span class="home-mb-event-badge-txt" id="home-mb-event-badge-txt">⚡ Micro-mercado abierto</span>
               <span class="home-mb-event-badge-cta" onclick="HomeModule.goLive()">Apostar →</span>
             </div>
+            </div><!-- /skc-live -->
           </div>
         </div>
 
@@ -1447,6 +1501,19 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
             <span class="home-block-arrow" style="color:var(--plasma);opacity:.7;">›</span>
           </div>
           <div class="home-block-body">
+            <!-- skeleton -->
+            <div class="sk-wrap" id="sk-vault" style="max-height:80px;">
+              <div class="sk-wrap sk-row" style="gap:10px;">
+                <div style="flex:1;display:flex;flex-direction:column;gap:6px;">
+                  <div class="sk sk-line-sm" style="width:70%;"></div>
+                  <div class="sk sk-line-lg" style="width:45%;"></div>
+                  <div class="sk sk-line-sm" style="width:85%;"></div>
+                </div>
+                <div class="sk sk-block" style="width:64px;height:60px;flex-shrink:0;"></div>
+              </div>
+            </div>
+            <!-- real content -->
+            <div class="sk-content" id="skc-vault">
             <div class="home-vault-row">
               <div class="home-vault-fuel">
                 <div class="home-vault-fuel-lbl">🔥 Combustible acumulado</div>
@@ -1458,6 +1525,7 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
                 <span class="home-vault-shield-lbl" id="home-vault-shield-lbl">INACTIVO</span>
               </div>
             </div>
+            </div><!-- /skc-vault -->
           </div>
         </div>
 
@@ -1472,6 +1540,14 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
             <span class="home-block-arrow">›</span>
           </div>
           <div class="home-block-body">
+            <!-- skeleton -->
+            <div class="sk-wrap" id="sk-missions" style="max-height:150px;">
+              <div class="sk sk-block" style="height:36px;width:100%;"></div>
+              <div class="sk sk-block" style="height:36px;width:100%;"></div>
+              <div class="sk sk-block" style="height:36px;width:100%;"></div>
+            </div>
+            <!-- real content -->
+            <div class="sk-content" id="skc-missions">
             <div class="home-mission-list" id="home-mission-list">
               <div class="home-mission-item">
                 <span class="home-mission-ico">⚡</span>
@@ -1489,6 +1565,7 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
                 <span class="home-mission-xp">+500</span>
               </div>
             </div>
+            </div><!-- /skc-missions -->
           </div>
         </div>
 
@@ -2140,6 +2217,7 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
       <div class="smenu-sep"></div>
       <div class="smenu-item" data-nav="missions"><span class="smenu-ico">🎯</span><span class="smenu-lbl">Misiones</span><span class="smenu-badge" id="smenu-missions-badge">3</span></div>
       <div class="smenu-item" data-nav="loot"><span class="smenu-ico">🎁</span><span class="smenu-lbl">Botín</span></div>
+      <div class="smenu-item" data-nav="casino"><span class="smenu-ico">🎰</span><span class="smenu-lbl">Casino</span></div>
       <div class="smenu-item" data-nav="ranking"><span class="smenu-ico">📊</span><span class="smenu-lbl">Ranking</span></div>
       <div class="smenu-item" data-nav="social"><span class="smenu-ico">⚔️</span><span class="smenu-lbl">Social</span></div>
       <div class="smenu-item" data-nav="altar"><span class="smenu-ico">🏛️</span><span class="smenu-lbl">Altar</span></div>
@@ -2201,6 +2279,12 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
       <div class="loot-box-title">CAJA DE BOTÍN</div>
       <span class="loot-box-chest" id="loot-box-chest">📦</span>
       <p style="font-size:11px;color:var(--t2);margin-bottom:14px;line-height:1.5;">Contenido <strong style="color:var(--gold)">variable e impredecible</strong> — la incertidumbre es la recompensa.</p>
+      <!-- skeleton shown while opening -->
+      <div class="sk-wrap" id="sk-loot" style="max-height:0;align-items:center;gap:8px;">
+        <div class="sk sk-circle" style="width:52px;height:52px;"></div>
+        <div class="sk sk-line-lg" style="width:70%;"></div>
+        <div class="sk sk-line-sm" style="width:50%;"></div>
+      </div>
       <span class="loot-box-result-ico" id="loot-box-ico">🏆</span>
       <div class="loot-box-result-txt" id="loot-box-txt"></div>
       <div class="loot-box-result-sub" id="loot-box-sub"></div>
@@ -2343,6 +2427,7 @@ const Store = (() => {
     S.xp += amount;
     save();
     showXPToast('+'+amount+' XP');
+    AudioEngine.xpGain();
     HeaderModule.refresh();
     ProfileModule.refresh();
     AdminModule.refresh();
@@ -2366,6 +2451,7 @@ const Store = (() => {
     S.lossStreak++;
     save();
     showVaultToast('+'+gain+' pts combustible');
+    AudioEngine.vaultLoss();
     VaultModule.refresh();
     AdminModule.refresh();
   }
@@ -2399,6 +2485,219 @@ const Store = (() => {
   }
 
   return { load, save, get, getLevelInfo, addXP, simulateWin, simulateLoss, resetDemo, showXPToast, showVaultToast };
+})();
+
+/* ── AUDIO ENGINE ───────────────────────────────────────────── */
+const AudioEngine = (() => {
+  let _ctx = null;
+  let _unlocked = false;
+  let _enabled = true;
+  const MASTER_VOL = 0.12; // 12% — subtle, premium
+
+  /* ── Context: lazy-init after first user gesture ── */
+  function _getCtx() {
+    if (_ctx) return _ctx;
+    try {
+      _ctx = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) { _ctx = null; }
+    return _ctx;
+  }
+
+  function unlock() {
+    if (_unlocked) return;
+    const ctx = _getCtx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    _unlocked = true;
+  }
+
+  /* ── Master toggle (hook for settings UI) ── */
+  function setEnabled(on) { _enabled = !!on; }
+  function isEnabled()    { return _enabled; }
+  function toggle()       { _enabled = !_enabled; return _enabled; }
+
+  /* ── Core synth primitive ──
+     Plays a shaped envelope through an optional chain of nodes.
+     opts: { freq, type, vol, attack, decay, sustain, release,
+             detune, filter:{type,freq,Q}, delay }
+  */
+  function _play(opts) {
+    if (!_enabled || !_unlocked) return;
+    const ctx = _getCtx();
+    if (!ctx) return;
+
+    const {
+      freq     = 440,
+      type     = 'sine',
+      vol      = 0.5,
+      attack   = 0.004,
+      decay    = 0.08,
+      sustain  = 0.3,
+      release  = 0.18,
+      detune   = 0,
+      filter   = null,
+      delay    = 0,
+    } = opts;
+
+    const masterGain = ctx.createGain();
+    masterGain.gain.value = MASTER_VOL * vol;
+
+    const osc = ctx.createOscillator();
+    osc.type    = type;
+    osc.frequency.value = freq;
+    if (detune) osc.detune.value = detune;
+
+    const env = ctx.createGain();
+    const now = ctx.currentTime + delay;
+    env.gain.setValueAtTime(0, now);
+    env.gain.linearRampToValueAtTime(1,          now + attack);
+    env.gain.linearRampToValueAtTime(sustain,     now + attack + decay);
+    env.gain.linearRampToValueAtTime(0,           now + attack + decay + release);
+
+    let chain = osc;
+
+    if (filter) {
+      const bq = ctx.createBiquadFilter();
+      bq.type = filter.type || 'lowpass';
+      bq.frequency.value = filter.freq || 2000;
+      bq.Q.value = filter.Q || 1;
+      chain.connect(bq);
+      chain = bq;
+    }
+
+    chain.connect(env);
+    env.connect(masterGain);
+    masterGain.connect(ctx.destination);
+
+    osc.start(now);
+    osc.stop(now + attack + decay + release + 0.02);
+  }
+
+  /* ── Noise burst (for vault/loss) ── */
+  function _noise(opts = {}) {
+    if (!_enabled || !_unlocked) return;
+    const ctx = _getCtx();
+    if (!ctx) return;
+    const { vol = 0.4, duration = 0.12, delay = 0 } = opts;
+    const bufSize = Math.floor(ctx.sampleRate * duration);
+    const buf = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < bufSize; i++) data[i] = (Math.random() * 2 - 1);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+
+    const bq = ctx.createBiquadFilter();
+    bq.type = 'bandpass';
+    bq.frequency.value = 280;
+    bq.Q.value = 0.8;
+
+    const env = ctx.createGain();
+    const now = ctx.currentTime + delay;
+    env.gain.setValueAtTime(MASTER_VOL * vol, now);
+    env.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+
+    src.connect(bq);
+    bq.connect(env);
+    env.connect(ctx.destination);
+    src.start(now);
+    src.stop(now + duration + 0.01);
+  }
+
+  /* ═══════════════════════════════════════
+     NAMED SOUNDS
+     ═══════════════════════════════════════ */
+
+  /* micro-event appear — ascending two-tone chime, airy */
+  function microEventAppear() {
+    _play({ freq:620,  type:'sine', vol:.7, attack:.006, decay:.06, sustain:.25, release:.22,
+            filter:{type:'highpass', freq:400, Q:.7} });
+    _play({ freq:930,  type:'sine', vol:.45, attack:.01,  decay:.05, sustain:.18, release:.28,
+            delay:.055 });
+  }
+
+  /* action confirm — crisp double-tap, like a chip click */
+  function actionConfirm() {
+    _play({ freq:880,  type:'square', vol:.35, attack:.002, decay:.04, sustain:.05, release:.08,
+            filter:{type:'lowpass', freq:1400, Q:1.2} });
+    _play({ freq:1100, type:'square', vol:.22, attack:.002, decay:.03, sustain:.04, release:.07,
+            delay:.07, filter:{type:'lowpass', freq:1600, Q:1} });
+  }
+
+  /* near-miss — descending dissonant fall, dramatic but brief */
+  function nearMiss() {
+    _play({ freq:520, type:'sawtooth', vol:.5, attack:.003, decay:.12, sustain:.15, release:.35,
+            filter:{type:'lowpass', freq:900, Q:1.5} });
+    _play({ freq:310, type:'sine',     vol:.55, attack:.01,  decay:.10, sustain:.12, release:.40,
+            delay:.06, filter:{type:'lowpass', freq:700, Q:1} });
+    _noise({ vol:.3, duration:.08, delay:.02 });
+  }
+
+  /* XP gain — bright ascending triad sparkle, celebratory */
+  function xpGain() {
+    const notes = [523, 659, 784]; // C5 E5 G5
+    notes.forEach((freq, i) => {
+      _play({ freq, type:'sine', vol:.6, attack:.005, decay:.07, sustain:.2, release:.3,
+              delay: i * 0.065,
+              filter:{type:'highpass', freq:300, Q:.5} });
+    });
+  }
+
+  /* vault loss — low thud + filtered noise, absorption feel */
+  function vaultLoss() {
+    _play({ freq:90,  type:'sine', vol:.9, attack:.003, decay:.18, sustain:.05, release:.25,
+            filter:{type:'lowpass', freq:300, Q:2} });
+    _noise({ vol:.5, duration:.15, delay:.01 });
+    _play({ freq:55,  type:'sine', vol:.5, attack:.008, decay:.22, sustain:.03, release:.20,
+            delay:.04 });
+  }
+
+  /* ── Boot: attach unlock to first interaction ── */
+  function init() {
+    const _unlock = () => { unlock(); };
+    ['click','touchstart','keydown'].forEach(ev =>
+      document.addEventListener(ev, _unlock, { once: true, passive: true })
+    );
+  }
+
+  return {
+    init,
+    unlock,
+    setEnabled,
+    isEnabled,
+    toggle,
+    microEventAppear,
+    actionConfirm,
+    nearMiss,
+    xpGain,
+    vaultLoss,
+  };
+})();
+
+/* ── SKELETON UTILITY ───────────────────────────────────────── */
+const Skeleton = (() => {
+  // reveal(skId, contentId) — dismiss skeleton, show real content
+  function reveal(skId, contentId) {
+    const sk  = document.getElementById(skId);
+    const cnt = document.getElementById(contentId);
+    if (sk)  sk.classList.add('sk-done');
+    if (cnt) cnt.classList.add('sk-ready');
+  }
+  // show(skId, contentId) — re-show skeleton, hide content (reset)
+  function show(skId, contentId) {
+    const sk  = document.getElementById(skId);
+    const cnt = document.getElementById(contentId);
+    if (sk)  { sk.classList.remove('sk-done');  sk.style.maxHeight = sk.dataset.mh || ''; }
+    if (cnt) cnt.classList.remove('sk-ready');
+  }
+  // pulse(skId) — momentarily show skeleton to signal loading
+  function pulse(skId, mh) {
+    const sk = document.getElementById(skId);
+    if (!sk) return;
+    if (mh) { sk.dataset.mh = mh; sk.style.maxHeight = mh; }
+    sk.classList.remove('sk-done');
+    sk.style.maxHeight = mh || sk.dataset.mh || '120px';
+  }
+  return { reveal, show, pulse };
 })();
 
 /* ── ROUTER ─────────────────────────────────────────────────── */
@@ -2575,6 +2874,8 @@ const LiveProvider = (() => {
       _updateBadge(true);
       _render();
       _startTick();
+      // Reveal home live block skeleton once connected
+      Skeleton.reveal('sk-live', 'skc-live');
     }, 1100);
     _updateBadge(false);
   }
@@ -2816,6 +3117,7 @@ const MicroBet = (() => {
     ev = { phase:'active', endsAt: Date.now() + def.dur * 1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
     _applyActiveUI();
     _runTick();
+    AudioEngine.microEventAppear();
     const cfg = _cfg();
     if (Router.current() !== 'live' && cfg.showPopup !== false) _showPopup();
     if (Router.current() !== 'live' && cfg.autoFocus !== false) _showFocus();
@@ -2886,6 +3188,7 @@ const MicroBet = (() => {
       } else {
         Store.save();
         Store.simulateLoss();
+        AudioEngine.nearMiss();
         _showResult('loss', '❌', 'Perdiste — tu bóveda absorbió la pérdida');
       }
       _updateLiveStats();
@@ -2968,6 +3271,7 @@ const MicroBet = (() => {
   function pick(side) {
     if (!ev || ev.phase !== 'active' || ev.pick) return;
     ev.pick = side;
+    AudioEngine.actionConfirm();
     const ba = document.getElementById('mb-btn-a');
     const bb = document.getElementById('mb-btn-b');
     const foBa = document.getElementById('fo-btn-a');
@@ -3239,7 +3543,11 @@ const LootModule = (() => {
     if (!_pendingCrate) return;
     const btn = document.getElementById('loot-open-btn');
     if(btn) btn.disabled=true;
+    // Show skeleton while resolving reward
+    Skeleton.pulse('sk-loot', '100px');
     setTimeout(() => {
+      // Dismiss skeleton, show reward
+      Skeleton.reveal('sk-loot', null);
       const reward = POOL[Math.floor(Math.random()*POOL.length)];
       document.getElementById('loot-box-chest').style.display='none';
       const ri = document.getElementById('loot-box-ico');
@@ -3607,6 +3915,10 @@ const HomeModule = (() => {
 
     // ── Streak Calendar ──
     _renderStreakCal(S);
+
+    // ── Skeletons: vault + missions are sync-ready, reveal them ──
+    Skeleton.reveal('sk-vault',    'skc-vault');
+    Skeleton.reveal('sk-missions', 'skc-missions');
   }
 
   function _renderStreakCal(S) {
@@ -4050,6 +4362,7 @@ const MBConfig = (() => {
 
 document.addEventListener('DOMContentLoaded', () => {
   Store.load();
+  AudioEngine.init();
   Viewport.init();
   Onboarding.applyDesktopState();
   HeaderModule.refresh();
