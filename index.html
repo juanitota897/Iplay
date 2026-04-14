@@ -1045,6 +1045,123 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
 .home-mission-xp{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--gold);flex-shrink:0;}
 .home-mission-prog{height:3px;background:var(--bg5);border-radius:2px;overflow:hidden;margin-top:4px;}
 .home-mission-prog-fill{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold));border-radius:2px;}
+
+/* ═══════════════════════════════════════
+   HOME: STREAK CALENDAR
+   ═══════════════════════════════════════ */
+.home-streak-wrap{margin-top:10px;padding:10px 0 2px;}
+.home-streak-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.home-streak-label{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1px;text-transform:uppercase;}
+.home-streak-count{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--neon);letter-spacing:.5px;}
+.home-streak-count.danger{color:var(--plasma);animation:blink 1.4s infinite;}
+.home-streak-cal{display:flex;align-items:center;gap:5px;}
+.home-streak-day{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  flex:1;
+}
+.home-streak-day-dot{
+  width:28px;height:28px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;
+  background:var(--bg4);
+  border:1.5px solid rgba(255,255,255,.06);
+  transition:all .3s;
+  position:relative;
+}
+.home-streak-day.hit .home-streak-day-dot{
+  background:rgba(57,255,20,.12);
+  border-color:rgba(57,255,20,.45);
+  box-shadow:0 0 8px rgba(57,255,20,.18);
+}
+.home-streak-day.today .home-streak-day-dot{
+  border-color:var(--gold);
+  box-shadow:0 0 10px rgba(212,175,55,.22);
+}
+.home-streak-day.today.hit .home-streak-day-dot{
+  background:rgba(57,255,20,.18);
+  border-color:var(--neon);
+  box-shadow:0 0 12px rgba(57,255,20,.3);
+}
+.home-streak-day.missed .home-streak-day-dot{
+  background:rgba(255,51,85,.07);
+  border-color:rgba(255,51,85,.3);
+}
+.home-streak-day-dot-ico{font-size:12px;line-height:1;}
+.home-streak-day-lbl{font-family:'Barlow Condensed',sans-serif;font-size:8px;font-weight:700;color:var(--t3);letter-spacing:.3px;text-transform:uppercase;}
+.home-streak-day.hit .home-streak-day-lbl{color:var(--neon-d);}
+.home-streak-day.today .home-streak-day-lbl{color:var(--gold-d);}
+.home-streak-day.missed .home-streak-day-lbl{color:rgba(255,51,85,.5);}
+/* Warning when streak is at risk */
+.home-streak-warning{
+  display:none;
+  align-items:center;gap:6px;
+  padding:6px 10px;
+  background:rgba(255,107,53,.07);
+  border:1px solid rgba(255,107,53,.25);
+  border-radius:8px;
+  margin-top:6px;
+}
+.home-streak-warning.show{display:flex;}
+.home-streak-warning-txt{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:var(--plasma);letter-spacing:.3px;flex:1;}
+.home-streak-warning-cta{font-family:'Barlow Condensed',sans-serif;font-size:9px;font-weight:800;color:var(--gold);letter-spacing:.5px;text-transform:uppercase;cursor:pointer;}
+
+/* ═══════════════════════════════════════
+   HOME: MICRO-MARKET LIVE NOTIFICATION
+   ═══════════════════════════════════════ */
+@keyframes home-mb-pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(57,255,20,.4);}
+  50%{box-shadow:0 0 0 6px rgba(57,255,20,.0);}
+}
+@keyframes home-mb-shake{
+  0%,100%{transform:none;}
+  20%{transform:translateX(-2px);}
+  40%{transform:translateX(2px);}
+  60%{transform:translateX(-1px);}
+  80%{transform:translateX(1px);}
+}
+.home-live-mb.mb-alert{
+  background:rgba(57,255,20,.11) !important;
+  border-color:rgba(57,255,20,.5) !important;
+  box-shadow:0 0 14px rgba(57,255,20,.18) !important;
+  animation:home-mb-pulse .9s ease infinite;
+}
+.home-block--live.mb-notify{
+  border-color:rgba(57,255,20,.45) !important;
+  animation:home-mb-shake .35s ease;
+}
+.home-mb-event-badge{
+  display:none;
+  align-items:center;gap:5px;
+  padding:4px 9px;
+  background:rgba(57,255,20,.1);
+  border:1px solid rgba(57,255,20,.3);
+  border-radius:20px;
+  margin-top:7px;
+  animation:home-mb-pulse .9s ease infinite;
+}
+.home-mb-event-badge.show{display:flex;}
+.home-mb-event-badge-txt{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;color:var(--neon);letter-spacing:.5px;text-transform:uppercase;}
+.home-mb-event-badge-cta{font-size:9px;font-family:'Barlow Condensed',sans-serif;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:.4px;cursor:pointer;}
+
+/* ═══════════════════════════════════════
+   VIEW TRANSITIONS
+   ═══════════════════════════════════════ */
+.view{
+  transition:opacity .18s ease, transform .18s ease;
+}
+.view.view-exit{
+  opacity:0;
+  transform:translateY(6px);
+  pointer-events:none;
+}
+.view.view-enter{
+  opacity:0;
+  transform:translateY(-6px);
+}
+.view.active{
+  opacity:1 !important;
+  transform:none !important;
+}
 /* ═══════════════════════════════════════
    ONBOARDING
    ═══════════════════════════════════════ */
@@ -1257,7 +1374,23 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
             </div>
           </div>
           <button class="home-cta-btn" onclick="HomeModule.goLive()">⚡ IR EN VIVO →</button>
-        </div>
+
+          <!-- STREAK CALENDAR -->
+          <div class="home-streak-wrap" id="home-streak-wrap">
+            <div class="home-streak-row">
+              <span class="home-streak-label">🔥 Racha semanal</span>
+              <span class="home-streak-count" id="home-streak-count">7 días</span>
+            </div>
+            <div class="home-streak-cal" id="home-streak-cal">
+              <!-- Filled by HomeModule.refresh() -->
+            </div>
+            <div class="home-streak-warning" id="home-streak-warning">
+              <span style="font-size:14px;">⚠️</span>
+              <span class="home-streak-warning-txt" id="home-streak-warning-txt">¡Jugá hoy para no perder tu racha!</span>
+              <span class="home-streak-warning-cta" onclick="HomeModule.goLive()">Ir ahora →</span>
+            </div>
+          </div><!-- /home-streak-wrap -->
+        </div><!-- /home-hero -->
 
         <!-- 1. LIVE BLOCK (PRIMARY) -->
         <div class="home-block home-block--live" id="home-block-live" onclick="HomeModule.goLive()">
@@ -1294,6 +1427,12 @@ body.is-desktop.ob-done  { --sidebar-w: 260px; }
               <span class="live-dot" style="background:var(--t3);animation:none;"></span>
               <span class="home-live-mb-txt">Conectando al live feed…</span>
               <span class="home-live-mb-cta">Ver →</span>
+            </div>
+            <!-- Micro-event alert badge (shown when event fires and user is on home) -->
+            <div class="home-mb-event-badge" id="home-mb-event-badge">
+              <span class="live-dot neon"></span>
+              <span class="home-mb-event-badge-txt" id="home-mb-event-badge-txt">⚡ Micro-mercado abierto</span>
+              <span class="home-mb-event-badge-cta" onclick="HomeModule.goLive()">Apostar →</span>
             </div>
           </div>
         </div>
@@ -2266,15 +2405,56 @@ const Store = (() => {
 const Router = (() => {
   const VIEWS = ['entry','home','live','vault','loot','missions','casino','profile','ranking','social','altar'];
   let _current = 'home';
+  let _transitioning = false;
 
   function go(viewId) {
     if (!VIEWS.includes(viewId)) return;
-    document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === viewId));
+    if (_transitioning) return;
+
+    const prevView = document.querySelector('.view.active');
+    const nextView = document.querySelector('.view[data-view="'+viewId+'"]');
+
+    // Update nav immediately
     document.querySelectorAll('#bottom-nav .bnav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === viewId));
     SideMenu.syncActive(viewId);
+
     if (_current === viewId) { MicroBet.onViewChange(viewId); return; }
+
+    _transitioning = true;
     _current = viewId;
     SideMenu.close();
+
+    // If no previous view or same view, just switch
+    if (!prevView || prevView === nextView) {
+      document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === viewId));
+      _transitioning = false;
+      _afterNav(viewId);
+      return;
+    }
+
+    // Exit current view
+    prevView.classList.add('view-exit');
+
+    // Prepare next view (invisible, then fade in)
+    if (nextView) {
+      nextView.classList.add('view-enter');
+      nextView.classList.add('active');
+    }
+
+    // After exit transition completes, clean up
+    setTimeout(() => {
+      prevView.classList.remove('active', 'view-exit');
+      if (nextView) {
+        // Force reflow then remove enter class to trigger transition
+        nextView.getBoundingClientRect();
+        nextView.classList.remove('view-enter');
+      }
+      _transitioning = false;
+      _afterNav(viewId);
+    }, 30);
+  }
+
+  function _afterNav(viewId) {
     MicroBet.onViewChange(viewId);
     if (viewId === 'vault') VaultModule.refresh();
     if (viewId === 'loot')  LootModule.refresh();
@@ -2835,13 +3015,21 @@ const MicroBet = (() => {
 
   function onViewChange(viewId) {
     if (viewId === 'live') {
-      _hideFocus(); _hidePopup(); return;
+      _hideFocus(); _hidePopup();
+      // Hide home alert badge
+      const badge = document.getElementById('home-mb-event-badge');
+      if (badge) badge.classList.remove('show');
+      return;
     }
     if (Onboarding.isActive()) return;
     if (!ev || ev.phase !== 'active') return;
     const cfg = _cfg();
     if (cfg.autoFocus  !== false && !_isFocusVisible() && !ev.focusShown && !ev.dismissed && !ev.pick) _showFocus();
     if (cfg.showPopup  !== false && !_isFocusVisible() && !ev.pick) _showPopup();
+    // Re-trigger home badge if landing on home with active event
+    if (viewId === 'home') {
+      _syncHomeMBBadge(true, ev.eventDef ? ev.eventDef.type : null);
+    }
   }
 
   function _updateLiveStats() {
@@ -2900,19 +3088,36 @@ const MicroBet = (() => {
     const mb  = document.getElementById('home-live-mb');
     const txt = mb ? mb.querySelector('.home-live-mb-txt') : null;
     const dot = mb ? mb.querySelector('.live-dot') : null;
+    const badge = document.getElementById('home-mb-event-badge');
+    const badgeTxt = document.getElementById('home-mb-event-badge-txt');
+    const liveBlock = document.getElementById('home-block-live');
     if (!mb) return;
     if (active) {
       mb.style.background     = 'rgba(57,255,20,.09)';
       mb.style.borderColor    = 'rgba(57,255,20,.35)';
       mb.style.boxShadow      = '0 0 10px rgba(57,255,20,.12)';
-      if(dot) { dot.className='live-dot neon'; }
+      mb.classList.add('mb-alert');
+      if(dot) { dot.className='live-dot neon'; dot.style.background=''; dot.style.animation=''; }
       if(txt) txt.textContent = '⚡ Micro-mercado abierto'+(eventType?' — '+eventType:'');
+      // Show alert badge and shake block only when user is on Home
+      if (Router.current() === 'home') {
+        if(badge) {
+          if(badgeTxt) badgeTxt.textContent = '⚡ '+(eventType||'Micro-evento')+' — Apostá ahora';
+          badge.classList.add('show');
+        }
+        if(liveBlock) {
+          liveBlock.classList.add('mb-notify');
+          setTimeout(() => liveBlock.classList.remove('mb-notify'), 400);
+        }
+      }
     } else {
       mb.style.background     = 'rgba(57,255,20,.04)';
       mb.style.borderColor    = 'rgba(57,255,20,.12)';
       mb.style.boxShadow      = '';
+      mb.classList.remove('mb-alert');
       if(dot) { dot.className='live-dot'; dot.style.background='var(--t3)'; dot.style.animation='none'; }
       if(txt) txt.textContent = 'Esperando próximo micro-mercado…';
+      if(badge) badge.classList.remove('show');
     }
   }
 
@@ -3399,6 +3604,69 @@ const HomeModule = (() => {
     const rankMap = [8,6,4,3,2];
     const rank = rankMap[Math.min(li.level-1, rankMap.length-1)];
     if(g('home-rank-num'))  g('home-rank-num').textContent  = '#'+rank;
+
+    // ── Streak Calendar ──
+    _renderStreakCal(S);
+  }
+
+  function _renderStreakCal(S) {
+    const g = id => document.getElementById(id);
+    const streak = S.streak || 0;
+    const DAY_LABELS = ['L','M','M','J','V','S','D'];
+    // Simulate which days of the current week are "hit" based on streak length
+    // Today = current day of week (0=Sun..6=Sat), we show Mon–Sun
+    const todayJS = new Date().getDay(); // 0=Sun,1=Mon,...6=Sat
+    const todayIdx = todayJS === 0 ? 6 : todayJS - 1; // convert to Mon=0..Sun=6
+    // Build 7 day states
+    const days = DAY_LABELS.map((lbl, i) => {
+      let state = 'future';
+      if (i < todayIdx) {
+        // Past day — hit if streak covers it
+        state = i >= (todayIdx - streak + 1) && streak > 0 ? 'hit' : (streak > 0 ? 'missed' : 'future');
+        // If streak is 0 or doesn't reach this day, missed
+        if (streak === 0) state = 'future';
+      } else if (i === todayIdx) {
+        // Today — "today" + hit if streak > 0
+        state = streak > 0 ? 'today hit' : 'today';
+      }
+      return { lbl, state, isToday: i === todayIdx };
+    });
+
+    const cal = g('home-streak-cal');
+    if (cal) {
+      cal.innerHTML = days.map(d => {
+        const cls = 'home-streak-day ' + d.state;
+        const ico = d.state.includes('hit') ? '🔥' : d.isToday ? '⭕' : d.state === 'missed' ? '✗' : '·';
+        return `<div class="${cls}">
+          <div class="home-streak-day-dot"><span class="home-streak-day-dot-ico">${ico}</span></div>
+          <span class="home-streak-day-lbl">${d.lbl}</span>
+        </div>`;
+      }).join('');
+    }
+
+    // Streak count label
+    const countEl = g('home-streak-count');
+    if (countEl) {
+      countEl.textContent = streak + (streak === 1 ? ' día' : ' días');
+      countEl.className = 'home-streak-count' + (streak === 0 ? ' danger' : '');
+    }
+
+    // Warning: show if streak > 0 but today not yet played (streak hasn't updated today)
+    // We simulate: show warning if streak > 0 and todayIdx > 0 (not Monday)
+    // In a real integration, this would check if user played today
+    const warning = g('home-streak-warning');
+    const warningTxt = g('home-streak-warning-txt');
+    if (warning) {
+      const atRisk = streak > 0 && streak < 30; // always show as reminder for demo
+      warning.classList.toggle('show', atRisk);
+      if (warningTxt) {
+        if (streak === 0) {
+          warningTxt.textContent = '¡Empezá tu racha hoy!';
+        } else {
+          warningTxt.textContent = '🔥 Racha de ' + streak + ' días — ¡no la pierdas!';
+        }
+      }
+    }
   }
 
   function _setLootBox(el, unlocked, opened) {
@@ -3416,7 +3684,12 @@ const HomeModule = (() => {
     }
   }
 
-  function goLive() { Router.go('live'); }
+  function goLive() {
+    // Hide the mb alert badge when navigating to live
+    const badge = document.getElementById('home-mb-event-badge');
+    if (badge) badge.classList.remove('show');
+    Router.go('live');
+  }
 
   return { refresh, goLive };
 })();
