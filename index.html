@@ -210,6 +210,12 @@ button{font-family:inherit;cursor:pointer;}
 /* ═══════════════════════════════════════
    DESKTOP LAYOUT  (body.is-desktop)
    ═══════════════════════════════════════ */
+
+/* CSS variable drives every offset — one place to change */
+body.is-desktop          { --sidebar-w: 260px; }
+body.is-desktop.ob-active{ --sidebar-w: 0px;   }
+body.is-desktop.ob-done  { --sidebar-w: 260px; }
+
 @media (min-width: 768px) {
   html, body { overflow: hidden; height: 100%; }
 
@@ -219,40 +225,50 @@ button{font-family:inherit;cursor:pointer;}
     background: #02020A;
   }
 
-  /* Shell fills full viewport, no max-width cap */
+  /* ── Shell: full viewport, flex-row ── */
   body.is-desktop #app {
     width: 100%;
     max-width: 100%;
     min-width: 0;
     flex-direction: row;
     border: none;
-    border-right: 1px solid rgba(255,255,255,.03);
   }
 
   /* ══ SIDEBAR ══ */
   body.is-desktop #side-overlay { display: none !important; }
 
   body.is-desktop #side-menu {
+    order: -1;                   /* force sidebar LEFT of app-main in DOM order */
     position: relative !important;
     transform: none !important;
-    width: 260px;
-    min-width: 260px;
-    max-width: 260px;
+    /* Width driven by variable — animates on class change */
+    width: var(--sidebar-w);
+    min-width: var(--sidebar-w);
+    max-width: var(--sidebar-w);
     flex-shrink: 0;
     height: 100%;
+    overflow: hidden;
     border-right: 1px solid var(--border);
-    box-shadow: 4px 0 32px rgba(0,0,0,.4);
+    box-shadow: 4px 0 32px rgba(0,0,0,.45);
     z-index: 2;
     background: linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
-    overflow-y: auto;
+    /* Smooth sidebar reveal */
+    transition: width .5s cubic-bezier(.4,0,.2,1),
+                min-width .5s cubic-bezier(.4,0,.2,1),
+                opacity .4s ease;
+    opacity: 1;
+  }
+
+  /* While sidebar is collapsed (ob-active): hide content inside */
+  body.is-desktop.ob-active #side-menu {
+    opacity: 0;
+    border-right: none;
+    box-shadow: none;
   }
 
   body.is-desktop #side-menu .smenu-close { display: none; }
-
-  body.is-desktop .smenu-header {
-    padding: 22px 18px 16px;
-  }
-  body.is-desktop .smenu-brand { font-size: 26px; }
+  body.is-desktop .smenu-header { padding: 22px 18px 16px; }
+  body.is-desktop .smenu-brand  { font-size: 26px; }
 
   body.is-desktop .smenu-item {
     padding: 14px 20px;
@@ -264,7 +280,7 @@ button{font-family:inherit;cursor:pointer;}
     border-left-color: var(--gold);
   }
   body.is-desktop .smenu-item.active-nav .smenu-lbl { color: var(--gold); }
-  body.is-desktop .smenu-item.active-nav .smenu-ico { filter: drop-shadow(0 0 4px var(--gold)); }
+  body.is-desktop .smenu-item.active-nav .smenu-ico  { filter: drop-shadow(0 0 4px var(--gold)); }
 
   /* ══ MAIN COLUMN ══ */
   body.is-desktop #app-main {
@@ -275,6 +291,8 @@ button{font-family:inherit;cursor:pointer;}
     height: 100%;
     overflow: hidden;
     background: var(--bg0);
+    /* Main column expands as sidebar collapses */
+    transition: flex .5s cubic-bezier(.4,0,.2,1);
   }
 
   /* ── Hide burger + bottom nav ── */
@@ -285,34 +303,22 @@ button{font-family:inherit;cursor:pointer;}
   body.is-desktop .header-top { padding: 12px 28px 8px; }
   body.is-desktop .hdr-energy  { padding: 0 28px 12px; }
 
-  /* ── Views container ── */
-  body.is-desktop #views-container {
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-    position: relative;
-  }
+  /* ── Views ── */
+  body.is-desktop #views-container { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+  body.is-desktop .view { padding-bottom: 32px; overflow-y: auto; }
 
-  body.is-desktop .view {
-    padding-bottom: 32px;
-    overflow-y: auto;
-  }
-
-  /* ── Content area: wide, centered, spacious ── */
+  /* ── Content scroll area ── */
   body.is-desktop .view-scroll {
-    padding: 24px 32px 40px;
-    max-width: 1000px;
+    padding: 24px 40px 40px;
+    max-width: 1020px;
     width: 100%;
     margin: 0 auto;
     box-sizing: border-box;
   }
 
-  /* ── Full-bleed bars in live view still span full width ── */
+  /* ── Live view full-bleed bars ── */
   body.is-desktop .live-ctx-bar,
-  body.is-desktop .live-data-bar {
-    padding-left: 32px;
-    padding-right: 32px;
-  }
+  body.is-desktop .live-data-bar { padding-left: 40px; padding-right: 40px; }
 
   /* ── Entry view ── */
   body.is-desktop #view-entry {
@@ -322,80 +328,49 @@ button{font-family:inherit;cursor:pointer;}
     padding: 0 60px 60px;
   }
   body.is-desktop #view-entry .entry-op-card,
-  body.is-desktop #view-entry .entry-enter-btn {
-    max-width: 440px;
-    width: 100%;
-  }
+  body.is-desktop #view-entry .entry-enter-btn { max-width: 440px; width: 100%; }
 
-  /* ── Admin panel ── */
+  /* ── Admin ── */
   body.is-desktop #admin-toggle { right: 28px; bottom: 28px; }
   body.is-desktop #admin-panel  { right: 28px; bottom: 84px; max-width: 280px; }
 
-  /* ── Toasts ── */
-  body.is-desktop .toast { left: calc(260px + 50%); }
-
-  /* ── Overlays only cover the main content column ── */
+  /* ══ OVERLAYS — always relative to #app-main, never to the full #app ══
+     We achieve this by offsetting them from the LEFT by var(--sidebar-w).
+     Since #app is the positioned ancestor, left:0 = left edge of #app.
+     left:var(--sidebar-w) = right edge of sidebar = left edge of #app-main.
+     Width = 100% - sidebar-w so they never bleed under the sidebar.
+  */
   body.is-desktop #focus-overlay,
   body.is-desktop #micro-popup,
   body.is-desktop #loot-overlay,
   body.is-desktop #onboarding-overlay {
-    left: 260px;
-    width: calc(100% - 260px);
+    left: var(--sidebar-w) !important;
+    width: calc(100% - var(--sidebar-w)) !important;
+    transition: left .5s cubic-bezier(.4,0,.2,1), width .5s cubic-bezier(.4,0,.2,1);
   }
 
-  /* ── Onboarding card max-width on desktop ── */
+  /* ── Toasts: centered within the main column ── */
+  body.is-desktop .toast {
+    left: calc(var(--sidebar-w) + (100% - var(--sidebar-w)) / 2) !important;
+    transition: left .5s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── Onboarding card: centered within its overlay ── */
   body.is-desktop #onboarding-card {
     left: 50%;
     transform: translateX(-50%);
     right: auto;
-    width: 520px;
+    width: 540px;
     max-width: calc(100% - 48px);
   }
 
-  /* ══ ONBOARDING IMMERSIVE MODE (before sidebar reveal) ══
-     During onboarding: no sidebar, full-width focus
-  */
-  body.is-desktop.ob-active #side-menu {
-    width: 0 !important;
-    min-width: 0 !important;
-    max-width: 0 !important;
-    overflow: hidden !important;
-    border-right: none !important;
-    box-shadow: none !important;
-    opacity: 0;
-    transition: width .5s cubic-bezier(.4,0,.2,1),
-                min-width .5s cubic-bezier(.4,0,.2,1),
-                opacity .4s ease;
-  }
-
-  /* Overlays span full width during onboarding */
-  body.is-desktop.ob-active #onboarding-overlay,
-  body.is-desktop.ob-active #focus-overlay,
-  body.is-desktop.ob-active #micro-popup,
-  body.is-desktop.ob-active #loot-overlay {
-    left: 0 !important;
-    width: 100% !important;
-  }
-
-  /* view-scroll uses more width during onboarding */
+  /* ── Immersive content during onboarding ── */
   body.is-desktop.ob-active .view-scroll {
-    max-width: 860px;
-    padding: 32px 48px 48px;
+    max-width: 900px;
+    padding: 32px 56px 48px;
   }
-
-  /* Toasts centered full width during onboarding */
-  body.is-desktop.ob-active .toast { left: 50%; }
-
-  /* ══ SIDEBAR REVEAL (after onboarding done) ══ */
-  body.is-desktop.ob-done #side-menu {
-    width: 260px;
-    min-width: 260px;
-    max-width: 260px;
-    opacity: 1;
-    transition: width .5s cubic-bezier(.4,0,.2,1),
-                min-width .5s cubic-bezier(.4,0,.2,1),
-                opacity .45s ease .1s;
-  }
+  body.is-desktop.ob-active .live-ctx-bar,
+  body.is-desktop.ob-active .live-data-bar { padding-left: 56px; padding-right: 56px; }
 }
 
 /* ═══════════════════════════════════════
@@ -2507,61 +2482,163 @@ const MicroBet = (() => {
   let _timer=null;
 
   function init() {
-    _scheduleWait(2000);
+    _queue = [];
+    _refillQueue();
+    _scheduleWait(2000); // short initial delay, then real pacing kicks in
   }
 
-  function _getWaitRange() {
-    const cfg = Store.get().mbConfig || {};
-    switch(cfg.frequency) {
-      case 'alta':        return [4000,  8000];
-      case 'baja':        return [20000, 35000];
-      case 'importantes': return [30000, 50000];
-      default:            return [6000,  14000]; // 'media'
-    }
+  /* ─────────────────────────────────────────────────────────────
+     FREQUENCY ENGINE
+     Non-linear scheduler + pre-generated event queue (size 3)
+     ───────────────────────────────────────────────────────────── */
+
+  // Frequency bands in milliseconds [min, max]
+  const FREQ_BANDS = {
+    alta:        [15000,  45000],
+    media:       [45000,  90000],
+    baja:        [90000, 180000],
+    importantes: [60000, 180000],
+  };
+
+  // Event priority map: high = included in 'importantes'
+  const EVENT_PRIORITY = {
+    'Penal':        'high',
+    'Córner':       'medium',
+    'Tiro libre':   'medium',
+    'Contraataque': 'low',
+    'Falta':        'low',
+  };
+
+  // Type config key map
+  const TYPE_KEY_MAP = {
+    'Penal':        'penal',
+    'Córner':       'corner',
+    'Tiro libre':   'tirolibre',
+    'Contraataque': 'corner',
+    'Falta':        'tirolibre',
+  };
+
+  let _queue = []; // pre-generated event queue
+
+  /**
+   * Non-linear delay sampler.
+   * Uses a power curve (x^2.2) to bias strongly towards longer delays,
+   * making the distribution feel organic rather than uniform random.
+   * Result is always within [min, max].
+   */
+  function _sampleDelay(min, max) {
+    const u = Math.random();
+    // Power curve: bias toward 1 (longer end) — feel natural, not metronome
+    const biased = Math.pow(u, 0.45); // < 1 exponent → bias toward longer values
+    return Math.round(min + biased * (max - min));
   }
 
+  /**
+   * Get the [min, max] band in ms for current frequency config.
+   */
+  function _getFreqBand() {
+    const freq = (Store.get().mbConfig || {}).frequency || 'media';
+    return FREQ_BANDS[freq] || FREQ_BANDS.media;
+  }
+
+  /**
+   * Get filtered event pool based on user config.
+   * Respects frequency mode and type checkboxes strictly.
+   */
   function _getEnabledEvents() {
     const cfg   = Store.get().mbConfig || {};
     const types = cfg.types || { penal:true, corner:true, tirolibre:true };
+    const freq  = cfg.frequency || 'media';
 
-    if (cfg.frequency === 'importantes') {
-      return EVENTS.filter(e => e.type === 'Penal');
+    // 'importantes' mode: only high-priority events, regardless of type checkboxes
+    if (freq === 'importantes') {
+      return EVENTS.filter(e => EVENT_PRIORITY[e.type] === 'high');
     }
 
-    // Map every event type to its config key
-    const MAP = {
-      'Penal':        'penal',
-      'Córner':       'corner',
-      'Tiro libre':   'tirolibre',
-      'Contraataque': 'corner',    // treat as secondary; include when corner is on
-      'Falta':        'tirolibre', // treat as secondary; include when tirolibre is on
-    };
-
+    // All other modes: strictly respect type checkboxes
     return EVENTS.filter(e => {
-      const key = MAP[e.type];
-      return key ? types[key] !== false : true;
+      const key = TYPE_KEY_MAP[e.type];
+      return key ? types[key] !== false : false; // unlisted types excluded by default
     });
   }
 
-  function _scheduleWait(delay) {
+  /**
+   * Pre-generate the event queue (up to QUEUE_SIZE entries).
+   * Each entry is { def, delay } where delay is the wait before this event fires.
+   * If the pool is empty (all types disabled), queue stays empty.
+   */
+  const QUEUE_SIZE = 3;
+
+  function _refillQueue() {
+    const pool = _getEnabledEvents();
+    if (!pool.length) { _queue = []; return; }
+
+    const [min, max] = _getFreqBand();
+
+    // Shuffle pool for variety, then fill up to QUEUE_SIZE
+    // Avoid back-to-back identical event types if pool has variety
+    while (_queue.length < QUEUE_SIZE) {
+      let def;
+      if (pool.length === 1) {
+        def = pool[0];
+      } else {
+        // Weighted shuffle: avoid repeating last queued type
+        const lastType = _queue.length > 0 ? _queue[_queue.length - 1].def.type : null;
+        const filtered = pool.filter(e => e.type !== lastType);
+        const pick = filtered.length > 0 ? filtered : pool;
+        def = pick[Math.floor(Math.random() * pick.length)];
+      }
+      _queue.push({ def, delay: _sampleDelay(min, max) });
+    }
+  }
+
+  /**
+   * Schedule the next event from the queue.
+   * If queue is empty, refill first.
+   * @param {number|undefined} overrideDelay — used only for init (short first delay)
+   */
+  function _scheduleWait(overrideDelay) {
     clearTimeout(_timer);
-    const [wMin, wMax] = _getWaitRange();
-    const wait = delay !== undefined ? delay : (wMin + Math.random()*(wMax-wMin));
-    ev = { phase:'waiting', endsAt: Date.now()+wait };
+
+    if (_queue.length === 0) _refillQueue();
+
+    // If still empty (all types disabled), check again later
+    if (_queue.length === 0) {
+      const wait = 5000;
+      ev = { phase:'waiting', endsAt: Date.now() + wait };
+      _applyWaitUI();
+      _timer = setTimeout(_scheduleWait, wait);
+      return;
+    }
+
+    const next = _queue[0]; // peek, don't shift yet
+    const wait = overrideDelay !== undefined ? overrideDelay : next.delay;
+
+    ev = { phase:'waiting', endsAt: Date.now() + wait };
     _applyWaitUI();
     _timer = setTimeout(_startActive, wait);
   }
 
   function _startActive(forceDef) {
-    const pool = _getEnabledEvents();
-    if (!pool.length) { _scheduleWait(); return; } // no types enabled → keep waiting
-    const def = forceDef || pool[Math.floor(Math.random()*pool.length)];
-    ev = { phase:'active', endsAt: Date.now()+def.dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
+    // Consume from queue (or use forced def for admin triggers)
+    let def;
+    if (forceDef) {
+      def = forceDef;
+      // Don't consume queue for forced events
+    } else {
+      if (_queue.length === 0) _refillQueue();
+      if (_queue.length === 0) { _scheduleWait(); return; }
+      def = _queue.shift().def;
+      // Immediately top up the queue in background
+      _refillQueue();
+    }
+
+    ev = { phase:'active', endsAt: Date.now() + def.dur * 1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
     _applyActiveUI();
     _runTick();
-    const cfg = Store.get().mbConfig || {};
+    const cfg = _cfg();
     if (Router.current() !== 'live' && cfg.showPopup !== false) _showPopup();
-    if (Router.current() !== 'live' && cfg.autoFocus  !== false) _showFocus();
+    if (Router.current() !== 'live' && cfg.autoFocus !== false) _showFocus();
   }
 
   function _runTick() {
@@ -2634,11 +2711,14 @@ const MicroBet = (() => {
       _updateLiveStats();
     }
     _syncHomeMBBadge(false, null);
-    // Show stage result briefly, then cooldown
+    // Brief result display, then schedule next from queue
     setTimeout(() => {
       const rb = document.getElementById('mb-result-banner');
       if(rb) rb.className = 'mb-result-banner';
-      _scheduleWait(5000 + Math.random()*5000);
+      // Use a short cooldown then let the queue drive next timing
+      const [min] = _getFreqBand();
+      const cooldown = Math.min(min * 0.3, 8000); // 30% of min band, max 8s
+      _scheduleWait(Math.round(cooldown));
     }, 2800);
   }
 
@@ -2780,13 +2860,17 @@ const MicroBet = (() => {
   }
 
   function applyConfig() {
-    // If currently waiting: reschedule with new wait range immediately
+    // Flush queue — regenerate with new frequency/types
+    _queue = [];
+    _refillQueue();
+
     if (!ev || ev.phase === 'waiting' || ev.phase === 'resolving') {
+      // Reschedule immediately with new timing
       _scheduleWait();
       return;
     }
-    // If currently active: enforce popup/focus state NOW
     if (ev.phase === 'active') {
+      // Respect popup/focus toggles immediately
       const cfg = _cfg();
       if (cfg.showPopup === false) _hidePopup();
       if (cfg.autoFocus === false) _hideFocus();
