@@ -99,6 +99,7 @@ button{font-family:inherit;cursor:pointer;}
 .hdr-energy-fill.low{background:linear-gradient(90deg,var(--plasma-d),var(--plasma));}
 
 /* ── VIEWS CONTAINER ── */
+#app-main{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden;}
 #views-container{flex:1;min-height:0;overflow:hidden;position:relative;}
 .view{display:none;flex-direction:column;height:100%;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:72px;}
 .view.active{display:flex;}
@@ -205,6 +206,197 @@ button{font-family:inherit;cursor:pointer;}
 .smenu-sep{height:1px;background:var(--border);margin:8px 18px;}
 .smenu-item.dim .smenu-lbl{color:var(--t2);}
 .smenu-item.dim .smenu-ico{opacity:.65;}
+
+/* ═══════════════════════════════════════
+   DESKTOP LAYOUT  (body.is-desktop)
+   ═══════════════════════════════════════ */
+@media (min-width: 768px) {
+  html, body { overflow: hidden; height: 100%; }
+
+  body.is-desktop {
+    align-items: stretch;
+    justify-content: stretch;
+    background: #02020A;
+  }
+
+  /* Shell fills full viewport, no max-width cap */
+  body.is-desktop #app {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    flex-direction: row;
+    border: none;
+    border-right: 1px solid rgba(255,255,255,.03);
+  }
+
+  /* ══ SIDEBAR ══ */
+  body.is-desktop #side-overlay { display: none !important; }
+
+  body.is-desktop #side-menu {
+    position: relative !important;
+    transform: none !important;
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    flex-shrink: 0;
+    height: 100%;
+    border-right: 1px solid var(--border);
+    box-shadow: 4px 0 32px rgba(0,0,0,.4);
+    z-index: 2;
+    background: linear-gradient(180deg, var(--bg1) 0%, var(--bg0) 100%);
+    overflow-y: auto;
+  }
+
+  body.is-desktop #side-menu .smenu-close { display: none; }
+
+  body.is-desktop .smenu-header {
+    padding: 22px 18px 16px;
+  }
+  body.is-desktop .smenu-brand { font-size: 26px; }
+
+  body.is-desktop .smenu-item {
+    padding: 14px 20px;
+    border-left: 3px solid transparent;
+    transition: background .15s, border-color .15s;
+  }
+  body.is-desktop .smenu-item.active-nav {
+    background: rgba(212,175,55,.09);
+    border-left-color: var(--gold);
+  }
+  body.is-desktop .smenu-item.active-nav .smenu-lbl { color: var(--gold); }
+  body.is-desktop .smenu-item.active-nav .smenu-ico { filter: drop-shadow(0 0 4px var(--gold)); }
+
+  /* ══ MAIN COLUMN ══ */
+  body.is-desktop #app-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: var(--bg0);
+  }
+
+  /* ── Hide burger + bottom nav ── */
+  body.is-desktop .hdr-menu-btn { display: none; }
+  body.is-desktop #bottom-nav   { display: none !important; }
+
+  /* ── Header ── */
+  body.is-desktop .header-top { padding: 12px 28px 8px; }
+  body.is-desktop .hdr-energy  { padding: 0 28px 12px; }
+
+  /* ── Views container ── */
+  body.is-desktop #views-container {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body.is-desktop .view {
+    padding-bottom: 32px;
+    overflow-y: auto;
+  }
+
+  /* ── Content area: wide, centered, spacious ── */
+  body.is-desktop .view-scroll {
+    padding: 24px 32px 40px;
+    max-width: 1000px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+  }
+
+  /* ── Full-bleed bars in live view still span full width ── */
+  body.is-desktop .live-ctx-bar,
+  body.is-desktop .live-data-bar {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  /* ── Entry view ── */
+  body.is-desktop #view-entry {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 60px 60px;
+  }
+  body.is-desktop #view-entry .entry-op-card,
+  body.is-desktop #view-entry .entry-enter-btn {
+    max-width: 440px;
+    width: 100%;
+  }
+
+  /* ── Admin panel ── */
+  body.is-desktop #admin-toggle { right: 28px; bottom: 28px; }
+  body.is-desktop #admin-panel  { right: 28px; bottom: 84px; max-width: 280px; }
+
+  /* ── Toasts ── */
+  body.is-desktop .toast { left: calc(260px + 50%); }
+
+  /* ── Overlays only cover the main content column ── */
+  body.is-desktop #focus-overlay,
+  body.is-desktop #micro-popup,
+  body.is-desktop #loot-overlay,
+  body.is-desktop #onboarding-overlay {
+    left: 260px;
+    width: calc(100% - 260px);
+  }
+
+  /* ── Onboarding card max-width on desktop ── */
+  body.is-desktop #onboarding-card {
+    left: 50%;
+    transform: translateX(-50%);
+    right: auto;
+    width: 520px;
+    max-width: calc(100% - 48px);
+  }
+
+  /* ══ ONBOARDING IMMERSIVE MODE (before sidebar reveal) ══
+     During onboarding: no sidebar, full-width focus
+  */
+  body.is-desktop.ob-active #side-menu {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    overflow: hidden !important;
+    border-right: none !important;
+    box-shadow: none !important;
+    opacity: 0;
+    transition: width .5s cubic-bezier(.4,0,.2,1),
+                min-width .5s cubic-bezier(.4,0,.2,1),
+                opacity .4s ease;
+  }
+
+  /* Overlays span full width during onboarding */
+  body.is-desktop.ob-active #onboarding-overlay,
+  body.is-desktop.ob-active #focus-overlay,
+  body.is-desktop.ob-active #micro-popup,
+  body.is-desktop.ob-active #loot-overlay {
+    left: 0 !important;
+    width: 100% !important;
+  }
+
+  /* view-scroll uses more width during onboarding */
+  body.is-desktop.ob-active .view-scroll {
+    max-width: 860px;
+    padding: 32px 48px 48px;
+  }
+
+  /* Toasts centered full width during onboarding */
+  body.is-desktop.ob-active .toast { left: 50%; }
+
+  /* ══ SIDEBAR REVEAL (after onboarding done) ══ */
+  body.is-desktop.ob-done #side-menu {
+    width: 260px;
+    min-width: 260px;
+    max-width: 260px;
+    opacity: 1;
+    transition: width .5s cubic-bezier(.4,0,.2,1),
+                min-width .5s cubic-bezier(.4,0,.2,1),
+                opacity .45s ease .1s;
+  }
+}
 
 /* ═══════════════════════════════════════
    VIEW: EN VIVO
@@ -949,6 +1141,39 @@ button{font-family:inherit;cursor:pointer;}
   box-shadow:0 3px 14px rgba(212,175,55,.25);transition:all .2s;
 }
 #ob-next:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(212,175,55,.35);}
+/* ═══════════════════════════════════════
+   MICRO-EVENTOS CONFIG (Profile)
+   ═══════════════════════════════════════ */
+.mbc-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;position:relative;overflow:hidden;}
+.mbc-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(212,175,55,.022),transparent 50%);pointer-events:none;}
+.mbc-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:2px;}
+.mbc-sub{font-size:10px;color:var(--t3);margin-bottom:14px;}
+.mbc-section{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;font-weight:700;margin:10px 0 7px;}
+/* Frequency */
+.mbc-freq-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
+.mbc-freq-btn{padding:8px 10px;border-radius:var(--r-sm);border:1px solid rgba(212,175,55,.18);background:rgba(212,175,55,.04);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;letter-spacing:.3px;cursor:pointer;transition:all .15s;text-align:center;}
+.mbc-freq-btn:hover{background:rgba(212,175,55,.1);color:var(--t1);}
+.mbc-freq-btn.active{background:rgba(212,175,55,.14);border-color:var(--gold);color:var(--gold);}
+/* Checkboxes */
+.mbc-checks{display:flex;flex-direction:column;gap:8px;}
+.mbc-check{display:flex;align-items:center;gap:10px;cursor:pointer;padding:8px 10px;border-radius:var(--r-sm);background:var(--bg2);border:1px solid rgba(255,255,255,.05);transition:background .15s;}
+.mbc-check:hover{background:rgba(212,175,55,.04);}
+.mbc-check input{display:none;}
+.mbc-check-box{width:18px;height:18px;border-radius:5px;border:1.5px solid rgba(212,175,55,.35);background:var(--bg3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.mbc-check-box::after{content:'✓';font-size:11px;font-weight:800;color:var(--gold);opacity:0;transition:opacity .15s;}
+.mbc-check input:checked + .mbc-check-box{background:rgba(212,175,55,.15);border-color:var(--gold);}
+.mbc-check input:checked + .mbc-check-box::after{opacity:1;}
+.mbc-check-lbl{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t1);}
+/* Toggles */
+.mbc-toggles{display:flex;flex-direction:column;gap:10px;}
+.mbc-toggle-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 10px;background:var(--bg2);border-radius:var(--r-sm);border:1px solid rgba(255,255,255,.05);}
+.mbc-toggle-info{flex:1;min-width:0;}
+.mbc-toggle-lbl{display:block;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t1);margin-bottom:1px;}
+.mbc-toggle-sub{display:block;font-size:9px;color:var(--t3);line-height:1.3;}
+.mbc-toggle{width:42px;height:24px;border-radius:12px;background:var(--bg5);border:1px solid rgba(255,255,255,.08);position:relative;cursor:pointer;flex-shrink:0;transition:background .2s,border-color .2s;}
+.mbc-toggle.on{background:rgba(57,255,20,.18);border-color:rgba(57,255,20,.35);}
+.mbc-toggle-knob{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:var(--t3);transition:transform .2s,background .2s;}
+.mbc-toggle.on .mbc-toggle-knob{transform:translateX(18px);background:var(--neon);}
 </style>
 </head>
 <body>
@@ -956,6 +1181,7 @@ button{font-family:inherit;cursor:pointer;}
 <div id="app">
 
   <!-- ═══ HEADER ═══ -->
+  <div id="app-main">
   <div id="app-header">
     <div class="header-top">
       <button class="hdr-menu-btn" onclick="SideMenu.open()">☰</button>
@@ -1659,6 +1885,61 @@ button{font-family:inherit;cursor:pointer;}
           </div>
           <button class="btn btn-plasma" style="width:100%;" onclick="Router.go('vault')">Ver Bóveda →</button>
         </div>
+
+        <!-- MICRO-EVENTOS CONFIG -->
+        <div class="mbc-card">
+          <div class="mbc-title">⚡ Micro-eventos</div>
+          <div class="mbc-sub">Controlá cuánto te interrumpe el sistema</div>
+
+          <div class="mbc-section">Frecuencia</div>
+          <div class="mbc-freq-grid">
+            <button class="mbc-freq-btn" data-freq="alta"        onclick="MBConfig.setFreq(this)">Alta</button>
+            <button class="mbc-freq-btn" data-freq="media"       onclick="MBConfig.setFreq(this)">Media</button>
+            <button class="mbc-freq-btn" data-freq="baja"        onclick="MBConfig.setFreq(this)">Baja</button>
+            <button class="mbc-freq-btn" data-freq="importantes" onclick="MBConfig.setFreq(this)">Solo importantes</button>
+          </div>
+
+          <div class="mbc-section">Tipo de eventos</div>
+          <div class="mbc-checks">
+            <label class="mbc-check">
+              <input type="checkbox" id="mbc-penal"     onchange="MBConfig.setType('penal',this.checked)">
+              <span class="mbc-check-box"></span>
+              <span class="mbc-check-lbl">🥅 Penal</span>
+            </label>
+            <label class="mbc-check">
+              <input type="checkbox" id="mbc-corner"    onchange="MBConfig.setType('corner',this.checked)">
+              <span class="mbc-check-box"></span>
+              <span class="mbc-check-lbl">🚩 Córner</span>
+            </label>
+            <label class="mbc-check">
+              <input type="checkbox" id="mbc-tirolibre" onchange="MBConfig.setType('tirolibre',this.checked)">
+              <span class="mbc-check-box"></span>
+              <span class="mbc-check-lbl">🎯 Tiro libre</span>
+            </label>
+          </div>
+
+          <div class="mbc-section">Comportamiento</div>
+          <div class="mbc-toggles">
+            <div class="mbc-toggle-row">
+              <div class="mbc-toggle-info">
+                <span class="mbc-toggle-lbl">Mostrar popup</span>
+                <span class="mbc-toggle-sub">Aviso flotante cuando hay un evento</span>
+              </div>
+              <button class="mbc-toggle" id="mbc-toggle-popup" onclick="MBConfig.toggle('showPopup',this)">
+                <span class="mbc-toggle-knob"></span>
+              </button>
+            </div>
+            <div class="mbc-toggle-row">
+              <div class="mbc-toggle-info">
+                <span class="mbc-toggle-lbl">Auto focus mode</span>
+                <span class="mbc-toggle-sub">Abre la pantalla de apuesta automáticamente</span>
+              </div>
+              <button class="mbc-toggle" id="mbc-toggle-focus" onclick="MBConfig.toggle('autoFocus',this)">
+                <span class="mbc-toggle-knob"></span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1732,6 +2013,7 @@ button{font-family:inherit;cursor:pointer;}
     <div class="bnav-item bnav-item--primary" data-nav="live" onclick="Router.go('live')"><span class="bnav-ico">⚡</span><span class="bnav-lbl">En Vivo</span></div>
     <div class="bnav-item bnav-item--vault" data-nav="vault" onclick="Router.go('vault')"><span class="bnav-ico">🛡️</span><span class="bnav-lbl">Bóveda</span></div>
   </div>
+  </div><!-- /#app-main -->
   <!-- SIDE MENU (inside app shell) -->
   <div id="side-overlay" onclick="SideMenu.close()"></div>
   <div id="side-menu">
@@ -1893,6 +2175,12 @@ const Store = (() => {
     ranking:  { duelScore: 840 },
     lossStreak: 0,
     profile: { name:'Aspirante' },
+    mbConfig: {
+      frequency: 'media',           // 'alta' | 'media' | 'baja' | 'importantes'
+      types: { penal:true, corner:true, tirolibre:true },
+      showPopup: true,
+      autoFocus: true,
+    },
   };
 
   let S = {};
@@ -1909,6 +2197,8 @@ const Store = (() => {
         S.microbet= Object.assign({}, DEFAULT.microbet, parsed.microbet|| {});
         S.ranking = Object.assign({}, DEFAULT.ranking,  parsed.ranking || {});
         S.profile = Object.assign({}, DEFAULT.profile,  parsed.profile || {});
+        S.mbConfig= Object.assign({}, DEFAULT.mbConfig, parsed.mbConfig|| {});
+        S.mbConfig.types = Object.assign({}, DEFAULT.mbConfig.types, (parsed.mbConfig||{}).types||{});
         if (!S.loot.unlocked[S.loot.tier]) S.loot.unlocked[S.loot.tier] = {common:false,rare:false,epic:false};
         if (!S.loot.opened[S.loot.tier])   S.loot.opened[S.loot.tier]   = {common:false,rare:false,epic:false};
         if (!S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier] = {missions:0,wins:0,xp:0};
@@ -2006,13 +2296,14 @@ const Router = (() => {
     if (!VIEWS.includes(viewId)) return;
     document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.dataset.view === viewId));
     document.querySelectorAll('#bottom-nav .bnav-item').forEach(b => b.classList.toggle('active', b.dataset.nav === viewId));
+    SideMenu.syncActive(viewId);
     if (_current === viewId) { MicroBet.onViewChange(viewId); return; }
     _current = viewId;
     SideMenu.close();
     MicroBet.onViewChange(viewId);
     if (viewId === 'vault') VaultModule.refresh();
     if (viewId === 'loot')  LootModule.refresh();
-    if (viewId === 'profile') ProfileModule.refresh();
+    if (viewId === 'profile') { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home') HomeModule.refresh();
   }
 
@@ -2020,15 +2311,55 @@ const Router = (() => {
   return { go, current };
 })();
 
+/* ── VIEWPORT ───────────────────────────────────────────────── */
+const Viewport = (() => {
+  const DESKTOP_BP = 768;
+
+  function _isDesktop() { return window.innerWidth >= DESKTOP_BP; }
+
+  function _apply() {
+    const desktop = _isDesktop();
+    document.body.classList.toggle('is-desktop', desktop);
+    document.body.classList.toggle('is-mobile',  !desktop);
+    if (!desktop) {
+      SideMenu.close();
+      document.body.classList.remove('ob-active','ob-done');
+    } else {
+      // Reapply correct sidebar state for desktop
+      if (typeof Onboarding !== 'undefined') Onboarding.applyDesktopState();
+    }
+  }
+
+  function init() {
+    _apply();
+    let _rTimer;
+    window.addEventListener('resize', () => {
+      clearTimeout(_rTimer);
+      _rTimer = setTimeout(_apply, 80);
+    });
+  }
+
+  function isDesktop() { return _isDesktop(); }
+
+  return { init, isDesktop };
+})();
+
 /* ── SIDE MENU ──────────────────────────────────────────────── */
 const SideMenu = (() => {
   function open() {
+    if (Viewport.isDesktop()) return; // always visible on desktop
     document.getElementById('side-menu').classList.add('open');
     document.getElementById('side-overlay').classList.add('open');
   }
   function close() {
+    if (Viewport.isDesktop()) return; // never close on desktop
     document.getElementById('side-menu').classList.remove('open');
     document.getElementById('side-overlay').classList.remove('open');
+  }
+  function _syncActive(viewId) {
+    document.querySelectorAll('#smenu-items [data-nav]').forEach(item => {
+      item.classList.toggle('active-nav', item.dataset.nav === viewId);
+    });
   }
   function init() {
     document.getElementById('smenu-items').addEventListener('click', e => {
@@ -2038,7 +2369,7 @@ const SideMenu = (() => {
       Router.go(item.dataset.nav);
     });
   }
-  return { open, close, init };
+  return { open, close, init, syncActive: _syncActive };
 })();
 
 /* ── HEADER MODULE ──────────────────────────────────────────── */
@@ -2170,7 +2501,6 @@ const MicroBet = (() => {
     {type:'Córner',       q:'¿Qué pasa en el área?',       optA:'Remate',     optB:'Despeje',    dur:35},
     {type:'Falta',        q:'¿Cómo sigue?',                optA:'Tarjeta',    optB:'Juego sigue',dur:25},
   ];
-  const WAIT_MIN=6000, WAIT_MAX=14000;
   const MICRO_XP=120;
 
   let ev=null; // {phase, endsAt, eventDef, pick, dismissed, focusShown}
@@ -2180,22 +2510,58 @@ const MicroBet = (() => {
     _scheduleWait(2000);
   }
 
+  function _getWaitRange() {
+    const cfg = Store.get().mbConfig || {};
+    switch(cfg.frequency) {
+      case 'alta':        return [4000,  8000];
+      case 'baja':        return [20000, 35000];
+      case 'importantes': return [30000, 50000];
+      default:            return [6000,  14000]; // 'media'
+    }
+  }
+
+  function _getEnabledEvents() {
+    const cfg   = Store.get().mbConfig || {};
+    const types = cfg.types || { penal:true, corner:true, tirolibre:true };
+
+    if (cfg.frequency === 'importantes') {
+      return EVENTS.filter(e => e.type === 'Penal');
+    }
+
+    // Map every event type to its config key
+    const MAP = {
+      'Penal':        'penal',
+      'Córner':       'corner',
+      'Tiro libre':   'tirolibre',
+      'Contraataque': 'corner',    // treat as secondary; include when corner is on
+      'Falta':        'tirolibre', // treat as secondary; include when tirolibre is on
+    };
+
+    return EVENTS.filter(e => {
+      const key = MAP[e.type];
+      return key ? types[key] !== false : true;
+    });
+  }
+
   function _scheduleWait(delay) {
     clearTimeout(_timer);
-    ev = { phase:'waiting', endsAt: Date.now()+(delay||WAIT_MIN+Math.random()*(WAIT_MAX-WAIT_MIN)) };
+    const [wMin, wMax] = _getWaitRange();
+    const wait = delay !== undefined ? delay : (wMin + Math.random()*(wMax-wMin));
+    ev = { phase:'waiting', endsAt: Date.now()+wait };
     _applyWaitUI();
-    _timer = setTimeout(_startActive, delay || (WAIT_MIN+Math.random()*(WAIT_MAX-WAIT_MIN)));
+    _timer = setTimeout(_startActive, wait);
   }
 
   function _startActive(forceDef) {
-    const def = forceDef || EVENTS[Math.floor(Math.random()*EVENTS.length)];
+    const pool = _getEnabledEvents();
+    if (!pool.length) { _scheduleWait(); return; } // no types enabled → keep waiting
+    const def = forceDef || pool[Math.floor(Math.random()*pool.length)];
     ev = { phase:'active', endsAt: Date.now()+def.dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
     _applyActiveUI();
     _runTick();
-    // Show popup if not on live
-    if (Router.current() !== 'live') _showPopup();
-    // Show focus if not on live and not shown yet
-    if (Router.current() !== 'live') _showFocus();
+    const cfg = Store.get().mbConfig || {};
+    if (Router.current() !== 'live' && cfg.showPopup !== false) _showPopup();
+    if (Router.current() !== 'live' && cfg.autoFocus  !== false) _showFocus();
   }
 
   function _runTick() {
@@ -2358,12 +2724,15 @@ const MicroBet = (() => {
     if(hintLbl) hintLbl.textContent = '✓ Apuesta registrada';
   }
 
+  function _cfg() { return Store.get().mbConfig || {}; }
+
   function dismissFocus() { ev && (ev.dismissed=true); _hideFocus(); }
 
   function _showFocus() {
     if (!ev || ev.focusShown || ev.dismissed || ev.pick) return;
     if (Router.current() === 'live') return;
     if (Onboarding.isActive()) return;
+    if (_cfg().autoFocus === false) return;
     ev.focusShown = true;
     document.getElementById('focus-overlay').classList.add('show');
   }
@@ -2377,6 +2746,7 @@ const MicroBet = (() => {
   function _showPopup() {
     if (Router.current() === 'live' || _isFocusVisible()) return;
     if (Onboarding.isActive()) return;
+    if (_cfg().showPopup === false) return;
     document.getElementById('micro-popup').classList.add('show');
   }
   function _hidePopup() {
@@ -2389,8 +2759,9 @@ const MicroBet = (() => {
     }
     if (Onboarding.isActive()) return;
     if (!ev || ev.phase !== 'active') return;
-    if (!_isFocusVisible() && !ev.focusShown && !ev.dismissed && !ev.pick) _showFocus();
-    if (!_isFocusVisible() && !ev.pick) _showPopup();
+    const cfg = _cfg();
+    if (cfg.autoFocus  !== false && !_isFocusVisible() && !ev.focusShown && !ev.dismissed && !ev.pick) _showFocus();
+    if (cfg.showPopup  !== false && !_isFocusVisible() && !ev.pick) _showPopup();
   }
 
   function _updateLiveStats() {
@@ -2408,13 +2779,30 @@ const MicroBet = (() => {
     _startActive(def);
   }
 
+  function applyConfig() {
+    // If currently waiting: reschedule with new wait range immediately
+    if (!ev || ev.phase === 'waiting' || ev.phase === 'resolving') {
+      _scheduleWait();
+      return;
+    }
+    // If currently active: enforce popup/focus state NOW
+    if (ev.phase === 'active') {
+      const cfg = _cfg();
+      if (cfg.showPopup === false) _hidePopup();
+      if (cfg.autoFocus === false) _hideFocus();
+    }
+  }
+
   // Popup click
   function initPopup() {
     const body = document.querySelector('.mp-body');
     if(body) body.addEventListener('click', () => {
       _hidePopup();
       Router.go('live');
-      if (ev && ev.phase==='active' && !ev.focusShown && !ev.pick) setTimeout(_showFocus, 80);
+      // Only auto-open focus if autoFocus is on
+      if (ev && ev.phase==='active' && !ev.focusShown && !ev.pick && _cfg().autoFocus !== false) {
+        setTimeout(_showFocus, 80);
+      }
     });
     const closeBtn = document.querySelector('.mp-close');
     if(closeBtn) closeBtn.addEventListener('click', e => {
@@ -2447,7 +2835,7 @@ const MicroBet = (() => {
   function getPhase() { return ev ? ev.phase : 'waiting'; }
   function getEventDef() { return ev && ev.phase==='active' ? ev.eventDef : null; }
 
-  return { init, pick, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
+  return { init, pick, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef, applyConfig };
 })();
 
 /* ── VAULT MODULE ───────────────────────────────────────────── */
@@ -3025,11 +3413,28 @@ const Onboarding = (() => {
     try { return !localStorage.getItem(STORAGE_KEY); } catch(e) { return true; }
   }
 
+  /* Called at boot to set correct desktop sidebar state without animation */
+  function applyDesktopState() {
+    if (!Viewport.isDesktop()) return;
+    if (shouldShow()) {
+      // Will show onboarding → start in immersive mode (no sidebar)
+      document.body.classList.add('ob-active');
+      document.body.classList.remove('ob-done');
+    } else {
+      // Already seen → reveal sidebar immediately, no transition
+      document.body.classList.add('ob-done');
+      document.body.classList.remove('ob-active');
+    }
+  }
+
   function start() {
     if (!shouldShow()) return;
     _step   = 0;
     _active = true;
-    // Force-close any overlays that might be open
+    // Ensure immersive mode on desktop
+    document.body.classList.add('ob-active');
+    document.body.classList.remove('ob-done');
+    // Force-close any overlays
     const fo = document.getElementById('focus-overlay');
     const mp = document.getElementById('micro-popup');
     if (fo) fo.classList.remove('show');
@@ -3191,7 +3596,7 @@ const Onboarding = (() => {
     _active = false;
     _markSeen();
     _detachResize();
-    // Remove ring
+    // Remove spotlight ring
     const ring = document.getElementById('ob-ring');
     if (ring) ring.remove();
     const ov = document.getElementById('onboarding-overlay');
@@ -3202,6 +3607,11 @@ const Onboarding = (() => {
         ov.classList.remove('active');
         ov.style.opacity    = '';
         ov.style.transition = '';
+        // Reveal desktop sidebar after overlay fades
+        if (Viewport.isDesktop()) {
+          document.body.classList.remove('ob-active');
+          document.body.classList.add('ob-done');
+        }
       }, 260);
     }
     const spotlight = document.getElementById('onboarding-spotlight');
@@ -3212,11 +3622,79 @@ const Onboarding = (() => {
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
   }
 
-  return { start, next, prev, skip, isActive };
+  return { start, next, prev, skip, isActive, applyDesktopState };
+})();
+
+/* ── MBCONFIG MODULE ────────────────────────────────────────── */
+const MBConfig = (() => {
+  const FREQ_LABELS = {
+    alta: 'Frecuencia: Alta ⚡',
+    media: 'Frecuencia: Media',
+    baja: 'Frecuencia: Baja 🐢',
+    importantes: 'Solo importantes 🎯',
+  };
+  const TYPE_LABELS = { penal:'Penal', corner:'Córner', tirolibre:'Tiro libre' };
+
+  function render() {
+    const cfg = Store.get().mbConfig;
+    document.querySelectorAll('.mbc-freq-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.freq === cfg.frequency);
+    });
+    const g = id => document.getElementById(id);
+    if(g('mbc-penal'))     g('mbc-penal').checked     = cfg.types.penal     !== false;
+    if(g('mbc-corner'))    g('mbc-corner').checked    = cfg.types.corner    !== false;
+    if(g('mbc-tirolibre')) g('mbc-tirolibre').checked = cfg.types.tirolibre !== false;
+    _applyToggle(g('mbc-toggle-popup'), cfg.showPopup !== false);
+    _applyToggle(g('mbc-toggle-focus'), cfg.autoFocus !== false);
+  }
+
+  function _applyToggle(el, on) {
+    if (!el) return;
+    el.classList.toggle('on', on);
+  }
+
+  function _toast(msg) {
+    Store.showXPToast(msg, '⚙️');
+  }
+
+  function setFreq(btn) {
+    const S = Store.get();
+    S.mbConfig.frequency = btn.dataset.freq;
+    Store.save();
+    render();
+    _toast(FREQ_LABELS[btn.dataset.freq] || btn.dataset.freq);
+    MicroBet.applyConfig();
+  }
+
+  function setType(key, val) {
+    const S = Store.get();
+    S.mbConfig.types[key] = val;
+    Store.save();
+    // Build readable label of active types
+    const active = Object.entries(S.mbConfig.types)
+      .filter(([,v]) => v !== false)
+      .map(([k]) => TYPE_LABELS[k] || k);
+    _toast(active.length ? active.join(' · ') : 'Sin eventos activos');
+    MicroBet.applyConfig();
+  }
+
+  function toggle(key, btn) {
+    const S = Store.get();
+    S.mbConfig[key] = !S.mbConfig[key];
+    Store.save();
+    _applyToggle(btn, S.mbConfig[key]);
+    const labels = { showPopup: ['Popup activado', 'Popup desactivado'], autoFocus: ['Auto focus activado', 'Auto focus desactivado'] };
+    _toast((labels[key] || ['On','Off'])[S.mbConfig[key] ? 0 : 1]);
+    MicroBet.applyConfig();
+  }
+
+  return { render, setFreq, setType, toggle };
 })();
 
 document.addEventListener('DOMContentLoaded', () => {
   Store.load();
+  Viewport.init();
+  Onboarding.applyDesktopState();
   HeaderModule.refresh();
   VaultModule.refresh();
   LootModule.refresh();
