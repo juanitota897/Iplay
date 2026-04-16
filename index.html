@@ -688,9 +688,10 @@ button{font-family:inherit;cursor:pointer;}
   #app-header{
     position:relative;z-index:50;flex-shrink:0;
   }
-  .header-top{padding:10px 28px 8px;gap:14px;}
-  .hdr-center{max-width:340px;}
+  .header-top{padding:10px 28px 8px;gap:14px;flex-wrap:nowrap;}
+  .hdr-center{max-width:340px;flex:1;min-width:0;}
   .hdr-energy{padding:0 28px 10px;}
+  .hdr-right{flex-shrink:0;}
   .hdr-menu-btn{display:none;}
 
   #desktop-body{
@@ -1403,6 +1404,37 @@ button{font-family:inherit;cursor:pointer;}
 #rescue-btn .rescue-sub{font-size:11px;color:rgba(255,51,85,.7);font-weight:600;}
 #rescue-btn:hover{background:rgba(255,51,85,.35);border-color:var(--red);}
 
+/* ── SETTINGS MODAL ── */
+#settings-modal{
+  position:absolute;inset:0;z-index:400;
+  display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(4,4,12,.82);backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity .25s;
+}
+#settings-modal.open{opacity:1;pointer-events:all;}
+#settings-panel{
+  width:100%;max-width:430px;
+  background:var(--bg2);
+  border:1px solid var(--border-b);
+  border-radius:20px 20px 0 0;
+  padding:20px 18px 36px;
+  transform:translateY(20px);
+  transition:transform .3s cubic-bezier(.34,1.36,.64,1);
+  max-height:85vh;overflow-y:auto;
+}
+#settings-modal.open #settings-panel{transform:translateY(0);}
+.settings-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--t1);letter-spacing:.5px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;}
+.settings-section{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.8px;margin:14px 0 8px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05);}
+.settings-row:last-child{border-bottom:none;}
+.settings-row-lbl{font-size:13px;color:var(--t1);}
+.settings-row-val{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--gold);}
+.settings-input{background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:6px 10px;color:var(--t1);font-size:13px;outline:none;width:160px;}
+.settings-btn{padding:8px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.settings-btn:hover{background:rgba(255,255,255,.08);color:var(--t1);}
+.settings-btn.danger{border-color:rgba(255,51,85,.3);color:var(--red);}
+.settings-btn.danger:hover{background:rgba(255,51,85,.1);}
+.settings-btn.primary{background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;border:none;}
 /* ── DEV RESET BUTTON ── */
 #dev-reset-btn{
   position:absolute;bottom:72px;right:8px;z-index:999;
@@ -2510,7 +2542,7 @@ const AuthUI = (() => {
                 <span class="mbc-toggle-lbl">Mostrar popup</span>
                 <span class="mbc-toggle-sub">Aviso flotante cuando hay un evento</span>
               </div>
-              <button class="mbc-toggle" id="mbc-toggle-popup" onclick="MBConfig.toggle('showPopup',this)">
+              <button class="mbc-toggle" id="mbc-toggle-popup">
                 <span class="mbc-toggle-knob"></span>
               </button>
             </div>
@@ -2519,7 +2551,7 @@ const AuthUI = (() => {
                 <span class="mbc-toggle-lbl">Auto focus mode</span>
                 <span class="mbc-toggle-sub">Abre la pantalla de apuesta automáticamente</span>
               </div>
-              <button class="mbc-toggle" id="mbc-toggle-focus" onclick="MBConfig.toggle('autoFocus',this)">
+              <button class="mbc-toggle" id="mbc-toggle-focus">
                 <span class="mbc-toggle-knob"></span>
               </button>
             </div>
@@ -2749,7 +2781,64 @@ const AuthUI = (() => {
     <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎯</span><span class="bnav-lbl">Apuestas</span></div>
     <div class="bnav-item bnav-item--home" data-nav="home" onclick="Router.go('home')"><span class="bnav-ico">🏠</span><span class="bnav-lbl">Inicio</span></div>
     <div class="bnav-item bnav-item--primary" data-nav="live" onclick="Router.go('live')"><span class="bnav-ico">⚡</span><span class="bnav-lbl">En Vivo</span></div>
-    <div class="bnav-item" data-nav="casino" onclick="Router.go('casino')"><span class="bnav-ico">🎲</span><span class="bnav-lbl">Casino</span></div>
+    <div class="bnav-item" onclick="SettingsModal.open()"><span class="bnav-ico">⚙️</span><span class="bnav-lbl">Config</span></div>
+  </div>
+
+  <!-- ── SETTINGS MODAL ── -->
+  <div id="settings-modal" onclick="if(event.target===this)SettingsModal.close()">
+    <div id="settings-panel">
+      <div class="settings-title">
+        <span>⚙️ Configuración</span>
+        <button onclick="SettingsModal.close()" style="background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;">✕</button>
+      </div>
+
+      <div class="settings-section">Cuenta</div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Usuario</span>
+        <span class="settings-row-val" id="cfg-username">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Email</span>
+        <span class="settings-row-val" id="cfg-email" style="font-size:11px;color:var(--t2);">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Nivel</span>
+        <span class="settings-row-val" id="cfg-level">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">XP Total</span>
+        <span class="settings-row-val" id="cfg-xp">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">G-Coins</span>
+        <span class="settings-row-val" id="cfg-gcoins">—</span>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Rescates usados</span>
+        <span class="settings-row-val" id="cfg-rescues">—</span>
+      </div>
+
+      <div class="settings-section">Nombre de usuario</div>
+      <div class="settings-row" style="flex-direction:column;align-items:flex-start;gap:8px;">
+        <input class="settings-input" id="cfg-username-input" type="text" placeholder="Nuevo nombre de usuario" style="width:100%;">
+        <button class="settings-btn primary" onclick="SettingsModal.saveUsername()" style="width:100%;">Guardar nombre</button>
+      </div>
+
+      <div class="settings-section">Micro-eventos</div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Mostrar popup</span>
+        <button class="mbc-toggle" id="cfg-toggle-popup"><span class="mbc-toggle-knob"></span></button>
+      </div>
+      <div class="settings-row">
+        <span class="settings-row-lbl">Auto focus mode</span>
+        <button class="mbc-toggle" id="cfg-toggle-focus"><span class="mbc-toggle-knob"></span></button>
+      </div>
+
+      <div class="settings-section">Sesión</div>
+      <div class="settings-row">
+        <button class="settings-btn danger" onclick="SettingsModal.signOut()" style="width:100%;">Cerrar sesión</button>
+      </div>
+    </div>
   </div>
   <!-- SIDE MENU (inside app shell) -->
   <div id="side-overlay"></div>
@@ -3287,11 +3376,12 @@ const HeaderModule = (() => {
     const smb = el('smenu-missions-badge');
     if(mb) { mb.textContent = rem; mb.style.display = rem > 0 ? '' : 'none'; }
     if(smb) { smb.textContent = rem; smb.style.display = rem > 0 ? '' : 'none'; }
-    const ePct = Math.round(S.energy);
-    if(el('hdr-energy-pct')) el('hdr-energy-pct').textContent = ePct+'%';
+    const eMax = 200; // energía máxima
+    const ePct = Math.round((S.energy / eMax) * 100);
+    if(el('hdr-energy-pct')) el('hdr-energy-pct').textContent = S.energy + '/' + eMax;
     if(el('hdr-energy-bar')) {
       const bar = el('hdr-energy-bar');
-      bar.style.width = ePct+'%';
+      bar.style.width = Math.min(100, ePct) + '%';
       bar.className = 'hdr-energy-fill' + (ePct <= 30 ? ' low' : '');
     }
     const gc = S.gcoins || 0;
@@ -5543,18 +5633,22 @@ const Onboarding = (() => {
 const MBConfig = (() => {
   function render() {
     const cfg = Store.get().mbConfig;
+    const g = id => document.getElementById(id);
     // Frequency buttons
     document.querySelectorAll('.mbc-freq-btn').forEach(b => {
       b.classList.toggle('active', b.dataset.freq === cfg.frequency);
     });
     // Type checkboxes
-    const g = id => document.getElementById(id);
     if(g('mbc-penal'))     g('mbc-penal').checked     = cfg.types.penal     !== false;
     if(g('mbc-corner'))    g('mbc-corner').checked    = cfg.types.corner    !== false;
     if(g('mbc-tirolibre')) g('mbc-tirolibre').checked = cfg.types.tirolibre !== false;
-    // Toggles
+    // Toggles — bind via JS para evitar problemas con onclick inline
     _applyToggle(g('mbc-toggle-popup'), cfg.showPopup !== false);
     _applyToggle(g('mbc-toggle-focus'), cfg.autoFocus !== false);
+    const pp = g('mbc-toggle-popup');
+    const pf = g('mbc-toggle-focus');
+    if(pp && !pp._bound) { pp._bound=true; pp.addEventListener('click', function(){ toggle('showPopup', pp); }); }
+    if(pf && !pf._bound) { pf._bound=true; pf.addEventListener('click', function(){ toggle('autoFocus', pf); }); }
   }
 
   function _applyToggle(el, on) {
@@ -5707,6 +5801,78 @@ const RankingModule = (() => {
   }
 
   return { refresh: refresh };
+})();
+
+/* ── SETTINGS MODAL MODULE ──────────────────────────────────── */
+const SettingsModal = (() => {
+  function open() {
+    var modal = document.getElementById('settings-modal');
+    if (!modal) return;
+    // Populate data
+    var S  = Store.get();
+    var li = Store.getLevelInfo();
+    var user = Auth.getUser();
+    var username = (user && user.email) ? user.email.split('@')[0] : 'Demo';
+    var el = function(id){ return document.getElementById(id); };
+    if(el('cfg-username'))   el('cfg-username').textContent   = username;
+    if(el('cfg-email'))      el('cfg-email').textContent      = (user && user.email) ? user.email : '(sin cuenta)';
+    if(el('cfg-level'))      el('cfg-level').textContent      = 'Nivel ' + li.level + ' — ' + li.title;
+    if(el('cfg-xp'))         el('cfg-xp').textContent         = li.xp.toLocaleString('es-AR') + ' XP';
+    if(el('cfg-gcoins'))     el('cfg-gcoins').textContent     = (S.gcoins || 0).toLocaleString('es-AR') + ' G';
+    if(el('cfg-rescues'))    el('cfg-rescues').textContent    = (S.rescue && S.rescue.used) ? S.rescue.used : '0';
+    if(el('cfg-username-input')) el('cfg-username-input').value = username;
+    // Toggles micro-eventos
+    var cfg = S.mbConfig || {};
+    var tp = el('cfg-toggle-popup');
+    var tf = el('cfg-toggle-focus');
+    if(tp) {
+      tp.className = 'mbc-toggle' + (cfg.showPopup !== false ? ' on' : '');
+      if(!tp._bound){ tp._bound=true; tp.addEventListener('click', function(){ MBConfig.toggle('showPopup', tp); }); }
+    }
+    if(tf) {
+      tf.className = 'mbc-toggle' + (cfg.autoFocus !== false ? ' on' : '');
+      if(!tf._bound){ tf._bound=true; tf.addEventListener('click', function(){ MBConfig.toggle('autoFocus', tf); }); }
+    }
+    modal.classList.add('open');
+  }
+
+  function close() {
+    var modal = document.getElementById('settings-modal');
+    if (modal) modal.classList.remove('open');
+  }
+
+  function saveUsername() {
+    var input = document.getElementById('cfg-username-input');
+    var val = input ? input.value.trim() : '';
+    if (!val) { Store.showXPToast('Ingresá un nombre válido'); return; }
+    var S = Store.get();
+    S.profile = S.profile || {};
+    S.profile.name = val;
+    Store.save();
+    // Actualizar en Supabase si está logueado
+    var user = Auth.getUser();
+    if (user) {
+      _sb.from('profiles').update({ username: val }).eq('id', user.id)
+        .then(function(res){ if(!res.error) Store.showXPToast('✓ Nombre actualizado'); });
+    }
+    var el = document.getElementById('cfg-username');
+    if(el) el.textContent = val;
+    Store.showXPToast('✓ Nombre guardado: ' + val);
+  }
+
+  function signOut() {
+    close();
+    Auth.signOut().then(function(){
+      var S = Store.get();
+      S.xp=0; S.gcoins=5000; S.energy=200;
+      S.vault={fuel:0,lossCount:0,shieldActive:false};
+      S.rescue={used:0,lastTs:0};
+      Store.save();
+      location.reload();
+    });
+  }
+
+  return { open: open, close: close, saveUsername: saveUsername, signOut: signOut };
 })();
 
 function devReset() {
