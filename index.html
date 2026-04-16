@@ -688,11 +688,14 @@ button{font-family:inherit;cursor:pointer;}
   #app-header{
     position:relative;z-index:50;flex-shrink:0;
   }
-  .header-top{padding:10px 28px 8px;gap:14px;flex-wrap:nowrap;}
-  .hdr-center{max-width:340px;flex:1;min-width:0;}
-  .hdr-energy{padding:0 28px 10px;}
-  .hdr-right{flex-shrink:0;}
+  .header-top{padding:8px 24px 6px;gap:16px;flex-wrap:nowrap;align-items:center;}
+  .hdr-center{flex:1;min-width:0;max-width:none;}
+  .hdr-energy{padding:0 24px 8px;}
+  .hdr-right{flex-shrink:0;display:flex;flex-direction:row;align-items:center;gap:8px;}
   .hdr-menu-btn{display:none;}
+  .hdr-avatar{display:none;} /* en desktop el avatar va en el sidebar */
+  .hdr-level-name{font-size:12px;}
+  .hdr-xp-val{font-size:10px;}
 
   #desktop-body{
     display:flex;flex:1;min-height:0;overflow:hidden;
@@ -1797,6 +1800,7 @@ const AuthUI = (() => {
     <div class="dsk-nav-item" data-nav="profile" onclick="Router.go('profile')"><span class="dsk-nav-ico">👤</span><span class="dsk-nav-lbl">Perfil</span></div>
     <div class="dsk-nav-sep"></div>
     <div class="dsk-nav-item" onclick="Tutorial.restart()"><span class="dsk-nav-ico">🎓</span><span class="dsk-nav-lbl">Tutorial</span></div>
+    <div class="dsk-nav-item" onclick="SettingsModal.open()"><span class="dsk-nav-ico">⚙️</span><span class="dsk-nav-lbl">Configuración</span></div>
 
   </div><!-- /desktop-sidebar -->
 
