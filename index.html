@@ -1558,17 +1558,31 @@ const SupaStore = (() => {
     var res = await _sb.from('profiles').select('*').eq('id', user.id).single();
     if (res.error || !res.data) return null;
     var data = res.data;
-    // El servidor es fuente de verdad — sobreescribe el Store local
-    // Esto impide que modificaciones en localStorage tengan efecto real
     var S = Store.get();
-    S.xp         = data.xp;
-    S.gcoins     = data.g_coins;
-    S.energy     = data.energy;
-    S.streak     = data.streak;
-    S.vault.fuel = data.vault_fuel;
+
+    // FIX: Protección contra sobrescritura con datos viejos.
+    // Solo aplicamos datos del servidor si son mayores (XP/G-Coins más altos),
+    // o si no hay datos locales válidos (primera carga / perfil nuevo).
+    // Esto evita que un loadProfile lento pise acciones que el usuario ya realizó.
+    var localXP    = S.xp     || 0;
+    var serverXP   = data.xp  || 0;
+    var localGC    = S.gcoins || 0;
+    var serverGC   = data.g_coins || 0;
+
+    // Regla: tomar el mayor valor para XP y G-Coins (protege contra regresión)
+    S.xp         = Math.max(localXP,  serverXP);
+    S.gcoins     = Math.max(localGC,  serverGC);
+    // Energy, streak y fuel: servidor gana (no se pueden incrementar sin una acción real)
+    S.energy     = data.energy     != null ? data.energy     : S.energy;
+    S.streak     = data.streak     != null ? data.streak     : S.streak;
+    S.vault.fuel = data.vault_fuel != null ? data.vault_fuel : S.vault.fuel;
     S.rescue     = { used: data.rescue_used || 0, lastTs: data.rescue_last_ts ? new Date(data.rescue_last_ts).getTime() : 0 };
+
     Store.save();
-    // Refrescar UI con datos del servidor
+    // Si el servidor tenía XP mayor, sincronizar de vuelta para que quede consistente
+    if (serverXP > localXP || serverGC > localGC) {
+      await syncProfile();
+    }
     HeaderModule.refresh();
     VaultModule.refresh();
     Store.checkRescue();
@@ -1593,10 +1607,15 @@ const SupaStore = (() => {
     if (res.error) console.warn('[SupaStore] syncAction error:', res.error.message);
   }
 
+  // FIX: debounce para evitar múltiples syncs simultáneos (race condition)
+  var _syncTimer = null;
   async function syncProfile() {
-    // Push estado local → Supabase (solo si logueado)
     const user = Auth.getUser();
     if (!user) return;
+    // Debounce: esperar 800ms antes de enviar, cancelar si llega otro sync antes
+    clearTimeout(_syncTimer);
+    await new Promise(function(resolve) { _syncTimer = setTimeout(resolve, 800); });
+
     const S = Store.get();
     const { error } = await _sb.from('profiles').update({
       xp:              S.xp,
@@ -1606,6 +1625,7 @@ const SupaStore = (() => {
       vault_fuel:      S.vault.fuel,
       rescue_used:     S.rescue?.used || 0,
       rescue_last_ts:  S.rescue?.lastTs ? new Date(S.rescue.lastTs).toISOString() : null,
+      updated_at:      new Date().toISOString(), // FIX: timestamp para detectar conflictos
     }).eq('id', user.id);
     if (error) console.warn('[SupaStore] syncProfile error:', error.message);
   }
@@ -3189,7 +3209,8 @@ const Store = (() => {
     HeaderModule.refresh();
     ProfileModule.refresh();
     LootModule.refresh();
-    setTimeout(function() { if (typeof SupaStore !== 'undefined') SupaStore.syncProfile(); }, 1500);
+    // FIX: sync inmediato (el debounce en syncProfile maneja la concurrencia)
+    if (typeof SupaStore !== 'undefined') SupaStore.syncProfile();
   }
 
   function activateXPBoost(minutes) {
@@ -3205,16 +3226,18 @@ const Store = (() => {
     if (existing) existing.remove();
     var banner = document.createElement('div');
     banner.id = 'xp-boost-banner';
-    banner.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:150;' +
+    // FIX: no usar position:absolute que tapa el header; insertar dentro del header como flex child
+    banner.style.cssText = 'display:flex;align-items:center;justify-content:space-between;' +
       'background:linear-gradient(90deg,rgba(212,175,55,.95),rgba(240,208,96,.95));' +
-      'padding:8px 16px;display:flex;align-items:center;justify-content:space-between;' +
-      'font-family:Barlow Condensed,sans-serif;box-shadow:0 4px 16px rgba(212,175,55,.3);';
+      'padding:5px 14px;flex-shrink:0;' +
+      'font-family:Barlow Condensed,sans-serif;box-shadow:0 2px 12px rgba(212,175,55,.3);';
     var endsAt = S.xpBoost.endsAt;
     banner.innerHTML =
-      '<span style="font-size:15px;font-weight:800;color:#000;letter-spacing:.5px;">⚡ DOBLE XP ACTIVO</span>' +
-      '<span id="xp-boost-timer" style="font-size:13px;font-weight:700;color:#000;"></span>';
-    var app = document.getElementById('app');
-    if (app) app.appendChild(banner);
+      '<span style="font-size:13px;font-weight:800;color:#000;letter-spacing:.5px;">⚡ DOBLE XP ACTIVO</span>' +
+      '<span id="xp-boost-timer" style="font-size:12px;font-weight:700;color:#000;"></span>';
+    // FIX: insertar al final del header (debajo del energy bar), no flotando sobre el perfil
+    var header = document.getElementById('app-header');
+    if (header) header.appendChild(banner);
     // Countdown
     var iv = setInterval(function() {
       var rem = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
@@ -3244,7 +3267,8 @@ const Store = (() => {
     save();
     HeaderModule.refresh();
     BetsModule.refreshWallet();
-    // Mostrar botón de rescate si balance ≤ 200
+    // FIX: sincronizar G-Coins con Supabase (antes no se hacía)
+    if (typeof SupaStore !== 'undefined') SupaStore.syncProfile();
     _checkRescueTrigger();
   }
 
