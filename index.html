@@ -1552,59 +1552,63 @@ const SupaStore = (() => {
 
 // ── AUTH UI ──────────────────────────────────────────────────────
 const AuthUI = (() => {
-  function showAuthModal(mode='signin') {
-    const existing = document.getElementById('auth-modal');
+  function showAuthModal(mode) {
+    if (!mode) mode = 'signin';
+    var existing = document.getElementById('auth-modal');
     if (existing) existing.remove();
 
-    const modal = document.createElement('div');
+    var isSignup = mode === 'signup';
+    var modal = document.createElement('div');
     modal.id = 'auth-modal';
     modal.style.cssText = 'position:absolute;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(4,4,12,.92);backdrop-filter:blur(8px);';
-    modal.innerHTML = `
-      <div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:28px 22px;max-width:320px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);">
-        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">
-          ${mode === 'signup' ? 'CREAR CUENTA' : 'INICIAR SESIÓN'}
-        </div>
-        <div style="font-size:11px;color:var(--t3);margin-bottom:20px;">
-          ${mode === 'signup' ? 'Tu progreso se guarda en el servidor' : 'Continuá donde lo dejaste'}
-        </div>
-        ${mode === 'signup' ? `
-        <input id="auth-username" type="text" placeholder="Nombre de usuario"
-          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">
-        ` : ''}
-        <input id="auth-email" type="email" placeholder="Email"
-          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">
-        <input id="auth-password" type="password" placeholder="Contraseña"
-          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:16px;outline:none;box-sizing:border-box;">
-        <div id="auth-error" style="color:var(--red);font-size:11px;margin-bottom:10px;display:none;"></div>
-        <button id="auth-submit"
-          style="width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.5px;cursor:pointer;margin-bottom:10px;">
-          ${mode === 'signup' ? 'CREAR CUENTA' : 'ENTRAR'}
-        </button>
-        <button onclick="AuthUI.showAuthModal('${mode === 'signup' ? 'signin' : 'signup'}')"
-          style="width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;cursor:pointer;">
-          ${mode === 'signup' ? '¿Ya tenés cuenta? Iniciá sesión' : '¿Primera vez? Creá una cuenta'}
-        </button>
-        <button onclick="AuthUI.skipAuth()"
-          style="width:100%;padding:8px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-top:6px;">
-          Continuar sin cuenta (modo demo)
-        </button>
-      </div>`;
+
+    var usernameField = isSignup
+      ? '<input id="auth-username" type="text" placeholder="Nombre de usuario" style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">'
+      : '';
+
+    var switchMode = isSignup ? 'signin' : 'signup';
+    var switchTxt  = isSignup ? 'Ya tenés cuenta? Iniciá sesión' : 'Primera vez? Creá una cuenta';
+    var submitTxt  = isSignup ? 'CREAR CUENTA' : 'ENTRAR';
+    var titleTxt   = isSignup ? 'CREAR CUENTA' : 'INICIAR SESIÓN';
+    var subTxt     = isSignup ? 'Tu progreso se guarda en el servidor' : 'Continuá donde lo dejaste';
+
+    modal.innerHTML =
+      '<div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:28px 22px;max-width:320px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);">' +
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">' + titleTxt + '</div>' +
+        '<div style="font-size:11px;color:var(--t3);margin-bottom:20px;">' + subTxt + '</div>' +
+        usernameField +
+        '<input id="auth-email" type="email" placeholder="Email" style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">' +
+        '<input id="auth-password" type="password" placeholder="Contraseña" style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:15px;margin-bottom:16px;outline:none;box-sizing:border-box;">' +
+        '<div id="auth-error" style="color:var(--red);font-size:11px;margin-bottom:10px;display:none;"></div>' +
+        '<button id="auth-submit" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;">' + submitTxt + '</button>' +
+        '<button id="auth-switch" style="width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;">' + switchTxt + '</button>' +
+        '<button id="auth-skip" style="width:100%;padding:8px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-top:6px;">Continuar sin cuenta (modo demo)</button>' +
+      '</div>';
 
     document.getElementById('app').appendChild(modal);
 
-    document.getElementById('auth-submit').addEventListener('click', async () => {
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      const errEl = document.getElementById('auth-error');
-      const btn = document.getElementById('auth-submit');
+    document.getElementById('auth-switch').addEventListener('click', function() {
+      showAuthModal(switchMode);
+    });
+
+    document.getElementById('auth-skip').addEventListener('click', function() {
+      skipAuth();
+    });
+
+    document.getElementById('auth-submit').addEventListener('click', async function() {
+      var email    = document.getElementById('auth-email').value.trim();
+      var password = document.getElementById('auth-password').value;
+      var errEl    = document.getElementById('auth-error');
+      var btn      = document.getElementById('auth-submit');
       btn.textContent = 'Cargando…'; btn.disabled = true;
       errEl.style.display = 'none';
       try {
-        if (mode === 'signup') {
-          const username = document.getElementById('auth-username').value.trim() || email.split('@')[0];
+        if (isSignup) {
+          var usernameEl = document.getElementById('auth-username');
+          var username = (usernameEl ? usernameEl.value.trim() : '') || email.split('@')[0];
           await Auth.signUp(email, password, username);
           errEl.style.display = 'block'; errEl.style.color = 'var(--neon)';
-          errEl.textContent = '✓ Revisá tu email para confirmar la cuenta';
+          errEl.textContent = 'Revisa tu email para confirmar la cuenta';
         } else {
           await Auth.signIn(email, password);
           modal.remove();
@@ -1613,19 +1617,19 @@ const AuthUI = (() => {
       } catch(e) {
         errEl.style.display = 'block';
         errEl.textContent = e.message || 'Error al autenticar';
-        btn.textContent = mode === 'signup' ? 'CREAR CUENTA' : 'ENTRAR';
+        btn.textContent = submitTxt;
         btn.disabled = false;
       }
     });
   }
 
   function skipAuth() {
-    const modal = document.getElementById('auth-modal');
+    var modal = document.getElementById('auth-modal');
     if (modal) modal.remove();
     EntryModule.enter();
   }
 
-  return { showAuthModal, skipAuth };
+  return { showAuthModal: showAuthModal, skipAuth: skipAuth };
 })();
 </script>
 </head>
