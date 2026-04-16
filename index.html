@@ -1798,7 +1798,23 @@ const AuthUI = (() => {
         </div>
       </div>
 
+      <!-- Estado A: sin sesión -->
       <button class="entry-enter-btn" id="entry-enter-btn" disabled onclick="AuthUI.showAuthModal('signin')">Conectando…</button>
+
+      <!-- Estado B: con sesión activa (oculto por defecto) -->
+      <div id="entry-session-card" style="display:none;width:100%;">
+        <div style="background:rgba(57,255,20,.06);border:1px solid rgba(57,255,20,.2);border-radius:14px;padding:12px 16px;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:2px;">Sesión activa</div>
+            <div style="font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--neon);" id="entry-session-username">—</div>
+          </div>
+          <span style="font-size:20px;">✓</span>
+        </div>
+        <button class="entry-enter-btn" id="entry-continue-btn" onclick="EntryModule.enter()" style="margin-bottom:10px;">Continuar →</button>
+        <button onclick="EntryModule.switchAccount()" style="width:100%;padding:12px;background:none;border:1px solid rgba(255,255,255,.1);border-radius:12px;color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;cursor:pointer;">
+          Cambiar de cuenta / Cerrar sesión
+        </button>
+      </div>
     </div>
 
     <!-- VIEW: HOME -->
@@ -4655,9 +4671,14 @@ const EntryModule = (() => {
       if(hdrOp)  hdrOp.textContent = _op.name.split(' ')[0];
 
       if (Auth.isLoggedIn()) {
-        // Sesion activa — entrar directo sin pedir login
-        if(btn) { btn.disabled = false; btn.textContent = 'Continuar como ' + (Auth.getUser().email.split('@')[0]) + ' →'; }
-        setTimeout(function() { enter(); }, 600);
+        // Sesion activa — mostrar card con opciones, NO entrar automático
+        var user = Auth.getUser();
+        var username = user.email.split('@')[0];
+        var sessionCard = document.getElementById('entry-session-card');
+        var sessionUsername = document.getElementById('entry-session-username');
+        if(btn) btn.style.display = 'none'; // ocultar botón de login
+        if(sessionCard) sessionCard.style.display = 'block';
+        if(sessionUsername) sessionUsername.textContent = username;
       } else {
         if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
       }
@@ -4677,7 +4698,23 @@ const EntryModule = (() => {
     setTimeout(() => Tutorial.start(), 400);
   }
 
-  return { init, enter };
+  function switchAccount() {
+    Auth.signOut().then(function() {
+      // Limpiar UI y mostrar botón de login
+      var sessionCard = document.getElementById('entry-session-card');
+      var btn = document.getElementById('entry-enter-btn');
+      if(sessionCard) sessionCard.style.display = 'none';
+      if(btn) { btn.style.display = 'block'; btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
+      // Limpiar Store local
+      var S = Store.get();
+      S.xp = 0; S.gcoins = 5000; S.energy = 200;
+      S.vault = { fuel: 0, lossCount: 0, shieldActive: false };
+      S.rescue = { used: 0, lastTs: 0 };
+      Store.save();
+    });
+  }
+
+  return { init: init, enter: enter, switchAccount: switchAccount };
 })();
 
 /* ── TUTORIAL MODULE (interactive, first-time) ───────────────── */
