@@ -1628,23 +1628,45 @@ const SupaStore = (() => {
       updated_at:      new Date().toISOString(), // FIX: timestamp para detectar conflictos
     }).eq('id', user.id);
     if (error) console.warn('[SupaStore] syncProfile error:', error.message);
+    // FIX: refrescar ranking automáticamente si el usuario está en esa tab
+    if (!error && typeof Router !== 'undefined' && Router.current() === 'ranking') {
+      RankingModule.refresh();
+    }
   }
 
   async function getLeaderboard() {
-    const { data, error } = await _sb.from('v_leaderboard').select('*').limit(20);
+    // FIX: leer directo de profiles con ORDER BY xp para evitar el ORDER BY fijo de la view
+    const { data, error } = await _sb
+      .from('profiles')
+      .select('username, xp, g_coins, energy, streak')
+      .order('xp', { ascending: false })
+      .limit(20);
     if (error) return null;
-    return data;
+    // Agregar nivel calculado (igual que la view)
+    return (data || []).map(function(r) {
+      var xp = r.xp || 0;
+      var level = xp < 120 ? 1 : xp < 280 ? 2 : xp < 500 ? 3 : xp < 800 ? 4 :
+                  xp < 1200 ? 5 : xp < 1700 ? 6 : xp < 2300 ? 7 : xp < 3000 ? 8 :
+                  xp < 3800 ? 9 : 10;
+      return Object.assign({}, r, { level: level });
+    });
   }
 
   async function getLeaderboardGCoins() {
-    // Ranking separado por G-Coins
+    // FIX: leer directo de profiles ordenado por g_coins
     const { data, error } = await _sb
-      .from('v_leaderboard')
-      .select('*')
+      .from('profiles')
+      .select('username, xp, g_coins, energy, streak')
       .order('g_coins', { ascending: false })
       .limit(20);
     if (error) return null;
-    return data;
+    return (data || []).map(function(r) {
+      var xp = r.xp || 0;
+      var level = xp < 120 ? 1 : xp < 280 ? 2 : xp < 500 ? 3 : xp < 800 ? 4 :
+                  xp < 1200 ? 5 : xp < 1700 ? 6 : xp < 2300 ? 7 : xp < 3000 ? 8 :
+                  xp < 3800 ? 9 : 10;
+      return Object.assign({}, r, { level: level });
+    });
   }
 
   async function subscribeLeaderboard(callback) {
