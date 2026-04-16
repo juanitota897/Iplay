@@ -3577,8 +3577,10 @@ const MicroBet = (() => {
     _applyActiveUI();
     _runTick();
     const cfg = Store.get().mbConfig || {};
-    if (Router.current() !== 'live' && Router.current() !== 'casino' && cfg.showPopup !== false) _showPopup();
-    if (Router.current() !== 'live' && Router.current() !== 'casino' && cfg.autoFocus  !== false) _showFocus();
+    if (Router.current() !== 'live' && Router.current() !== 'casino') {
+      if (cfg.showPopup !== false) _showPopup();
+      if (cfg.autoFocus !== false) _showFocus();
+    }
   }
 
   function _runTick() {
@@ -3752,6 +3754,8 @@ const MicroBet = (() => {
     if (!ev || ev.focusShown || ev.dismissed || ev.pick) return;
     if (Router.current() === 'live' || Router.current() === 'casino') return;
     if (Onboarding.isActive() || Tutorial.isActive()) return;
+    const cfg = Store.get().mbConfig || {};
+    if (cfg.autoFocus === false) return; // usuario lo desactivó
     ev.focusShown = true;
     document.getElementById('focus-overlay').classList.add('show');
   }
@@ -3765,6 +3769,8 @@ const MicroBet = (() => {
   function _showPopup() {
     if (Router.current() === 'live' || Router.current() === 'casino' || _isFocusVisible()) return;
     if (Onboarding.isActive() || Tutorial.isActive()) return;
+    const cfg = Store.get().mbConfig || {};
+    if (cfg.showPopup === false) return; // usuario lo desactivó
     document.getElementById('micro-popup').classList.add('show');
   }
   function _hidePopup() {
@@ -3777,8 +3783,14 @@ const MicroBet = (() => {
     }
     if (Onboarding.isActive() || Tutorial.isActive()) return;
     if (!ev || ev.phase !== 'active') return;
-    if (!_isFocusVisible() && !ev.focusShown && !ev.dismissed && !ev.pick) _showFocus();
-    if (!_isFocusVisible() && !ev.pick) _showPopup();
+    const cfg = Store.get().mbConfig || {};
+    // Respetar preferencias del usuario — si están desactivadas, no mostrar
+    if (cfg.autoFocus !== false) {
+      if (!_isFocusVisible() && !ev.focusShown && !ev.dismissed && !ev.pick) _showFocus();
+    }
+    if (cfg.showPopup !== false) {
+      if (!_isFocusVisible() && !ev.pick) _showPopup();
+    }
   }
 
   function _updateLiveStats() {
@@ -3802,7 +3814,10 @@ const MicroBet = (() => {
     if(body) body.addEventListener('click', () => {
       _hidePopup();
       Router.go('live');
-      if (ev && ev.phase==='active' && !ev.focusShown && !ev.pick) setTimeout(_showFocus, 80);
+      const cfg2 = Store.get().mbConfig || {};
+      if (cfg2.autoFocus !== false) {
+        if (ev && ev.phase==='active' && !ev.focusShown && !ev.pick) setTimeout(_showFocus, 80);
+      }
     });
     const closeBtn = document.querySelector('.mp-close');
     if(closeBtn) closeBtn.addEventListener('click', e => {
