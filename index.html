@@ -4576,9 +4576,19 @@ const BetsModule = (() => {
     { id:'m12',league:'arg',        leagueName:'🇦🇷 Liga Argentina',   home:'Racing',       away:'Independ.',   time:'19:00', live:false, homeG:0, awayG:0, odds:{h:2.10, d:3.20, a:3.60} },
   ];
 
+  // ── CONSTANTES COMBINADAS ──────────────────────────────────────
+  const MAX_PICKS    = 6;     // máximo de selecciones
+  const MIN_ODD      = 1.25;  // cuota mínima por selección
+  const XP_MULTI     = { 1:1, 2:1.5, 3:2, 4:3, 5:5, 6:5 }; // multiplicador XP por picks
+  const WIN_RATE_SINGLE = 0.48;  // 48% win rate apuesta simple
+  const WIN_RATE_PARLAY = 0.42;  // 42% win rate combinada (por pata)
+
   let _currentLeague = 'all';
-  let _slip = null; // { matchId, pick:'h'|'d'|'a', odd, matchName }
+  let _picks = [];   // array de picks: [{matchId, pick, odd, label, matchName, live}]
   let _stake = 100;
+
+  // Compatibilidad con código que usa _slip
+  Object.defineProperty(window, '_slip', { get: () => _picks[0] || null });
 
   function refresh() {
     refreshWallet();
@@ -4655,28 +4665,63 @@ const BetsModule = (() => {
     }).join('');
   }
 
+  // ── pickOdd: soporte multi-pick (combinadas) ──────────────────
   function pickOdd(matchId, pick, odd, label) {
     const match = MATCHES.find(m => m.id === matchId);
     if (!match) return;
-    // Toggle off if same pick
-    if (_slip && _slip.matchId === matchId && _slip.pick === pick) {
-      _slip = null;
+
+    // Cuota mínima — validar antes de agregar
+    if (odd < MIN_ODD) {
+      Store.showVaultToast('Cuota mínima: ' + MIN_ODD.toFixed(2) + 'x por selección');
+      return;
+    }
+
+    const existingIdx = _picks.findIndex(p => p.matchId === matchId);
+    if (existingIdx >= 0) {
+      // Si el mismo pick → toggle off; si diferente pick → reemplazar
+      if (_picks[existingIdx].pick === pick) {
+        _picks.splice(existingIdx, 1);
+      } else {
+        _picks[existingIdx] = { matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live };
+      }
     } else {
-      _slip = { matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away };
+      if (_picks.length >= MAX_PICKS) {
+        Store.showVaultToast('Máximo ' + MAX_PICKS + ' selecciones por cupón');
+        return;
+      }
+      _picks.push({ matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live });
     }
     _renderMatches();
     _renderSlip();
   }
 
+  // ── Cuota total combinada ──────────────────────────────────────
+  function _totalOdd() {
+    return _picks.reduce(function(acc, p) { return acc * p.odd; }, 1);
+  }
+
+  // ── XP escalado por picks y stake ─────────────────────────────
+  function _calcXP(stake, numPicks) {
+    var base;
+    if (stake >= 1000) base = 120;
+    else if (stake >= 500) base = 90;
+    else if (stake >= 250) base = 60;
+    else base = 40;
+    var multi = XP_MULTI[Math.min(numPicks, 6)] || 1;
+    return Math.round(base * multi);
+  }
+
+  // ── Render slip con soporte de combinadas ──────────────────────
   function _renderSlip() {
-    const body    = document.getElementById('bets-slip-body');
-    const empty   = document.getElementById('bets-slip-empty');
-    const controls= document.getElementById('bets-slip-controls');
+    const body     = document.getElementById('bets-slip-body');
+    const empty    = document.getElementById('bets-slip-empty');
+    const controls = document.getElementById('bets-slip-controls');
     if (!body) return;
 
-    if (!_slip) {
+    if (_picks.length === 0) {
       if(empty)    empty.style.display    = '';
       if(controls) controls.style.display = 'none';
+      body.innerHTML = '';
       return;
     }
 
@@ -4686,99 +4731,160 @@ const BetsModule = (() => {
     const S = Store.get();
     const gc = S.gcoins || 0;
     const effectiveStake = Math.max(50, Math.min(_stake, gc, 5000));
-    const potWin = Math.round(effectiveStake * _slip.odd);
-    const xpGain = _calcXP(effectiveStake);
+    const totalOdd = _totalOdd();
+    const potWin   = Math.round(effectiveStake * totalOdd);
+    const n        = _picks.length;
+    const xpGain   = _calcXP(effectiveStake, n);
+    const isParlay = n > 1;
 
-    body.innerHTML = `
-      <div class="bets-slip-item">
-        <div>
-          <div class="bets-slip-match">${_slip.matchName}</div>
-          <div class="bets-slip-pick">✓ ${_slip.label}</div>
-        </div>
-        <div class="bets-slip-odd">${_slip.odd.toFixed(2)}x</div>
-      </div>
-      <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11px;color:var(--t3);">
-        <span>Stake: <strong style="color:var(--gold)">${effectiveStake.toLocaleString('es-AR')} G</strong></span>
-        <span>Ganás: <strong style="color:var(--neon)">${potWin.toLocaleString('es-AR')} G</strong></span>
-        <span>XP: <strong style="color:var(--gold)">+${xpGain}</strong></span>
-      </div>`;
+    var pickRows = _picks.map(function(p) {
+      return '<div class="bets-slip-item">' +
+        '<div style="flex:1;min-width:0;">' +
+          '<div class="bets-slip-match">' + p.matchName + '</div>' +
+          '<div class="bets-slip-pick">✓ ' + p.label + '</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;gap:6px;">' +
+          '<div class="bets-slip-odd">' + p.odd.toFixed(2) + 'x</div>' +
+          '<button data-remove="' + p.matchId + '" style="background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;padding:2px 4px;">✕</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    var parlayBadge = isParlay
+      ? '<div style="display:flex;align-items:center;gap:6px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);margin-bottom:4px;">' +
+          '<span style="font-family:Barlow Condensed,sans-serif;font-size:11px;font-weight:800;color:var(--gold);letter-spacing:.5px;">COMBINADA ' + n + ' PICKS</span>' +
+          '<span style="font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:800;color:var(--gold);">× ' + totalOdd.toFixed(2) + '</span>' +
+          '<span style="font-size:9px;color:var(--neon);margin-left:auto;">XP x' + (XP_MULTI[Math.min(n,6)]||1) + '</span>' +
+        '</div>'
+      : '';
+
+    // Event delegation para botones de eliminar pick
+    if (!body._delegated) {
+      body._delegated = true;
+      body.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-remove]');
+        if (btn) removePick(btn.dataset.remove);
+      });
+    }
+    body.innerHTML = pickRows + parlayBadge +
+      '<div style="display:flex;justify-content:space-between;padding:6px 0;font-size:11px;color:var(--t3);">' +
+        '<span>Stake: <strong style="color:var(--gold)">' + effectiveStake.toLocaleString('es-AR') + ' G</strong></span>' +
+        '<span>Ganás: <strong style="color:var(--neon)">' + potWin.toLocaleString('es-AR') + ' G</strong></span>' +
+        '<span>XP: <strong style="color:var(--gold)">+' + xpGain + '</strong></span>' +
+      '</div>' +
+      (isParlay ? '<div style="font-size:9px;color:var(--t3);padding-bottom:4px;">⚠ Combinada: todas deben acertar</div>' : '');
   }
 
-  function _calcXP(stake) {
-    // XP por predicción ganada (economía v2)
-    // stake 100-249 → 40 XP / 250-499 → 60 XP / 500-999 → 90 XP / 1000+ → 120 XP
-    if (stake >= 1000) return 120;
-    if (stake >= 500)  return 90;
-    if (stake >= 250)  return 60;
-    return 40;
+  function removePick(matchId) {
+    _picks = _picks.filter(function(p){ return p.matchId !== matchId; });
+    _renderMatches();
+    _renderSlip();
   }
 
+  // ── Confirmar apuesta ──────────────────────────────────────────
   function confirm() {
-    if (!_slip) return;
+    if (_picks.length === 0) return;
     const S = Store.get();
     const gc = S.gcoins || 0;
     const effectiveStake = Math.max(50, Math.min(_stake, gc, 5000));
     if (gc < 50) { Store.showVaultToast('Sin G-Coins suficientes'); return; }
 
-    // Deduct stake immediately
+    const n         = _picks.length;
+    const totalOdd  = _totalOdd();
+    const isParlay  = n > 1;
+    const xpGain    = _calcXP(effectiveStake, n);
+    const label     = isParlay ? 'Combinada ' + n + ' picks' : _picks[0].label;
+    const matchName = isParlay ? n + ' partidos' : _picks[0].matchName;
+
     Store.addGCoins(-effectiveStake);
 
-    // Simulate result after 3-8 seconds (partido "en vivo") or instant
-    const match = MATCHES.find(m => m.id === _slip.matchId);
     const pendingEntry = {
-      id: Date.now(),
-      matchName: _slip.matchName,
-      label: _slip.label,
-      odd: _slip.odd,
-      stake: effectiveStake,
-      status: 'pending',
-      xpGain: _calcXP(effectiveStake),
+      id:        Date.now(),
+      matchName: matchName,
+      label:     label,
+      odd:       totalOdd,
+      stake:     effectiveStake,
+      status:    'pending',
+      xpGain:    xpGain,
+      isParlay:  isParlay,
+      picks:     _picks.slice(), // guardar picks para near-miss
+      numPicks:  n,
     };
 
-    // Add to history as pending
     if (!S.bets.history) S.bets.history = [];
     S.bets.history.unshift(pendingEntry);
     if (S.bets.history.length > 10) S.bets.history = S.bets.history.slice(0, 10);
     Store.save();
 
-    _slip = null;
+    _picks = [];
     _renderMatches();
     _renderSlip();
     _renderHistory();
-    Store.showXPToast('⏳ Apuesta registrada');
+    Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada');
 
-    // Resolve after delay
     const delay = 4000 + Math.random() * 6000;
-    setTimeout(() => _resolve(pendingEntry.id, effectiveStake, pendingEntry.xpGain), delay);
+    setTimeout(function(){ _resolve(pendingEntry.id, effectiveStake, xpGain, n); }, delay);
   }
 
-  function _resolve(betId, stake, xpGain) {
+  // ── Resolver apuesta (con near-miss para combinadas) ───────────
+  function _resolve(betId, stake, xpGain, numPicks) {
     const S = Store.get();
     if (!S.bets.history) return;
-    const bet = S.bets.history.find(b => b.id === betId);
+    const bet = S.bets.history.find(function(b){ return b.id === betId; });
     if (!bet || bet.status !== 'pending') return;
 
-    const win = Math.random() < 0.48; // ~48% win rate with realistic odds
-    bet.status = win ? 'win' : 'loss';
+    var win = false;
+    var nearMiss = false;
+
+    if (bet.isParlay && numPicks >= 2) {
+      // Resolver pata por pata
+      var hitCount = 0;
+      for (var i = 0; i < numPicks; i++) {
+        if (Math.random() < WIN_RATE_PARLAY) hitCount++;
+      }
+      win = hitCount === numPicks;
+      nearMiss = !win && hitCount === numPicks - 1; // falló solo 1
+    } else {
+      win = Math.random() < WIN_RATE_SINGLE;
+    }
+
+    bet.status   = win ? 'win' : (nearMiss ? 'nearmiss' : 'loss');
+    bet.nearMiss = nearMiss;
+
+    S.energy = Math.max(0, (S.energy || 200) - 8);
 
     if (win) {
       const winAmount = Math.round(stake * bet.odd);
       bet.amount = winAmount;
-      S.energy = Math.max(0, (S.energy || 200) - 8); // energy: 8 por predicción
       Store.save();
       Store.addGCoins(winAmount);
       Store.addXP(xpGain);
       HeaderModule.refresh();
-      Store.showGCoinToast('🏆 +' + winAmount.toLocaleString('es-AR') + ' G-Coins');
+      const msg = bet.isParlay
+        ? '🏆 ¡COMBINADA! +' + winAmount.toLocaleString('es-AR') + ' G-Coins'
+        : '🏆 +' + winAmount.toLocaleString('es-AR') + ' G-Coins';
+      Store.showGCoinToast(msg);
+    } else if (nearMiss) {
+      // Near-miss: falló 1 pata de N — XP consolación + energía devuelta
+      bet.amount = -stake;
+      const consolXP  = Math.round(xpGain * 0.25);   // 25% del XP
+      const consolEn  = 4;                             // devolver la mitad de energía
+      S.vault.fuel   += 20;
+      S.vault.lossCount++;
+      S.energy        = Math.min(200, S.energy + consolEn);
+      Store.addXP(consolXP);
+      Store.save();
+      VaultModule.refresh();
+      HeaderModule.refresh();
+      // Banner near-miss llamativo
+      Store.showGCoinToast('💔 ¡Casi! Fallaste 1 pata — +' + consolXP + ' XP consolación');
     } else {
       bet.amount = -stake;
-      // +5 XP por participar + +20 fuel fijo por predicción perdida (economía v2)
-      S.vault.fuel += 20;
+      S.vault.fuel += bet.isParlay ? 25 : 20;
       S.vault.lossCount++;
-      S.energy = Math.max(0, (S.energy || 200) - 8); // energy: 8 por predicción
-      Store.addXP(5);
+      Store.addXP(bet.isParlay ? 8 : 5);
       Store.save();
-      Store.showVaultToast('+20 pts combustible 🔥');
+      Store.showVaultToast('+' + (bet.isParlay ? 25 : 20) + ' pts combustible 🔥');
       VaultModule.refresh();
       HeaderModule.refresh();
     }
@@ -4788,43 +4894,104 @@ const BetsModule = (() => {
     HeaderModule.refresh();
   }
 
+  // ── Render matches con multi-pick highlight ────────────────────
+  function _renderMatches() {
+    const list = document.getElementById('bets-matches-list');
+    if (!list) return;
+    const filtered = _currentLeague === 'all' ? MATCHES : MATCHES.filter(function(m){ return m.league === _currentLeague; });
+    if (!list._delegated) {
+      list._delegated = true;
+      list.addEventListener('click', function(e) {
+        var btn = e.target.closest('[data-mid][data-side]');
+        if (!btn) return;
+        if (btn.classList.contains('disabled')) return;
+        pickOdd(btn.dataset.mid, btn.dataset.side, parseFloat(btn.dataset.odd), btn.dataset.label);
+      });
+    }
+    list.innerHTML = filtered.map(function(m) {
+      const isLive = m.live;
+      const mPick  = _picks.find(function(p){ return p.matchId === m.id; });
+      const liveHtml = isLive
+        ? '<span class="bmc-live-badge"><span class="live-dot red"></span>EN VIVO &middot; ' + m.homeG + '&ndash;' + m.awayG + '</span>'
+        : '<span class="bmc-time">' + m.time + '</span>';
+      const selBorder = mPick ? 'border-color:rgba(57,255,20,.35);' : '';
+      return '<div class="bets-match-card" style="margin-bottom:8px;' + selBorder + '">' +
+        '<div class="bmc-header">' +
+          '<span class="bmc-league">' + m.leagueName + '</span>' + liveHtml +
+        '</div>' +
+        '<div class="bmc-teams">' +
+          '<div class="bmc-team"><div class="bmc-team-name">' + m.home + '</div></div>' +
+          '<div class="bmc-score">' +
+            '<div class="bmc-score-val">' + (isLive ? m.homeG + '&ndash;' + m.awayG : 'VS') + '</div>' +
+            '<div class="bmc-score-lbl">' + (isLive ? 'EN VIVO' : m.time) + '</div>' +
+          '</div>' +
+          '<div class="bmc-team"><div class="bmc-team-name">' + m.away + '</div></div>' +
+        '</div>' +
+        '<div class="bmc-odds-row">' +
+          _oddBtn(m, 'h', m.odds.h, '1 &middot; ' + m.home.split(' ')[0], m.home + ' gana', mPick) +
+          _oddBtn(m, 'd', m.odds.d, 'X &middot; Empate', 'Empate', mPick) +
+          _oddBtn(m, 'a', m.odds.a, '2 &middot; ' + m.away.split(' ')[0], m.away + ' gana', mPick) +
+        '</div>' +
+        (m.odds.h < MIN_ODD || m.odds.d < MIN_ODD || m.odds.a < MIN_ODD
+          ? '<div style="padding:3px 8px;font-size:9px;color:var(--t3);">* Cuota mín. ' + MIN_ODD.toFixed(2) + 'x para combinadas</div>'
+          : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function _oddBtn(m, side, odd, lbl, label, mPick) {
+    const sel     = mPick && mPick.pick === side;
+    const blocked = odd < MIN_ODD;
+    const cls     = 'bmc-odd-btn' + (sel ? ' selected' : '') + (blocked ? ' disabled' : '');
+    const sty     = blocked ? 'opacity:.45;cursor:not-allowed;' : '';
+    const safeLabel = label.replace(/"/g, '');
+    return '<button class="' + cls + '" style="' + sty + '"' +
+      ' data-mid="' + m.id + '" data-side="' + side + '" data-odd="' + odd + '" data-label="' + safeLabel + '">' +
+      '<span class="bmc-odd-lbl">' + lbl + '</span>' +
+      '<span class="bmc-odd-val">' + odd.toFixed(2) + '</span>' +
+    '</button>';
+  }
+
+  // ── Historial con soporte combinadas y near-miss ───────────────
   function _renderHistory() {
     const list = document.getElementById('bets-history-list');
     if (!list) return;
     const S = Store.get();
     const history = (S.bets && S.bets.history) || [];
-
     if (!history.length) {
       list.innerHTML = '<div class="bets-history-empty">Todavía no apostaste. ¡Empezá ahora!</div>';
       return;
     }
-
-    list.innerHTML = history.map(b => {
-      const isPending = b.status === 'pending';
-      const isWin     = b.status === 'win';
-      const ico       = isPending ? '⏳' : isWin ? '✓' : '✗';
-      const cls       = isPending ? 'pending' : isWin ? 'win' : 'loss';
-      const amtTxt    = isPending
+    list.innerHTML = history.map(function(b) {
+      const isPending  = b.status === 'pending';
+      const isWin      = b.status === 'win';
+      const isNearMiss = b.status === 'nearmiss';
+      const ico = isPending ? '⏳' : isWin ? '✓' : isNearMiss ? '💔' : '✗';
+      const cls = isPending ? 'pending' : isWin ? 'win' : isNearMiss ? 'pending' : 'loss';
+      const amtTxt = isPending || isNearMiss
         ? b.stake.toLocaleString('es-AR') + ' G'
         : isWin
           ? '+' + b.amount.toLocaleString('es-AR') + ' G'
           : b.stake.toLocaleString('es-AR') + ' G';
-      return `
-        <div class="bets-hist-item">
-          <div class="bets-hist-result ${cls}">${ico}</div>
-          <div class="bets-hist-info">
-            <div class="bets-hist-match">${b.matchName}</div>
-            <div class="bets-hist-pick">${b.label} · ${b.odd.toFixed(2)}x</div>
-          </div>
-          <div class="bets-hist-right">
-            <div class="bets-hist-amount ${cls}">${amtTxt}</div>
-            <div class="bets-hist-xp">${isPending ? 'pendiente' : isWin ? '+'+b.xpGain+' XP' : '+'+Math.round(b.xpGain*.1)+' XP'}</div>
-          </div>
-        </div>`;
+      const xpTxt = isPending ? 'pendiente'
+        : isWin ? '+' + b.xpGain + ' XP'
+        : isNearMiss ? '+' + Math.round(b.xpGain*.25) + ' XP (consolación)'
+        : '+' + (b.isParlay ? 8 : 5) + ' XP';
+      return '<div class="bets-hist-item">' +
+        '<div class="bets-hist-result ' + cls + '">' + ico + '</div>' +
+        '<div class="bets-hist-info">' +
+          '<div class="bets-hist-match">' + b.matchName + '</div>' +
+          '<div class="bets-hist-pick">' + b.label + ' &middot; ' + b.odd.toFixed(2) + 'x' + (isNearMiss ? ' 💔 casi' : '') + '</div>' +
+        '</div>' +
+        '<div class="bets-hist-right">' +
+          '<div class="bets-hist-amount ' + cls + '">' + amtTxt + '</div>' +
+          '<div class="bets-hist-xp">' + xpTxt + '</div>' +
+        '</div>' +
+      '</div>';
     }).join('');
   }
 
-  return { refresh, refreshWallet, setLeague, setStake, pickOdd, confirm };
+  return { refresh, refreshWallet, setLeague, setStake, pickOdd, removePick, confirm };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
