@@ -2305,6 +2305,9 @@ const AuthUI = (() => {
           <div class="mission-prog-track"><div class="mission-prog-fill" id="mp-3" style="width:0%"></div></div>
           <button class="mission-btn special" id="mbtn-3" onclick="MissionsModule.complete(3,160)">🏆 Simular Champions</button>
         </div>
+        <!-- Misión de nivel — se renderiza dinámicamente -->
+        <div id="level-mission-container" style="display:none;"></div>
+
         <div class="mission-stats">
           <div class="mission-stats-title">📊 Análisis de racha</div>
           <div class="stat-grid stat-grid-3">
@@ -2913,7 +2916,13 @@ const Store = (() => {
       opened:   { 1: { common:false, rare:false, epic:false } },
       progress: { 1: { missions:0, wins:0, xp:0 } }
     },
-    missions: { completed: [], totalDone: 0 },
+    missions: {
+      completed: [],   // IDs de misiones diarias completadas hoy
+      totalDone: 0,    // total histórico
+      lastReset: 0,    // timestamp del último reset diario
+      levelMission: { completed: false, level: 0 }, // misión de nivel actual
+    },
+    xpBoost: { active: false, endsAt: 0 }, // doble XP por tiempo
     microbet: { rounds: 0, wins: 0, stake: 100 },
     ranking:  { duelScore: 0 },
     lossStreak: 0,
@@ -2990,14 +2999,69 @@ const Store = (() => {
   }
 
   function addXP(amount) {
-    S.xp += amount;
+    // Aplicar doble XP si el boost está activo
+    var multiplier = 1;
+    if (S.xpBoost && S.xpBoost.active && Date.now() < S.xpBoost.endsAt) {
+      multiplier = 2;
+    } else if (S.xpBoost && S.xpBoost.active) {
+      // Boost expirado — desactivar
+      S.xpBoost.active = false;
+      _hideXPBoostBanner();
+    }
+    var earned = amount * multiplier;
+    S.xp += earned;
     save();
-    showXPToast('+'+amount+' XP');
+    showXPToast('+' + earned + ' XP' + (multiplier > 1 ? ' ⚡x2' : ''));
     HeaderModule.refresh();
     ProfileModule.refresh();
     LootModule.refresh();
-    // Sync diferido para no bloquear UI
-    setTimeout(() => SupaStore && SupaStore.syncProfile(), 1500);
+    setTimeout(function() { if (typeof SupaStore !== 'undefined') SupaStore.syncProfile(); }, 1500);
+  }
+
+  function activateXPBoost(minutes) {
+    if (!S.xpBoost) S.xpBoost = { active: false, endsAt: 0 };
+    S.xpBoost.active = true;
+    S.xpBoost.endsAt = Date.now() + minutes * 60 * 1000;
+    save();
+    _showXPBoostBanner(minutes);
+  }
+
+  function _showXPBoostBanner(minutes) {
+    var existing = document.getElementById('xp-boost-banner');
+    if (existing) existing.remove();
+    var banner = document.createElement('div');
+    banner.id = 'xp-boost-banner';
+    banner.style.cssText = 'position:absolute;top:0;left:0;right:0;z-index:150;' +
+      'background:linear-gradient(90deg,rgba(212,175,55,.95),rgba(240,208,96,.95));' +
+      'padding:8px 16px;display:flex;align-items:center;justify-content:space-between;' +
+      'font-family:Barlow Condensed,sans-serif;box-shadow:0 4px 16px rgba(212,175,55,.3);';
+    var endsAt = S.xpBoost.endsAt;
+    banner.innerHTML =
+      '<span style="font-size:15px;font-weight:800;color:#000;letter-spacing:.5px;">⚡ DOBLE XP ACTIVO</span>' +
+      '<span id="xp-boost-timer" style="font-size:13px;font-weight:700;color:#000;"></span>';
+    var app = document.getElementById('app');
+    if (app) app.appendChild(banner);
+    // Countdown
+    var iv = setInterval(function() {
+      var rem = Math.max(0, Math.ceil((endsAt - Date.now()) / 1000));
+      var el = document.getElementById('xp-boost-timer');
+      if (el) {
+        var m = Math.floor(rem / 60), s = rem % 60;
+        el.textContent = (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s;
+      }
+      if (rem <= 0) {
+        clearInterval(iv);
+        _hideXPBoostBanner();
+        var S2 = Store.get();
+        if (S2.xpBoost) S2.xpBoost.active = false;
+        Store.save();
+      }
+    }, 1000);
+  }
+
+  function _hideXPBoostBanner() {
+    var el = document.getElementById('xp-boost-banner');
+    if (el) el.remove();
   }
 
   function addGCoins(amount) {
@@ -3138,7 +3202,7 @@ const Store = (() => {
     if(t) { t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2800); }
   }
 
-  return { load, save, get, getLevelInfo, addXP, addGCoins, activateRescue, checkRescue: _checkRescueTrigger, showGCoinToast, simulateWin, simulateLoss, resetDemo, showXPToast, showVaultToast };
+  return { load, save, get, getLevelInfo, addXP, addGCoins, activateRescue, activateXPBoost, checkRescue: _checkRescueTrigger, showGCoinToast, simulateWin, simulateLoss, resetDemo, showXPToast, showVaultToast };
 })();
 
 /* ── ROUTER ─────────────────────────────────────────────────── */
@@ -3866,52 +3930,196 @@ const LootModule = (() => {
 
 /* ── MISSIONS MODULE ────────────────────────────────────────── */
 const MissionsModule = (() => {
-  function complete(id, xpReward) {
-    const S = Store.get();
-    const done = new Set(S.missions.completed);
-    if (done.has(id)) return;
-    const btn = document.getElementById('mbtn-'+id);
-    if(btn){ btn.disabled=true; btn.textContent='⏳ Procesando…'; }
-    setTimeout(() => {
-      const prog = document.getElementById('mp-'+id);
-      if(prog) prog.style.width='100%';
-      const card = document.getElementById('mission-'+id);
-      if(card) card.classList.add('done');
-      if(btn) btn.textContent='✓ Completada';
-      done.add(id);
-      S.missions.completed = Array.from(done);
-      S.missions.totalDone++;
-      // Loot tier progress
-      const lp = S.loot.progress[S.loot.tier];
-      if(lp) lp.missions++;
-      Store.save();
-      Store.addXP(xpReward);
-      HeaderModule.refresh();
-      LootModule.refresh();
-      AdminModule.refresh();
-    }, 800);
+
+  // ── POOL de misiones por nivel ─────────────────────────────────
+  // Cada misión tiene: título, descripción, XP, dificultad, botón texto
+  // Los XP escalan con el nivel del usuario
+  var DAILY_POOL = [
+    { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',    desc:'Realizá tu primera apuesta del día.',                  xpBase:40,  btn:'⚡ Simular Apuesta' },
+    { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',         desc:'Participá en 2 micro-apuestas en vivo.',               xpBase:45,  btn:'🎯 Simular Microbet' },
+    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:40,  btn:'🎰 Ir al Casino' },
+    { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',            desc:'Realizá una apuesta combinada de 2+ eventos.',         xpBase:90,  btn:'🔗 Simular Combinada' },
+    { id:'m_ganador',  diff:'med',  ico:'🏆', name:'Racha Ganadora',        desc:'Ganá 2 micro-apuestas seguidas.',                     xpBase:90,  btn:'🏆 Simular Ganancia' },
+    { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',   desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',      xpBase:80,  btn:'🛡️ Ver Bóveda' },
+    { id:'m_cuota',    diff:'hard', ico:'👑', name:'Cazador de Cuotas',     desc:'Acertá una predicción con cuota mayor a 3.0.',         xpBase:160, btn:'👑 Simular Pick' },
+    { id:'m_streak',   diff:'hard', ico:'🔥', name:'Racha Imparable',       desc:'Completá las otras 2 misiones del día sin errores.',   xpBase:160, btn:'🔥 Completar todo' },
+    { id:'m_casino2',  diff:'hard', ico:'💎', name:'El Gran Apostador',     desc:'Jugá 3 rondas del Crash en una sesión.',               xpBase:140, btn:'💎 Ir al Casino' },
+  ];
+
+  // Misiones de nivel — una por nivel, se completan una sola vez
+  var LEVEL_MISSIONS = {
+    1: { name:'Primera Sangre',      desc:'Completá tus 3 misiones diarias por primera vez.',       xpBonus:200 },
+    2: { name:'Estratega Emergente', desc:'Acertá 5 microbets en total.',                            xpBonus:250 },
+    3: { name:'Veterano del Live',   desc:'Participá en 10 micro-apuestas en vivo.',                 xpBonus:300 },
+    4: { name:'Coleccionista',       desc:'Abrí tu primera caja de Botín.',                          xpBonus:350 },
+    5: { name:'Analista',            desc:'Completá misiones 5 días seguidos.',                      xpBonus:400 },
+    6: { name:'Máquina de Riesgo',   desc:'Jugá 20 rondas del Crash.',                              xpBonus:500 },
+    7: { name:'Élite del Ranking',   desc:'Llegá al top 10 del ranking.',                            xpBonus:600 },
+    8: { name:'Maestro del Vault',   desc:'Activá el Escudo 3 veces.',                               xpBonus:700 },
+    9: { name:'Leyenda Viviente',    desc:'Acumulá 3,000 XP en total.',                              xpBonus:1000 },
+  };
+
+  var _todayMissions = []; // las 3 misiones del día
+
+  // ── XP escalado por nivel ──────────────────────────────────────
+  function _scaledXP(base) {
+    var li = Store.getLevelInfo();
+    var lvl = li.level;
+    // +8% por nivel sobre la base
+    return Math.round(base * (1 + (lvl - 1) * 0.08));
   }
 
-  function refresh() {
-    const S = Store.get();
-    const done = new Set(S.missions.completed);
-    [1,2,3].forEach(id => {
-      const card = document.getElementById('mission-'+id);
-      const btn  = document.getElementById('mbtn-'+id);
-      const prog = document.getElementById('mp-'+id);
-      if (done.has(id)) {
-        if(card) card.classList.add('done');
-        if(btn) { btn.disabled=true; btn.textContent='✓ Completada'; }
-        if(prog) prog.style.width='100%';
-      } else {
-        if(card) card.classList.remove('done');
-        if(btn) { btn.disabled=false; }
-        if(prog) prog.style.width='0%';
+  // ── Reset diario ───────────────────────────────────────────────
+  function _checkDailyReset() {
+    var S = Store.get();
+    if (!S.missions.lastReset) S.missions.lastReset = 0;
+    var lastDate = new Date(S.missions.lastReset);
+    var today    = new Date();
+    var isNewDay = lastDate.toDateString() !== today.toDateString();
+    if (isNewDay) {
+      S.missions.completed  = [];
+      S.missions.totalDone  = 0;
+      S.missions.lastReset  = Date.now();
+      Store.save();
+    }
+  }
+
+  // ── Seleccionar 3 misiones del día (seed por fecha) ───────────
+  function _selectDailyMissions() {
+    var today = new Date();
+    var seed  = today.getFullYear() * 10000 + (today.getMonth()+1) * 100 + today.getDate();
+    // Pseudo-random determinista por día — todos ven las mismas misiones
+    function seededRand(s) { s = Math.sin(s) * 10000; return s - Math.floor(s); }
+    var shuffled = DAILY_POOL.slice().sort(function(a, b) {
+      return seededRand(seed + DAILY_POOL.indexOf(a)) - seededRand(seed + DAILY_POOL.indexOf(b));
+    });
+    // Asegurar 1 easy + 1 med + 1 hard
+    var easy = shuffled.find(function(m){ return m.diff === 'easy'; });
+    var med  = shuffled.find(function(m){ return m.diff === 'med'; });
+    var hard = shuffled.find(function(m){ return m.diff === 'hard'; });
+    return [easy, med, hard];
+  }
+
+  // ── Render misiones diarias ────────────────────────────────────
+  function _renderDailyMissions() {
+    var S    = Store.get();
+    var done = new Set(S.missions.completed);
+    _todayMissions = _selectDailyMissions();
+
+    [0, 1, 2].forEach(function(i) {
+      var m   = _todayMissions[i];
+      var num = i + 1;
+      var xp  = _scaledXP(m.xpBase);
+      var isDone = done.has(m.id);
+      var card = document.getElementById('mission-' + num);
+      var btn  = document.getElementById('mbtn-' + num);
+      var prog = document.getElementById('mp-' + num);
+      var diffEl = card ? card.querySelector('.mission-diff') : null;
+      var txtEl  = card ? card.querySelector('.mission-txt') : null;
+      var xpEl   = card ? card.querySelector('.mission-xp') : null;
+
+      if (diffEl) {
+        var diffMap = { easy:'easy', med:'med', hard:'hard' };
+        diffEl.className = 'mission-diff ' + diffMap[m.diff];
+        diffEl.textContent = m.diff === 'easy' ? 'Fácil' : m.diff === 'med' ? 'Media' : 'Épica';
       }
+      if (txtEl)  txtEl.innerHTML  = '<strong>' + m.ico + ' ' + m.name + '</strong><br>' + m.desc;
+      if (xpEl)   xpEl.textContent = '+' + xp;
+      if (btn) {
+        btn.onclick = function() { complete(m.id, xp); };
+        btn.textContent = isDone ? '✓ Completada' : m.btn;
+        btn.disabled = isDone;
+      }
+      if (card) card.classList.toggle('done', isDone);
+      if (prog) prog.style.width = isDone ? '100%' : '0%';
     });
   }
 
-  return { complete, refresh };
+  // ── Render misión de nivel ─────────────────────────────────────
+  function _renderLevelMission() {
+    var S   = Store.get();
+    var li  = Store.getLevelInfo();
+    var lvl = li.level;
+    var lm  = LEVEL_MISSIONS[lvl];
+    var container = document.getElementById('level-mission-container');
+    if (!container) return;
+
+    if (!lm) { container.style.display = 'none'; return; }
+
+    var alreadyDone = S.missions.levelMission &&
+                      S.missions.levelMission.level === lvl &&
+                      S.missions.levelMission.completed;
+    var xpBonus = lm.xpBonus;
+
+    container.style.display = 'block';
+    container.innerHTML =
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:10px;font-weight:700;' +
+      'color:var(--gold);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;">⭐ Misión de Nivel ' + lvl + '</div>' +
+      '<div class="mission-card' + (alreadyDone ? ' done' : '') + '" style="border-color:rgba(212,175,55,.35);background:linear-gradient(135deg,rgba(212,175,55,.06),var(--bg1));">' +
+        '<span class="mission-diff" style="background:rgba(212,175,55,.12);color:var(--gold);">Nivel ' + lvl + ' · Único</span>' +
+        '<div class="mission-hdr">' +
+          '<div class="mission-txt"><strong>⭐ ' + lm.name + '</strong><br>' + lm.desc + '</div>' +
+          '<div class="mission-reward">' +
+            '<div class="mission-xp" style="font-size:14px;">+' + xpBonus + '</div>' +
+            '<div class="mission-xp-lbl">XP</div>' +
+            '<div style="font-size:9px;color:var(--gold);margin-top:2px;">+ 30min ⚡x2</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="mission-prog-track"><div class="mission-prog-fill" style="width:' + (alreadyDone ? '100' : '0') + '%;"></div></div>' +
+        (alreadyDone
+          ? '<button class="mission-btn" disabled>✓ Completada</button>'
+          : '<button class="mission-btn special" onclick="MissionsModule.completeLevelMission()">⭐ Completar misión de nivel</button>'
+        ) +
+      '</div>';
+  }
+
+  // ── Completar misión diaria ────────────────────────────────────
+  function complete(missionId, xpReward) {
+    var S    = Store.get();
+    var done = new Set(S.missions.completed);
+    if (done.has(missionId)) return;
+
+    done.add(missionId);
+    S.missions.completed = Array.from(done);
+    S.missions.totalDone++;
+    var lp = S.loot.progress[S.loot.tier];
+    if (lp) lp.missions++;
+    Store.save();
+    Store.addXP(xpReward);
+    HeaderModule.refresh();
+    LootModule.refresh();
+    _renderDailyMissions();
+    _renderLevelMission(); // subir de nivel puede desbloquear misión nueva
+  }
+
+  // ── Completar misión de nivel ──────────────────────────────────
+  function completeLevelMission() {
+    var S  = Store.get();
+    var li = Store.getLevelInfo();
+    var lvl = li.level;
+    var lm  = LEVEL_MISSIONS[lvl];
+    if (!lm) return;
+    if (S.missions.levelMission && S.missions.levelMission.level === lvl && S.missions.levelMission.completed) return;
+
+    S.missions.levelMission = { completed: true, level: lvl };
+    Store.save();
+
+    // Dar XP bonus + activar doble XP 30 min
+    Store.addXP(lm.xpBonus);
+    Store.activateXPBoost(30);
+    Store.showXPToast('⭐ +' + lm.xpBonus + ' XP + Doble XP 30min activado!', '⭐');
+    HeaderModule.refresh();
+    _renderLevelMission();
+  }
+
+  // ── Refresh completo ───────────────────────────────────────────
+  function refresh() {
+    _checkDailyReset();
+    _renderDailyMissions();
+    _renderLevelMission();
+  }
+
+  return { complete: complete, completeLevelMission: completeLevelMission, refresh: refresh };
 })();
 
 /* ── CASINO MODULE ──────────────────────────────────────────── */
@@ -5512,6 +5720,14 @@ function devReset() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   Store.load();
+  // Restaurar boost de doble XP si seguía activo
+  (function() {
+    var S = Store.get();
+    if (S.xpBoost && S.xpBoost.active && Date.now() < S.xpBoost.endsAt) {
+      var remMin = Math.ceil((S.xpBoost.endsAt - Date.now()) / 60000);
+      Store.activateXPBoost && Store._restoreBoostBanner && Store._restoreBoostBanner(remMin);
+    }
+  })();
   // Auth.init con timeout — no bloquea si Supabase tarda
   try {
     await Promise.race([
