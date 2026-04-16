@@ -1417,8 +1417,8 @@ button{font-family:inherit;cursor:pointer;}
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ── SUPABASE CONFIG ──────────────────────────────────────────────
-const SUPABASE_URL =  + SUPABASE_URL + ;
-const SUPABASE_KEY =  + SUPABASE_KEY + ;
+const SUPABASE_URL = 'https://jtxvwzcolsbdviskhxpj.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
 const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── AUTH MODULE ──────────────────────────────────────────────────
@@ -5314,37 +5314,40 @@ const MBConfig = (() => {
 /* ── RANKING MODULE ─────────────────────────────────────────── */
 const RankingModule = (() => {
   async function refresh() {
-    if (!Auth.isLoggedIn()) return; // sin auth, usa datos mock
-    const data = await SupaStore.getLeaderboard();
+    if (!Auth.isLoggedIn()) return;
+    var data = await SupaStore.getLeaderboard();
     if (!data || !data.length) return;
     _renderLeaderboard(data);
   }
 
   function _renderLeaderboard(rows) {
-    const list = document.querySelector('#view-ranking .lb-list');
+    var list = document.querySelector('#view-ranking .lb-list');
     if (!list) return;
-    const medals = ['👑','🥈','🥉'];
-    const S = Store.get();
-    const myUsername = Auth.getUser()?.email?.split('@')[0] || 'TÚ';
-    list.innerHTML = rows.map((row, i) => {
-      const isMe = row.username === myUsername;
-      const medal = medals[i] || '';
-      const rankCls = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
-      return `
-        <div class="lb-row${isMe ? ' me' : ''}">
-          <span class="lb-rank ${rankCls}">${i+1}</span>
-          <span class="lb-ava">${medal || '🎮'}</span>
-          <div class="lb-info">
-            <div class="lb-name${isMe ? '" style="color:var(--neon)"' : '"}'>${isMe ? 'TÚ' : row.username}</div>
-            <div class="lb-lvl">NV${row.level} · ${row.xp.toLocaleString('es-AR')} XP</div>
-            <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,(row.xp/3800)*100).toFixed(0)}%;${isMe?'background:linear-gradient(90deg,var(--neon-d),var(--neon))':''}"></div></div>
-          </div>
-          <span class="lb-extra">${medal}</span>
-        </div>`;
+    var medals = ['👑','🥈','🥉'];
+    var user = Auth.getUser();
+    var myUsername = (user && user.email) ? user.email.split('@')[0] : '';
+    list.innerHTML = rows.map(function(row, i) {
+      var isMe = row.username === myUsername;
+      var medal = medals[i] || '';
+      var rankCls = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
+      var nameStyle = isMe ? ' style="color:var(--neon)"' : '';
+      var barStyle = isMe ? 'background:linear-gradient(90deg,var(--neon-d),var(--neon))' : '';
+      var barW = Math.min(100, (row.xp / 3800) * 100).toFixed(0);
+      var displayName = isMe ? 'TÚ' : row.username;
+      return '<div class="lb-row' + (isMe ? ' me' : '') + '">' +
+        '<span class="lb-rank ' + rankCls + '">' + (i+1) + '</span>' +
+        '<span class="lb-ava">' + (medal || '🎮') + '</span>' +
+        '<div class="lb-info">' +
+          '<div class="lb-name"' + nameStyle + '>' + displayName + '</div>' +
+          '<div class="lb-lvl">NV' + row.level + ' · ' + row.xp.toLocaleString('es-AR') + ' XP</div>' +
+          '<div class="lb-bar-track"><div class="lb-bar-fill" style="width:' + barW + '%;' + barStyle + '"></div></div>' +
+        '</div>' +
+        '<span class="lb-extra">' + medal + '</span>' +
+      '</div>';
     }).join('');
   }
 
-  return { refresh };
+  return { refresh: refresh };
 })();
 
 function devReset() {
