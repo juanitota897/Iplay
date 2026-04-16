@@ -1616,6 +1616,17 @@ const SupaStore = (() => {
     return data;
   }
 
+  async function getLeaderboardGCoins() {
+    // Ranking separado por G-Coins
+    const { data, error } = await _sb
+      .from('v_leaderboard')
+      .select('*')
+      .order('g_coins', { ascending: false })
+      .limit(20);
+    if (error) return null;
+    return data;
+  }
+
   async function subscribeLeaderboard(callback) {
     // Realtime: escuchar cambios en profiles para actualizar ranking en vivo
     return _sb
@@ -1624,7 +1635,7 @@ const SupaStore = (() => {
       .subscribe();
   }
 
-  return { loadProfile, syncAction, syncProfile, getLeaderboard, subscribeLeaderboard };
+  return { loadProfile, syncAction, syncProfile, getLeaderboard, getLeaderboardGCoins, subscribeLeaderboard };
 })();
 
 // ── AUTH UI ──────────────────────────────────────────────────────
@@ -2591,17 +2602,38 @@ const AuthUI = (() => {
     <!-- VIEW: RANKING -->
     <div class="view" id="view-ranking" data-view="ranking">
       <div class="view-scroll">
-        <div class="simple-view-hdr"><div class="simple-view-title">📊 Ranking</div><div class="simple-view-sub">Clasificación semanal · Se resetea cada lunes</div></div>
-        <div class="lb-list">
-          <div class="lb-row"><span class="lb-rank g">1</span><span class="lb-ava">🤵</span><div class="lb-info"><div class="lb-name">JuanP_88</div><div class="lb-lvl">NV12 · 9,840 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:95%"></div></div></div><span class="lb-extra">👑</span></div>
-          <div class="lb-row"><span class="lb-rank s">2</span><span class="lb-ava">👩</span><div class="lb-info"><div class="lb-name">Marta_Bet</div><div class="lb-lvl">NV10 · 7,200 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:72%"></div></div></div><span class="lb-extra">🥈</span></div>
-          <div class="lb-row"><span class="lb-rank b">3</span><span class="lb-ava">😤</span><div class="lb-info"><div class="lb-name">CrackTotalAR</div><div class="lb-lvl">NV8 · 5,100 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:51%"></div></div></div><span class="lb-extra">🥉</span></div>
-          <div class="lb-row"><span class="lb-rank" style="color:var(--t3)">4</span><span class="lb-ava">🎮</span><div class="lb-info"><div class="lb-name">ElPatrón77</div><div class="lb-lvl">NV7 · 4,400 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:44%;background:linear-gradient(90deg,var(--t3),var(--t2))"></div></div></div></div>
-          <div class="lb-row danger" style="position:relative;"><span class="lb-rank" style="color:var(--t3)">5</span><span class="lb-ava">😰</span><div class="lb-info"><div class="lb-name">RiskyPlayer99</div><div class="lb-lvl">NV5 · 3,200 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" style="width:32%;background:linear-gradient(90deg,var(--red-d),var(--red))"></div></div></div><span class="lb-danger-label">⚠ DESCENSO</span></div>
-          <div class="lb-row me"><span class="lb-rank" style="color:var(--neon)">6</span><span class="lb-ava" style="border:1px solid rgba(57,255,20,.35);border-radius:50%;padding:1px">😎</span><div class="lb-info"><div class="lb-name" style="color:var(--neon)">TÚ</div><div class="lb-lvl" id="my-lb-level">NV4 · 300 XP</div><div class="lb-bar-track"><div class="lb-bar-fill" id="my-lb-bar" style="width:30%;background:linear-gradient(90deg,var(--neon-d),var(--neon))"></div></div></div><span class="lb-extra">📈</span></div>
+        <div class="simple-view-hdr">
+          <div class="simple-view-title">📊 Ranking</div>
+          <div class="simple-view-sub">Datos en tiempo real del piloto</div>
         </div>
-        <div class="card" style="background:rgba(255,51,85,.04);border-color:rgba(255,51,85,.18);">
-          <p style="font-size:11px;color:var(--red);font-weight:600;line-height:1.5;">⚠ Si no jugás hoy, bajás a la Zona de Descenso. Tu racha se resetea a las 00:00.</p>
+
+        <!-- Tabs XP / G-Coins -->
+        <div style="display:flex;gap:8px;margin-bottom:10px;">
+          <button id="rank-tab-xp" onclick="RankingModule.setTab('xp')"
+            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            ⚡ XP — Constancia
+          </button>
+          <button id="rank-tab-gc" onclick="RankingModule.setTab('gcoins')"
+            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            🪙 G-Coins — Skill
+          </button>
+        </div>
+
+        <!-- Descripción del tab activo -->
+        <div id="rank-tab-desc" style="font-size:11px;color:var(--t3);margin-bottom:8px;padding:0 2px;">
+          Premia la constancia — cuanto más jugás, más subís.
+        </div>
+
+        <!-- Lista dinámica -->
+        <div class="lb-list" id="ranking-list-xp">
+          <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando ranking…</div>
+        </div>
+        <div class="lb-list" id="ranking-list-gcoins" style="display:none;">
+          <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando ranking…</div>
+        </div>
+
+        <div class="card" style="background:rgba(255,51,85,.04);border-color:rgba(255,51,85,.18);margin-top:8px;">
+          <p style="font-size:11px;color:var(--red);font-weight:600;line-height:1.5;">⚠ Si no jugás hoy, bajás posiciones. Tu racha se resetea a las 00:00.</p>
         </div>
       </div>
     </div>
@@ -5992,19 +6024,51 @@ const MBConfig = (() => {
 /* ── DEV RESET ── */
 /* ── RANKING MODULE ─────────────────────────────────────────── */
 const RankingModule = (() => {
-  var _lastData = null;
+  var _lastData     = null;
+  var _lastDataGC   = null;
+  var _activeTab    = 'xp';
+
+  function setTab(tab) {
+    _activeTab = tab;
+    var xpList  = document.getElementById('ranking-list-xp');
+    var gcList  = document.getElementById('ranking-list-gcoins');
+    var tabXP   = document.getElementById('rank-tab-xp');
+    var tabGC   = document.getElementById('rank-tab-gc');
+    var desc    = document.getElementById('rank-tab-desc');
+    if (xpList)  xpList.style.display  = tab === 'xp' ? '' : 'none';
+    if (gcList)  gcList.style.display  = tab === 'gcoins' ? '' : 'none';
+    if (tabXP) {
+      tabXP.style.background    = tab === 'xp' ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
+      tabXP.style.borderColor   = tab === 'xp' ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
+      tabXP.style.color         = tab === 'xp' ? 'var(--gold)' : 'var(--t2)';
+    }
+    if (tabGC) {
+      tabGC.style.background    = tab === 'gcoins' ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
+      tabGC.style.borderColor   = tab === 'gcoins' ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
+      tabGC.style.color         = tab === 'gcoins' ? 'var(--gold)' : 'var(--t2)';
+    }
+    if (desc) desc.textContent = tab === 'xp'
+      ? 'Premia la constancia — cuanto más jugás, más subís.'
+      : 'Premia la habilidad — tu saldo actual de G-Coins define tu posición.';
+  }
 
   async function refresh() {
-    var data = null;
+    var dataXP = null;
+    var dataGC = null;
     if (Auth.isLoggedIn()) {
-      data = await SupaStore.getLeaderboard();
+      dataXP = await SupaStore.getLeaderboard();
+      dataGC = await SupaStore.getLeaderboardGCoins();
     }
-    if (data && data.length) {
-      _lastData = data;
-      _renderLeaderboard(data);
-      _renderRightPanel(data);
+    if (dataXP && dataXP.length) {
+      _lastData = dataXP;
+      _renderList(dataXP, 'ranking-list-xp', 'xp');
+      _renderRightPanel(dataXP);
     } else {
-      _renderRightPanel(null); // sin datos — mostrar solo al usuario local
+      _renderRightPanel(null);
+    }
+    if (dataGC && dataGC.length) {
+      _lastDataGC = dataGC;
+      _renderList(dataGC, 'ranking-list-gcoins', 'gcoins');
     }
   }
 
@@ -6013,8 +6077,8 @@ const RankingModule = (() => {
     return (user && user.email) ? user.email.split('@')[0] : '';
   }
 
-  function _renderLeaderboard(rows) {
-    var list = document.querySelector('#view-ranking .lb-list');
+  function _renderList(rows, listId, mode) {
+    var list = document.getElementById(listId);
     if (!list) return;
     var medals = ['👑','🥈','🥉'];
     var myUsername = _getMyUsername();
@@ -6023,15 +6087,22 @@ const RankingModule = (() => {
       var medal = medals[i] || '';
       var rankCls = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
       var nameStyle = isMe ? ' style="color:var(--neon)"' : '';
-      var barStyle = isMe ? 'background:linear-gradient(90deg,var(--neon-d),var(--neon))' : '';
-      var barW = Math.min(100, (row.xp / 3800) * 100).toFixed(0);
+      var barStyle  = isMe ? 'background:linear-gradient(90deg,var(--neon-d),var(--neon))' : '';
       var displayName = isMe ? 'TÚ' : row.username;
+      var valLabel, barW;
+      if (mode === 'gcoins') {
+        valLabel = 'NV' + row.level + ' · ' + (row.g_coins || 0).toLocaleString('es-AR') + ' G';
+        barW = Math.min(100, ((row.g_coins || 0) / 5000) * 100).toFixed(0);
+      } else {
+        valLabel = 'NV' + row.level + ' · ' + row.xp.toLocaleString('es-AR') + ' XP';
+        barW = Math.min(100, (row.xp / 3800) * 100).toFixed(0);
+      }
       return '<div class="lb-row' + (isMe ? ' me' : '') + '">' +
         '<span class="lb-rank ' + rankCls + '">' + (i+1) + '</span>' +
         '<span class="lb-ava">' + (medal || '🎮') + '</span>' +
         '<div class="lb-info">' +
           '<div class="lb-name"' + nameStyle + '>' + displayName + '</div>' +
-          '<div class="lb-lvl">NV' + row.level + ' · ' + row.xp.toLocaleString('es-AR') + ' XP</div>' +
+          '<div class="lb-lvl">' + valLabel + '</div>' +
           '<div class="lb-bar-track"><div class="lb-bar-fill" style="width:' + barW + '%;' + barStyle + '"></div></div>' +
         '</div>' +
         '<span class="lb-extra">' + medal + '</span>' +
@@ -6110,7 +6181,7 @@ const RankingModule = (() => {
     panel.innerHTML = html;
   }
 
-  return { refresh: refresh };
+  return { refresh: refresh, setTab: setTab };
 })();
 
 /* ── SETTINGS MODAL MODULE ──────────────────────────────────── */
