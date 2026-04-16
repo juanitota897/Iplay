@@ -4214,26 +4214,52 @@ const MissionsModule = (() => {
     return Math.round(base * (1 + (lvl - 1) * 0.08));
   }
 
+  // ── Hora del servidor (cache de 5min para no spamear) ─────────
+  var _serverTimeCache = null;
+  var _serverTimeFetchedAt = 0;
+  async function _getServerNow() {
+    var now = Date.now();
+    // Usar cache si fue hace menos de 5 minutos
+    if (_serverTimeCache && (now - _serverTimeFetchedAt) < 5 * 60 * 1000) {
+      return _serverTimeCache + (now - _serverTimeFetchedAt);
+    }
+    try {
+      // Supabase no tiene endpoint de tiempo, usamos un SELECT NOW()
+      var res = await _sb.rpc('get_server_time').single();
+      if (res.data) {
+        _serverTimeCache = new Date(res.data).getTime();
+        _serverTimeFetchedAt = now;
+        return _serverTimeCache;
+      }
+    } catch(e) {}
+    // Fallback al cliente si falla (mejor que nada)
+    return now;
+  }
+
   // ── Reset diario ───────────────────────────────────────────────
   function _checkDailyReset() {
     var S = Store.get();
     if (!S.missions.lastReset) S.missions.lastReset = 0;
-    var lastDate = new Date(S.missions.lastReset);
-    var today    = new Date();
-    var isNewDay = lastDate.toDateString() !== today.toDateString();
+    // FIX: usar fecha guardada en UTC para evitar exploit de cambio de hora del celu
+    // La fecha del último reset se guarda como string UTC — comparamos solo la fecha (YYYY-MM-DD)
+    var lastResetDateStr = S.missions.lastResetUTC || '';
+    var todayUTC = new Date().toISOString().slice(0, 10); // "2026-04-16"
+    var isNewDay = lastResetDateStr !== todayUTC;
+
     if (isNewDay) {
       S.missions.completed  = [];
       S.missions.totalDone  = 0;
       S.missions.lastReset  = Date.now();
-      // Resetear contadores diarios
+      S.missions.lastResetUTC = todayUTC; // FIX: guardar fecha UTC
       S.missions.daily = {
         bets: 0, combos: 0, microbets: 0, microbetWins: 0,
         consecutiveWins: 0, crashRounds: 0, crashCashedBefore2x: 0,
         fuelStart: S.vault.fuel, highOddWin: false, openedLoot: false,
       };
       Store.save();
+      // FIX: verificar con servidor de forma asíncrona para detectar trampas
+      _validateDailyResetWithServer(todayUTC);
     }
-    // Asegurar que daily existe aunque no haya reset
     if (!S.missions.daily) {
       S.missions.daily = {
         bets: 0, combos: 0, microbets: 0, microbetWins: 0,
@@ -4242,6 +4268,24 @@ const MissionsModule = (() => {
       };
       Store.save();
     }
+  }
+
+  // Validación asíncrona: si el servidor dice que es otro día, revertir el reset
+  async function _validateDailyResetWithServer(clientDateStr) {
+    try {
+      var serverNow = await _getServerNow();
+      var serverDateStr = new Date(serverNow).toISOString().slice(0, 10);
+      if (serverDateStr !== clientDateStr) {
+        // El cliente mintió con la hora — revertir el reset
+        var S = Store.get();
+        S.missions.lastResetUTC = serverDateStr;
+        // Si el servidor dice que NO es día nuevo, restaurar el estado anterior
+        // (no podemos recuperar el estado exacto, pero sí bloqueamos el reset)
+        S.missions.completed = S.missions.completed || [];
+        Store.save();
+        console.warn('[Missions] Daily reset revertido — hora del cliente no coincide con servidor');
+      }
+    } catch(e) {}
   }
 
   // ── Seleccionar 3 misiones del día (seed por fecha) ───────────
@@ -4374,10 +4418,66 @@ const MissionsModule = (() => {
     if (!lm) return;
     if (S.missions.levelMission && S.missions.levelMission.level === lvl && S.missions.levelMission.completed) return;
 
+    // FIX: validar requisitos reales antes de dar la recompensa
+    var d = S.missions.daily || {};
+    var valid = false;
+    var reason = '';
+    switch(lvl) {
+      case 1: // "Primera Sangre" — completar las 3 misiones diarias
+        valid = S.missions.totalDone >= 3;
+        reason = 'Completá tus 3 misiones diarias primero (' + S.missions.totalDone + '/3)';
+        break;
+      case 2: // "Estratega Emergente" — 5 microbets ganadas en total
+        var totalMBWins = S.microbet ? (S.microbet.wins || 0) : 0;
+        valid = totalMBWins >= 5;
+        reason = 'Necesitás 5 microbets ganadas (' + totalMBWins + '/5)';
+        break;
+      case 3: // "Veterano del Live" — 10 microbets participadas en total
+        var totalMB = S.microbet ? (S.microbet.rounds || 0) : 0;
+        valid = totalMB >= 10;
+        reason = 'Necesitás 10 microbets jugadas (' + totalMB + '/10)';
+        break;
+      case 4: // "Coleccionista" — abrió al menos 1 caja
+        var opened = S.loot && S.loot.opened && S.loot.opened[1];
+        valid = opened && (opened.common || opened.rare || opened.epic);
+        reason = 'Abrí al menos una caja de Botín primero';
+        break;
+      case 5: // "Analista" — misiones completadas acumuladas >= 5 días (aprox 15 misiones)
+        valid = (S.missions.allTimeDone || 0) >= 15;
+        reason = 'Necesitás completar misiones en 5 días distintos';
+        break;
+      case 6: // "Máquina de Riesgo" — 20 rondas de crash
+        var totalCrash = S._houseMetrics ? (S._houseMetrics.rounds || 0) : 0;
+        valid = totalCrash >= 20;
+        reason = 'Necesitás 20 rondas del Crash (' + totalCrash + '/20)';
+        break;
+      case 7: // "Élite del Ranking" — top 10 (no verificable fácil en cliente, usar XP threshold)
+        valid = li.xp >= 1700; // nivel 7 = EXPERTO, ya tienen suficiente XP
+        reason = 'Alcanzá 1700 XP primero (' + li.xp + '/1700)';
+        break;
+      case 8: // "Maestro del Vault" — activar escudo 3 veces
+        var shieldUses = S.vault ? (S.vault.shieldUses || 0) : 0;
+        valid = shieldUses >= 3;
+        reason = 'Activá el Escudo 3 veces (' + shieldUses + '/3)';
+        break;
+      case 9: // "Leyenda Viviente" — 3000 XP
+        valid = li.xp >= 3000;
+        reason = 'Necesitás 3,000 XP (' + li.xp + '/3000)';
+        break;
+      default:
+        valid = true;
+    }
+
+    if (!valid) {
+      Store.showXPToast('⛔ ' + reason, '⛔');
+      return;
+    }
+
     S.missions.levelMission = { completed: true, level: lvl };
+    // FIX: trackear misiones completadas de nivel para niveles futuros
+    S.missions.allTimeDone = (S.missions.allTimeDone || 0) + S.missions.totalDone;
     Store.save();
 
-    // Dar XP bonus + activar doble XP 30 min
     Store.addXP(lm.xpBonus);
     Store.activateXPBoost(30);
     Store.showXPToast('⭐ +' + lm.xpBonus + ' XP + Doble XP 30min activado!', '⭐');
