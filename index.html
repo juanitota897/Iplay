@@ -213,6 +213,30 @@ button{font-family:inherit;cursor:pointer;}
 .bmc-odd-val{display:block;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;color:var(--gold);}
 .bmc-odd-btn.selected .bmc-odd-val{color:var(--neon);}
 .bets-slip{background:var(--bg2);border:1px solid rgba(212,175,55,.2);border-radius:var(--r-lg);padding:14px;}
+/* Sticky slip bar */
+#bets-sticky-slip{
+  position:absolute;bottom:64px;left:0;right:0;z-index:60;
+  background:linear-gradient(180deg,transparent 0%,rgba(8,8,16,.98) 18px);
+  padding:12px 12px 10px;
+  transform:translateY(120%);
+  transition:transform .35s cubic-bezier(.34,1.36,.64,1);
+  pointer-events:none;
+}
+#bets-sticky-slip.visible{transform:translateY(0);pointer-events:all;}
+#bets-sticky-inner{
+  background:linear-gradient(135deg,rgba(212,175,55,.12),rgba(212,175,55,.05));
+  border:1px solid rgba(212,175,55,.45);
+  border-radius:var(--r-lg);
+  padding:10px 14px;
+  box-shadow:0 -8px 32px rgba(0,0,0,.5),0 0 0 1px rgba(212,175,55,.08);
+  display:flex;align-items:center;gap:10px;
+}
+.bss-picks{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t2);flex-shrink:0;}
+.bss-odd{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--gold);line-height:1;}
+.bss-win{font-size:11px;color:var(--neon);flex:1;}
+.bss-win strong{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;display:block;line-height:1.1;}
+.bss-confirm{flex-shrink:0;padding:10px 16px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;cursor:pointer;white-space:nowrap;}
+.bss-confirm:active{transform:scale(.97);}
 .bets-slip-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--gold);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
 .bets-slip-empty{font-size:11px;color:var(--t3);text-align:center;padding:10px 0;}
 .bets-slip-item{display:flex;align-items:center;justify-content:space-between;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -2691,6 +2715,18 @@ const AuthUI = (() => {
 
   </div><!-- /views-container -->
 
+  <!-- ── STICKY SLIP BAR (bets view) ── -->
+  <div id="bets-sticky-slip">
+    <div id="bets-sticky-inner">
+      <div style="flex:1;min-width:0;">
+        <div class="bss-picks" id="bss-picks">0 picks</div>
+        <div class="bss-odd" id="bss-odd">1.00x</div>
+        <div class="bss-win"><strong id="bss-win">0 G</strong><span style="color:var(--t3);font-size:10px;"> ganancia potencial</span></div>
+      </div>
+      <button class="bss-confirm" onclick="BetsModule.confirm()">⚡ APOSTAR</button>
+    </div>
+  </div>
+
   <!-- ── DESKTOP RIGHT PANEL ── -->
   <div id="desktop-right">
 
@@ -3317,6 +3353,11 @@ const Router = (() => {
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
     if (viewId === 'bets')     BetsModule.refresh();
+    // Ocultar sticky slip cuando no estás en bets
+    if (viewId !== 'bets') {
+      var ss = document.getElementById('bets-sticky-slip');
+      if (ss) ss.classList.remove('visible');
+    }
     if (viewId === 'missions') MissionsModule.refresh();
     if (viewId === 'ranking')  { HeaderModule.refresh(); RankingModule.refresh(); }
   }
@@ -4712,11 +4753,35 @@ const BetsModule = (() => {
   }
 
   // ── Render slip con soporte de combinadas ──────────────────────
+  function _updateStickySlip() {
+    var sticky = document.getElementById('bets-sticky-slip');
+    if (!sticky) return;
+    if (_picks.length === 0) {
+      sticky.classList.remove('visible');
+      return;
+    }
+    var S = Store.get();
+    var gc = S.gcoins || 0;
+    var effectiveStake = Math.max(50, Math.min(_stake, gc, 5000));
+    var totalOdd = _totalOdd();
+    var potWin = Math.round(effectiveStake * totalOdd);
+    var n = _picks.length;
+    var bsspicks = document.getElementById('bss-picks');
+    var bssodd   = document.getElementById('bss-odd');
+    var bsswin   = document.getElementById('bss-win');
+    if (bsspicks) bsspicks.textContent = n + (n === 1 ? ' pick' : ' picks');
+    if (bssodd)   bssodd.textContent  = totalOdd.toFixed(2) + 'x';
+    if (bsswin)   bsswin.textContent  = potWin.toLocaleString('es-AR') + ' G';
+    sticky.classList.add('visible');
+  }
+
   function _renderSlip() {
     const body     = document.getElementById('bets-slip-body');
     const empty    = document.getElementById('bets-slip-empty');
     const controls = document.getElementById('bets-slip-controls');
     if (!body) return;
+
+    _updateStickySlip(); // siempre actualizar el sticky
 
     if (_picks.length === 0) {
       if(empty)    empty.style.display    = '';
@@ -4835,49 +4900,101 @@ const BetsModule = (() => {
 
     var win = false;
     var nearMiss = false;
+    var pickResults = []; // true/false por pata
 
     if (bet.isParlay && numPicks >= 2) {
-      // Resolver pata por pata
       var hitCount = 0;
       for (var i = 0; i < numPicks; i++) {
-        if (Math.random() < WIN_RATE_PARLAY) hitCount++;
+        var pWin = Math.random() < WIN_RATE_PARLAY;
+        pickResults.push(pWin);
+        if (pWin) hitCount++;
       }
       win = hitCount === numPicks;
-      nearMiss = !win && hitCount === numPicks - 1; // falló solo 1
+      nearMiss = !win && hitCount === numPicks - 1;
     } else {
       win = Math.random() < WIN_RATE_SINGLE;
+      pickResults = [win];
     }
+
+    // Guardar resultados por pata para el reveal
+    bet.pickResults = pickResults;
+    bet.status = 'revealing'; // estado intermedio durante el reveal
+    Store.save();
+
+    if (bet.isParlay && numPicks >= 2) {
+      // ── REVEAL SECUENCIAL ──────────────────────────────────────
+      // Mostrar cada pata una por una con 1.2s de delay entre ellas
+      _renderHistory(); // muestra el cupón en estado "revealing"
+      var delay = 1200;
+      pickResults.forEach(function(pResult, idx) {
+        setTimeout(function() {
+          _revealPick(betId, idx, pResult, pickResults, win, nearMiss, stake, xpGain);
+        }, delay * (idx + 1));
+      });
+      // Resolver todo después del último reveal
+      setTimeout(function() {
+        _finalize(betId, win, nearMiss, stake, xpGain);
+      }, delay * (numPicks + 1));
+    } else {
+      // Apuesta simple — resolver directo
+      _finalize(betId, win, nearMiss, stake, xpGain);
+    }
+  }
+
+  function _revealPick(betId, idx, pResult, allResults, allWin, nearMiss, stake, xpGain) {
+    // Actualizar el historial para mostrar el resultado de esta pata
+    var S = Store.get();
+    var bet = S.bets && S.bets.history && S.bets.history.find(function(b){ return b.id === betId; });
+    if (!bet) return;
+    if (!bet.revealedCount) bet.revealedCount = 0;
+    bet.revealedCount = idx + 1;
+    Store.save();
+    _renderHistory();
+    // Sonido/feedback visual por pata
+    if (pResult) {
+      Store.showXPToast('✅ Pata ' + (idx+1) + ' — ¡Acertaste!', '✅');
+    } else {
+      // Si ya falló y no es near-miss en la última → spoilear el resultado
+      var remainingCanWin = allResults.slice(idx+1).every(function(r){ return r; });
+      if (!remainingCanWin && !nearMiss) {
+        Store.showVaultToast('❌ Pata ' + (idx+1) + ' — Perdiste la combinada');
+      } else {
+        Store.showXPToast('❌ Pata ' + (idx+1) + ' — Fallaste', '❌');
+      }
+    }
+  }
+
+  function _finalize(betId, win, nearMiss, stake, xpGain) {
+    var S = Store.get();
+    var bet = S.bets && S.bets.history && S.bets.history.find(function(b){ return b.id === betId; });
+    if (!bet) return;
 
     bet.status   = win ? 'win' : (nearMiss ? 'nearmiss' : 'loss');
     bet.nearMiss = nearMiss;
-
     S.energy = Math.max(0, (S.energy || 200) - 8);
 
     if (win) {
-      const winAmount = Math.round(stake * bet.odd);
+      var winAmount = Math.round(stake * bet.odd);
       bet.amount = winAmount;
       Store.save();
       Store.addGCoins(winAmount);
       Store.addXP(xpGain);
       HeaderModule.refresh();
-      const msg = bet.isParlay
-        ? '🏆 ¡COMBINADA! +' + winAmount.toLocaleString('es-AR') + ' G-Coins'
+      var msg = bet.isParlay
+        ? '🏆 ¡COMBINADA COMPLETA! +' + winAmount.toLocaleString('es-AR') + ' G'
         : '🏆 +' + winAmount.toLocaleString('es-AR') + ' G-Coins';
       Store.showGCoinToast(msg);
     } else if (nearMiss) {
-      // Near-miss: falló 1 pata de N — XP consolación + energía devuelta
       bet.amount = -stake;
-      const consolXP  = Math.round(xpGain * 0.25);   // 25% del XP
-      const consolEn  = 4;                             // devolver la mitad de energía
-      S.vault.fuel   += 20;
+      var consolXP = Math.round(xpGain * 0.25);
+      S.vault.fuel += 20;
       S.vault.lossCount++;
-      S.energy        = Math.min(200, S.energy + consolEn);
+      S.energy = Math.min(200, S.energy + 4);
       Store.addXP(consolXP);
       Store.save();
       VaultModule.refresh();
       HeaderModule.refresh();
-      // Banner near-miss llamativo
-      Store.showGCoinToast('💔 ¡Casi! Fallaste 1 pata — +' + consolXP + ' XP consolación');
+      Store.showGCoinToast('💔 ¡Casi! 1 pata falló — +' + consolXP + ' XP consolación');
     } else {
       bet.amount = -stake;
       S.vault.fuel += bet.isParlay ? 25 : 20;
@@ -4963,17 +5080,24 @@ const BetsModule = (() => {
       return;
     }
     list.innerHTML = history.map(function(b) {
-      const isPending  = b.status === 'pending';
-      const isWin      = b.status === 'win';
-      const isNearMiss = b.status === 'nearmiss';
-      const ico = isPending ? '⏳' : isWin ? '✓' : isNearMiss ? '💔' : '✗';
-      const cls = isPending ? 'pending' : isWin ? 'win' : isNearMiss ? 'pending' : 'loss';
-      const amtTxt = isPending || isNearMiss
+      const isPending   = b.status === 'pending';
+      const isRevealing = b.status === 'revealing';
+      const isWin       = b.status === 'win';
+      const isNearMiss  = b.status === 'nearmiss';
+      const ico = isPending ? '⏳' : isRevealing ? '🎲' : isWin ? '✓' : isNearMiss ? '💔' : '✗';
+      const cls = isPending || isRevealing ? 'pending' : isWin ? 'win' : isNearMiss ? 'pending' : 'loss';
+      const amtTxt = isPending || isRevealing || isNearMiss
         ? b.stake.toLocaleString('es-AR') + ' G'
         : isWin
           ? '+' + b.amount.toLocaleString('es-AR') + ' G'
           : b.stake.toLocaleString('es-AR') + ' G';
-      const xpTxt = isPending ? 'pendiente'
+      // For revealing state, show partial pick results
+      var revealInfo = '';
+      if (isRevealing && b.pickResults && b.revealedCount) {
+        var revealed = b.pickResults.slice(0, b.revealedCount);
+        revealInfo = ' (' + revealed.filter(function(r){return r;}).length + '/' + b.revealedCount + ' ✓)';
+      }
+      const xpTxt = isPending || isRevealing ? ('pendiente' + (isRevealing ? revealInfo : ''))
         : isWin ? '+' + b.xpGain + ' XP'
         : isNearMiss ? '+' + Math.round(b.xpGain*.25) + ' XP (consolación)'
         : '+' + (b.isParlay ? 8 : 5) + ' XP';
