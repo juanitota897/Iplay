@@ -2720,27 +2720,8 @@ const AuthUI = (() => {
 
     <!-- Top ranking -->
     <div class="dsk-right-title">🏆 Ranking</div>
-    <div class="dsk-right-section">
-      <div class="dsk-rank-row">
-        <span class="dsk-rank-pos" style="color:var(--gold);">1</span>
-        <span class="dsk-rank-name">JuanP_88</span>
-        <span class="dsk-rank-xp">9,840 XP</span>
-      </div>
-      <div class="dsk-rank-row">
-        <span class="dsk-rank-pos" style="color:var(--t2);">2</span>
-        <span class="dsk-rank-name">Marta_Bet</span>
-        <span class="dsk-rank-xp">7,200 XP</span>
-      </div>
-      <div class="dsk-rank-row">
-        <span class="dsk-rank-pos" style="color:var(--plasma);">3</span>
-        <span class="dsk-rank-name">CrackTotal</span>
-        <span class="dsk-rank-xp">5,100 XP</span>
-      </div>
-      <div class="dsk-rank-row" style="margin-top:4px;border-top:1px dashed rgba(57,255,20,.15);padding-top:8px;">
-        <span class="dsk-rank-pos" style="color:var(--neon);">#<span id="dsk-r-rank-pos">6</span></span>
-        <span class="dsk-rank-name dsk-rank-me">TÚ</span>
-        <span class="dsk-rank-xp" id="dsk-r-rank-xp" style="color:var(--neon);">300 XP</span>
-      </div>
+    <div class="dsk-right-section" id="dsk-ranking-list">
+      <div style="font-size:10px;color:var(--t3);text-align:center;padding:8px 0;">Cargando…</div>
     </div>
 
   </div><!-- /desktop-right -->
@@ -4690,12 +4671,12 @@ const EntryModule = (() => {
     HomeModule.refresh();
     MicroBet.init();
     LiveProvider.connect();
-    // Sync perfil con Supabase si está logueado
     if (Auth.isLoggedIn()) {
       SupaStore.syncProfile();
     }
-    // Launch interactive tutorial on first visit
-    setTimeout(() => Tutorial.start(), 400);
+    // Cargar ranking real en el panel derecho
+    setTimeout(function() { RankingModule.refresh(); }, 1000);
+    setTimeout(function() { Tutorial.start(); }, 400);
   }
 
   function switchAccount() {
@@ -5399,19 +5380,32 @@ const MBConfig = (() => {
 /* ── DEV RESET ── */
 /* ── RANKING MODULE ─────────────────────────────────────────── */
 const RankingModule = (() => {
+  var _lastData = null;
+
   async function refresh() {
-    if (!Auth.isLoggedIn()) return;
-    var data = await SupaStore.getLeaderboard();
-    if (!data || !data.length) return;
-    _renderLeaderboard(data);
+    var data = null;
+    if (Auth.isLoggedIn()) {
+      data = await SupaStore.getLeaderboard();
+    }
+    if (data && data.length) {
+      _lastData = data;
+      _renderLeaderboard(data);
+      _renderRightPanel(data);
+    } else {
+      _renderRightPanel(null); // sin datos — mostrar solo al usuario local
+    }
+  }
+
+  function _getMyUsername() {
+    var user = Auth.getUser();
+    return (user && user.email) ? user.email.split('@')[0] : '';
   }
 
   function _renderLeaderboard(rows) {
     var list = document.querySelector('#view-ranking .lb-list');
     if (!list) return;
     var medals = ['👑','🥈','🥉'];
-    var user = Auth.getUser();
-    var myUsername = (user && user.email) ? user.email.split('@')[0] : '';
+    var myUsername = _getMyUsername();
     list.innerHTML = rows.map(function(row, i) {
       var isMe = row.username === myUsername;
       var medal = medals[i] || '';
@@ -5431,6 +5425,77 @@ const RankingModule = (() => {
         '<span class="lb-extra">' + medal + '</span>' +
       '</div>';
     }).join('');
+  }
+
+  function _renderRightPanel(rows) {
+    var panel = document.getElementById('dsk-ranking-list');
+    if (!panel) return;
+    var myUsername = _getMyUsername();
+    var li = Store.getLevelInfo();
+
+    if (!rows || !rows.length) {
+      // Sin datos del servidor — mostrar solo el usuario actual
+      panel.innerHTML =
+        '<div class="dsk-rank-row" style="border-top:1px dashed rgba(57,255,20,.15);padding-top:8px;">' +
+          '<span class="dsk-rank-pos" style="color:var(--neon);">#1</span>' +
+          '<span class="dsk-rank-name dsk-rank-me">TÚ</span>' +
+          '<span class="dsk-rank-xp" style="color:var(--neon);">' + li.xp.toLocaleString('es-AR') + ' XP</span>' +
+        '</div>';
+      return;
+    }
+
+    // Encontrar posición del usuario
+    var myIdx = -1;
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].username === myUsername) { myIdx = i; break; }
+    }
+
+    var html = '';
+    var posColors = ['var(--gold)', 'var(--t2)', 'var(--plasma)'];
+
+    if (myIdx <= 2) {
+      // Estoy en el top 3 — mostrar top 3
+      for (var j = 0; j < Math.min(3, rows.length); j++) {
+        var r = rows[j];
+        var isMe = j === myIdx;
+        var col = posColors[j] || 'var(--t3)';
+        html +=
+          '<div class="dsk-rank-row">' +
+            '<span class="dsk-rank-pos" style="color:' + col + ';">' + (j+1) + '</span>' +
+            '<span class="dsk-rank-name' + (isMe ? ' dsk-rank-me' : '') + '">' + (isMe ? 'TÚ' : r.username) + '</span>' +
+            '<span class="dsk-rank-xp" style="' + (isMe ? 'color:var(--neon);' : '') + '">' + r.xp.toLocaleString('es-AR') + ' XP</span>' +
+          '</div>';
+      }
+    } else {
+      // No estoy en top 3 — mostrar #1 + el de arriba + yo + el de abajo
+      var show = [];
+      show.push({ row: rows[0], pos: 1, isTop: true });
+      if (myIdx > 1) show.push({ row: null, pos: -1, isDivider: true }); // separador
+      if (myIdx > 0) show.push({ row: rows[myIdx - 1], pos: myIdx, isAbove: true });
+      show.push({ row: rows[myIdx], pos: myIdx + 1, isMe: true });
+      if (myIdx < rows.length - 1) show.push({ row: rows[myIdx + 1], pos: myIdx + 2, isBelow: true });
+
+      for (var k = 0; k < show.length; k++) {
+        var item = show[k];
+        if (item.isDivider) {
+          html += '<div style="text-align:center;font-size:10px;color:var(--t3);padding:2px 0;">•••</div>';
+          continue;
+        }
+        var r2 = item.row;
+        var col2 = item.isTop ? 'var(--gold)' : item.isMe ? 'var(--neon)' : 'var(--t3)';
+        var nameCls = item.isMe ? ' dsk-rank-me' : '';
+        var xpStyle = item.isMe ? 'color:var(--neon);' : '';
+        var borderTop = (item.isAbove && !item.isTop) ? 'margin-top:4px;border-top:1px dashed rgba(255,255,255,.06);padding-top:6px;' : '';
+        html +=
+          '<div class="dsk-rank-row" style="' + borderTop + '">' +
+            '<span class="dsk-rank-pos" style="color:' + col2 + ';">' + item.pos + '</span>' +
+            '<span class="dsk-rank-name' + nameCls + '">' + (item.isMe ? 'TÚ' : r2.username) + '</span>' +
+            '<span class="dsk-rank-xp" style="' + xpStyle + '">' + r2.xp.toLocaleString('es-AR') + ' XP</span>' +
+          '</div>';
+      }
+    }
+
+    panel.innerHTML = html;
   }
 
   return { refresh: refresh };
