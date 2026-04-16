@@ -1414,6 +1414,220 @@ button{font-family:inherit;cursor:pointer;}
 }
 #dev-reset-btn:hover{background:var(--red);}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// ── SUPABASE CONFIG ──────────────────────────────────────────────
+const SUPABASE_URL =  + SUPABASE_URL + ;
+const SUPABASE_KEY =  + SUPABASE_KEY + ;
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// ── AUTH MODULE ──────────────────────────────────────────────────
+const Auth = (() => {
+  let _user = null;
+  let _session = null;
+
+  async function init() {
+    const { data } = await _sb.auth.getSession();
+    _session = data.session;
+    _user = _session?.user ?? null;
+
+    _sb.auth.onAuthStateChange((event, session) => {
+      _session = session;
+      _user = session?.user ?? null;
+      if (event === 'SIGNED_IN') _onSignedIn();
+      if (event === 'SIGNED_OUT') _onSignedOut();
+    });
+
+    return _user;
+  }
+
+  async function signUp(email, password, username) {
+    const { data, error } = await _sb.auth.signUp({
+      email, password,
+      options: { data: { username } }
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  async function signIn(email, password) {
+    const { data, error } = await _sb.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return data;
+  }
+
+  async function signOut() {
+    await _sb.auth.signOut();
+  }
+
+  function getUser() { return _user; }
+  function getSession() { return _session; }
+  function isLoggedIn() { return !!_user; }
+
+  async function _onSignedIn() {
+    // Cargar perfil del servidor y sincronizar con Store local
+    await SupaStore.loadProfile();
+    HeaderModule.refresh();
+  }
+
+  function _onSignedOut() {
+    _user = null;
+  }
+
+  return { init, signUp, signIn, signOut, getUser, isLoggedIn };
+})();
+
+// ── SUPASTORE — sincroniza Store local ↔ Supabase ───────────────
+const SupaStore = (() => {
+
+  async function loadProfile() {
+    const user = Auth.getUser();
+    if (!user) return null;
+    const { data, error } = await _sb.from('profiles').select('*').eq('id', user.id).single();
+    if (error || !data) return null;
+    // Sincronizar datos del servidor al Store local
+    const S = Store.get();
+    S.xp         = data.xp;
+    S.gcoins     = data.g_coins;
+    S.energy     = data.energy;
+    S.streak     = data.streak;
+    S.vault.fuel = data.vault_fuel;
+    S.rescue      = { used: data.rescue_used, lastTs: data.rescue_last_ts ? new Date(data.rescue_last_ts).getTime() : 0 };
+    Store.save();
+    return data;
+  }
+
+  async function syncAction(actionType, payload) {
+    // Registrar acción en Supabase (inmutable)
+    const user = Auth.getUser();
+    if (!user) return; // si no está logueado, solo local
+    const { error } = await _sb.from('user_actions').insert({
+      user_id: user.id,
+      action_type: actionType,
+      stake_gcoins: payload.stake || 0,
+      energy_spent: payload.energy || 0,
+      prediction: payload.prediction || {},
+      result: payload.result || 'pending',
+      xp_rewarded: payload.xp || 0,
+      gcoins_delta: payload.gcoins_delta || 0,
+      fuel_gained: payload.fuel || 0,
+      processed: true,
+    });
+    if (error) console.warn('[SupaStore] syncAction error:', error.message);
+  }
+
+  async function syncProfile() {
+    // Push estado local → Supabase (solo si logueado)
+    const user = Auth.getUser();
+    if (!user) return;
+    const S = Store.get();
+    const { error } = await _sb.from('profiles').update({
+      xp:              S.xp,
+      g_coins:         S.gcoins,
+      energy:          S.energy,
+      streak:          S.streak,
+      vault_fuel:      S.vault.fuel,
+      rescue_used:     S.rescue?.used || 0,
+      rescue_last_ts:  S.rescue?.lastTs ? new Date(S.rescue.lastTs).toISOString() : null,
+    }).eq('id', user.id);
+    if (error) console.warn('[SupaStore] syncProfile error:', error.message);
+  }
+
+  async function getLeaderboard() {
+    const { data, error } = await _sb.from('v_leaderboard').select('*').limit(20);
+    if (error) return null;
+    return data;
+  }
+
+  async function subscribeLeaderboard(callback) {
+    // Realtime: escuchar cambios en profiles para actualizar ranking en vivo
+    return _sb
+      .channel('leaderboard')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'profiles' }, callback)
+      .subscribe();
+  }
+
+  return { loadProfile, syncAction, syncProfile, getLeaderboard, subscribeLeaderboard };
+})();
+
+// ── AUTH UI ──────────────────────────────────────────────────────
+const AuthUI = (() => {
+  function showAuthModal(mode='signin') {
+    const existing = document.getElementById('auth-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'auth-modal';
+    modal.style.cssText = 'position:absolute;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(4,4,12,.92);backdrop-filter:blur(8px);';
+    modal.innerHTML = `
+      <div style="background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:28px 22px;max-width:320px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);">
+        <div style="font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--gold);letter-spacing:1px;margin-bottom:4px;">
+          ${mode === 'signup' ? 'CREAR CUENTA' : 'INICIAR SESIÓN'}
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-bottom:20px;">
+          ${mode === 'signup' ? 'Tu progreso se guarda en el servidor' : 'Continuá donde lo dejaste'}
+        </div>
+        ${mode === 'signup' ? `
+        <input id="auth-username" type="text" placeholder="Nombre de usuario"
+          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">
+        ` : ''}
+        <input id="auth-email" type="email" placeholder="Email"
+          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;">
+        <input id="auth-password" type="password" placeholder="Contraseña"
+          style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-family:'Barlow Condensed',sans-serif;font-size:15px;margin-bottom:16px;outline:none;box-sizing:border-box;">
+        <div id="auth-error" style="color:var(--red);font-size:11px;margin-bottom:10px;display:none;"></div>
+        <button id="auth-submit"
+          style="width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;border:none;border-radius:12px;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.5px;cursor:pointer;margin-bottom:10px;">
+          ${mode === 'signup' ? 'CREAR CUENTA' : 'ENTRAR'}
+        </button>
+        <button onclick="AuthUI.showAuthModal('${mode === 'signup' ? 'signin' : 'signup'}')"
+          style="width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;cursor:pointer;">
+          ${mode === 'signup' ? '¿Ya tenés cuenta? Iniciá sesión' : '¿Primera vez? Creá una cuenta'}
+        </button>
+        <button onclick="AuthUI.skipAuth()"
+          style="width:100%;padding:8px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-top:6px;">
+          Continuar sin cuenta (modo demo)
+        </button>
+      </div>`;
+
+    document.getElementById('app').appendChild(modal);
+
+    document.getElementById('auth-submit').addEventListener('click', async () => {
+      const email = document.getElementById('auth-email').value.trim();
+      const password = document.getElementById('auth-password').value;
+      const errEl = document.getElementById('auth-error');
+      const btn = document.getElementById('auth-submit');
+      btn.textContent = 'Cargando…'; btn.disabled = true;
+      errEl.style.display = 'none';
+      try {
+        if (mode === 'signup') {
+          const username = document.getElementById('auth-username').value.trim() || email.split('@')[0];
+          await Auth.signUp(email, password, username);
+          errEl.style.display = 'block'; errEl.style.color = 'var(--neon)';
+          errEl.textContent = '✓ Revisá tu email para confirmar la cuenta';
+        } else {
+          await Auth.signIn(email, password);
+          modal.remove();
+          EntryModule.enter();
+        }
+      } catch(e) {
+        errEl.style.display = 'block';
+        errEl.textContent = e.message || 'Error al autenticar';
+        btn.textContent = mode === 'signup' ? 'CREAR CUENTA' : 'ENTRAR';
+        btn.disabled = false;
+      }
+    });
+  }
+
+  function skipAuth() {
+    const modal = document.getElementById('auth-modal');
+    if (modal) modal.remove();
+    EntryModule.enter();
+  }
+
+  return { showAuthModal, skipAuth };
+})();
+</script>
 </head>
 <body>
 
@@ -1537,7 +1751,7 @@ button{font-family:inherit;cursor:pointer;}
         </div>
       </div>
 
-      <button class="entry-enter-btn" id="entry-enter-btn" disabled onclick="EntryModule.enter()">Conectando…</button>
+      <button class="entry-enter-btn" id="entry-enter-btn" disabled onclick="Auth.isLoggedIn() ? EntryModule.enter() : AuthUI.showAuthModal('signin')">Conectando…</button>
     </div>
 
     <!-- VIEW: HOME -->
@@ -2738,6 +2952,8 @@ const Store = (() => {
     HeaderModule.refresh();
     ProfileModule.refresh();
     LootModule.refresh();
+    // Sync diferido para no bloquear UI
+    setTimeout(() => SupaStore && SupaStore.syncProfile(), 1500);
   }
 
   function addGCoins(amount) {
@@ -2901,7 +3117,7 @@ const Router = (() => {
     if (viewId === 'home')     HomeModule.refresh();
     if (viewId === 'bets')     BetsModule.refresh();
     if (viewId === 'missions') MissionsModule.refresh();
-    if (viewId === 'ranking')  HeaderModule.refresh();
+    if (viewId === 'ranking')  { HeaderModule.refresh(); RankingModule.refresh(); }
   }
 
   function current() { return _current; }
@@ -4401,7 +4617,11 @@ const EntryModule = (() => {
     HomeModule.refresh();
     MicroBet.init();
     LiveProvider.connect();
-    // Launch interactive tutorial on first visit, otherwise skip straight to home
+    // Sync perfil con Supabase si está logueado
+    if (Auth.isLoggedIn()) {
+      SupaStore.syncProfile();
+    }
+    // Launch interactive tutorial on first visit
     setTimeout(() => Tutorial.start(), 400);
   }
 
@@ -5088,6 +5308,42 @@ const MBConfig = (() => {
 })();
 
 /* ── DEV RESET ── */
+/* ── RANKING MODULE ─────────────────────────────────────────── */
+const RankingModule = (() => {
+  async function refresh() {
+    if (!Auth.isLoggedIn()) return; // sin auth, usa datos mock
+    const data = await SupaStore.getLeaderboard();
+    if (!data || !data.length) return;
+    _renderLeaderboard(data);
+  }
+
+  function _renderLeaderboard(rows) {
+    const list = document.querySelector('#view-ranking .lb-list');
+    if (!list) return;
+    const medals = ['👑','🥈','🥉'];
+    const S = Store.get();
+    const myUsername = Auth.getUser()?.email?.split('@')[0] || 'TÚ';
+    list.innerHTML = rows.map((row, i) => {
+      const isMe = row.username === myUsername;
+      const medal = medals[i] || '';
+      const rankCls = i === 0 ? 'g' : i === 1 ? 's' : i === 2 ? 'b' : '';
+      return `
+        <div class="lb-row${isMe ? ' me' : ''}">
+          <span class="lb-rank ${rankCls}">${i+1}</span>
+          <span class="lb-ava">${medal || '🎮'}</span>
+          <div class="lb-info">
+            <div class="lb-name${isMe ? '" style="color:var(--neon)"' : '"}'>${isMe ? 'TÚ' : row.username}</div>
+            <div class="lb-lvl">NV${row.level} · ${row.xp.toLocaleString('es-AR')} XP</div>
+            <div class="lb-bar-track"><div class="lb-bar-fill" style="width:${Math.min(100,(row.xp/3800)*100).toFixed(0)}%;${isMe?'background:linear-gradient(90deg,var(--neon-d),var(--neon))':''}"></div></div>
+          </div>
+          <span class="lb-extra">${medal}</span>
+        </div>`;
+    }).join('');
+  }
+
+  return { refresh };
+})();
+
 function devReset() {
   try {
     localStorage.removeItem('glayer_tutorialSeen');
@@ -5097,8 +5353,10 @@ function devReset() {
   location.reload();
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   Store.load();
+  // Inicializar Auth (detecta sesión existente)
+  await Auth.init();
   HeaderModule.refresh();
   VaultModule.refresh();
   LootModule.refresh();
