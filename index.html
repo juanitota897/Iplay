@@ -1423,49 +1423,62 @@ const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // ── AUTH MODULE ──────────────────────────────────────────────────
 const Auth = (() => {
-  let _user = null;
-  let _session = null;
+  var _user = null;
+  var _session = null;
 
   async function init() {
-    const { data } = await _sb.auth.getSession();
-    _session = data.session;
-    _user = _session?.user ?? null;
+    // Supabase persiste la sesion en localStorage automaticamente
+    // Si hay sesion activa, el usuario no tiene que volver a loguearse
+    var res = await _sb.auth.getSession();
+    _session = res.data.session;
+    _user = _session ? _session.user : null;
 
-    _sb.auth.onAuthStateChange((event, session) => {
+    _sb.auth.onAuthStateChange(function(event, session) {
       _session = session;
-      _user = session?.user ?? null;
-      if (event === 'SIGNED_IN') _onSignedIn();
+      _user = session ? session.user : null;
+      if (event === 'SIGNED_IN')  _onSignedIn();
       if (event === 'SIGNED_OUT') _onSignedOut();
+      if (event === 'TOKEN_REFRESHED') _session = session; // refresh automatico
     });
+
+    // Si ya estaba logueado, cargar perfil del servidor silenciosamente
+    if (_user) {
+      await SupaStore.loadProfile();
+    }
 
     return _user;
   }
 
   async function signUp(email, password, username) {
-    const { data, error } = await _sb.auth.signUp({
-      email, password,
-      options: { data: { username } }
+    var res = await _sb.auth.signUp({
+      email: email,
+      password: password,
+      options: { data: { username: username } }
     });
-    if (error) throw error;
-    return data;
+    if (res.error) throw res.error;
+    return res.data;
   }
 
   async function signIn(email, password) {
-    const { data, error } = await _sb.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    return data;
+    var res = await _sb.auth.signInWithPassword({ email: email, password: password });
+    if (res.error) throw res.error;
+    return res.data;
   }
 
   async function signOut() {
     await _sb.auth.signOut();
   }
 
+  async function resetPassword(email) {
+    var redirectTo = window.location.origin + window.location.pathname;
+    var res = await _sb.auth.resetPasswordForEmail(email, { redirectTo: redirectTo });
+    if (res.error) throw res.error;
+  }
+
   function getUser() { return _user; }
-  function getSession() { return _session; }
   function isLoggedIn() { return !!_user; }
 
   async function _onSignedIn() {
-    // Cargar perfil del servidor y sincronizar con Store local
     await SupaStore.loadProfile();
     HeaderModule.refresh();
   }
@@ -1474,46 +1487,51 @@ const Auth = (() => {
     _user = null;
   }
 
-  return { init, signUp, signIn, signOut, getUser, isLoggedIn };
+  return { init: init, signUp: signUp, signIn: signIn, signOut: signOut, resetPassword: resetPassword, getUser: getUser, isLoggedIn: isLoggedIn };
 })();
 
 // ── SUPASTORE — sincroniza Store local ↔ Supabase ───────────────
 const SupaStore = (() => {
 
   async function loadProfile() {
-    const user = Auth.getUser();
+    var user = Auth.getUser();
     if (!user) return null;
-    const { data, error } = await _sb.from('profiles').select('*').eq('id', user.id).single();
-    if (error || !data) return null;
-    // Sincronizar datos del servidor al Store local
-    const S = Store.get();
+    var res = await _sb.from('profiles').select('*').eq('id', user.id).single();
+    if (res.error || !res.data) return null;
+    var data = res.data;
+    // El servidor es fuente de verdad — sobreescribe el Store local
+    // Esto impide que modificaciones en localStorage tengan efecto real
+    var S = Store.get();
     S.xp         = data.xp;
     S.gcoins     = data.g_coins;
     S.energy     = data.energy;
     S.streak     = data.streak;
     S.vault.fuel = data.vault_fuel;
-    S.rescue      = { used: data.rescue_used, lastTs: data.rescue_last_ts ? new Date(data.rescue_last_ts).getTime() : 0 };
+    S.rescue     = { used: data.rescue_used || 0, lastTs: data.rescue_last_ts ? new Date(data.rescue_last_ts).getTime() : 0 };
     Store.save();
+    // Refrescar UI con datos del servidor
+    HeaderModule.refresh();
+    VaultModule.refresh();
+    Store.checkRescue();
     return data;
   }
 
   async function syncAction(actionType, payload) {
-    // Registrar acción en Supabase (inmutable)
-    const user = Auth.getUser();
-    if (!user) return; // si no está logueado, solo local
-    const { error } = await _sb.from('user_actions').insert({
-      user_id: user.id,
-      action_type: actionType,
+    var user = Auth.getUser();
+    if (!user) return; // sin auth, solo local
+    var res = await _sb.from('user_actions').insert({
+      user_id:      user.id,
+      action_type:  actionType,
       stake_gcoins: payload.stake || 0,
       energy_spent: payload.energy || 0,
-      prediction: payload.prediction || {},
-      result: payload.result || 'pending',
-      xp_rewarded: payload.xp || 0,
+      prediction:   payload.prediction || {},
+      result:       payload.result || 'pending',
+      xp_rewarded:  payload.xp || 0,
       gcoins_delta: payload.gcoins_delta || 0,
-      fuel_gained: payload.fuel || 0,
-      processed: true,
+      fuel_gained:  payload.fuel || 0,
+      processed:    true,
     });
-    if (error) console.warn('[SupaStore] syncAction error:', error.message);
+    if (res.error) console.warn('[SupaStore] syncAction error:', res.error.message);
   }
 
   async function syncProfile() {
@@ -1581,8 +1599,9 @@ const AuthUI = (() => {
         '<input id="auth-password" type="password" placeholder="Contraseña" style="width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:15px;margin-bottom:16px;outline:none;box-sizing:border-box;">' +
         '<div id="auth-error" style="color:var(--red);font-size:11px;margin-bottom:10px;display:none;"></div>' +
         '<button id="auth-submit" style="width:100%;padding:13px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;border:none;border-radius:12px;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:10px;">' + submitTxt + '</button>' +
-        '<button id="auth-switch" style="width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;">' + switchTxt + '</button>' +
-        '<button id="auth-skip" style="width:100%;padding:8px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-top:6px;">Continuar sin cuenta (modo demo)</button>' +
+        '<button id="auth-switch" style="width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;margin-bottom:6px;">' + switchTxt + '</button>' +
+        (!isSignup ? '<button id="auth-reset" style="width:100%;padding:6px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;">Olvidé mi contraseña</button>' : '') +
+        '<button id="auth-skip" style="width:100%;padding:8px;background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;margin-top:4px;">Continuar sin cuenta (modo demo)</button>' +
       '</div>';
 
     document.getElementById('app').appendChild(modal);
@@ -1594,6 +1613,30 @@ const AuthUI = (() => {
     document.getElementById('auth-skip').addEventListener('click', function() {
       skipAuth();
     });
+
+    var resetBtn = document.getElementById('auth-reset');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', async function() {
+        var email = document.getElementById('auth-email').value.trim();
+        var errEl = document.getElementById('auth-error');
+        if (!email) {
+          errEl.style.display = 'block';
+          errEl.style.color = 'var(--red)';
+          errEl.textContent = 'Ingresá tu email primero';
+          return;
+        }
+        try {
+          await Auth.resetPassword(email);
+          errEl.style.display = 'block';
+          errEl.style.color = 'var(--neon)';
+          errEl.textContent = 'Te enviamos un email para restablecer tu contraseña';
+        } catch(e) {
+          errEl.style.display = 'block';
+          errEl.style.color = 'var(--red)';
+          errEl.textContent = e.message || 'Error al enviar email';
+        }
+      });
+    }
 
     document.getElementById('auth-submit').addEventListener('click', async function() {
       var email    = document.getElementById('auth-email').value.trim();
@@ -4600,19 +4643,25 @@ const EntryModule = (() => {
 
   function init() {
     _op = OPERATORS[Math.floor(Math.random()*OPERATORS.length)];
-    setTimeout(() => {
-      const card = document.getElementById('entry-op-card');
-      const conn = document.getElementById('entry-connecting');
-      const btn  = document.getElementById('entry-enter-btn');
-      const nameEl = document.getElementById('entry-op-name');
-      if(card) card.style.display = 'block';
-      if(conn) conn.style.display = 'none';
+    setTimeout(function() {
+      var card   = document.getElementById('entry-op-card');
+      var conn   = document.getElementById('entry-connecting');
+      var btn    = document.getElementById('entry-enter-btn');
+      var nameEl = document.getElementById('entry-op-name');
+      if(card)   card.style.display = 'block';
+      if(conn)   conn.style.display = 'none';
       if(nameEl) nameEl.textContent = _op.name;
-      // Botón siempre habilitado — auth se maneja al click
-      if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
-      const hdrOp = document.getElementById('hdr-op-name');
-      if(hdrOp) hdrOp.textContent = _op.name.split(' ')[0];
-    }, 1800); // 1.8s de "conexión" visual, independiente de Supabase
+      var hdrOp = document.getElementById('hdr-op-name');
+      if(hdrOp)  hdrOp.textContent = _op.name.split(' ')[0];
+
+      if (Auth.isLoggedIn()) {
+        // Sesion activa — entrar directo sin pedir login
+        if(btn) { btn.disabled = false; btn.textContent = 'Continuar como ' + (Auth.getUser().email.split('@')[0]) + ' →'; }
+        setTimeout(function() { enter(); }, 600);
+      } else {
+        if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
+      }
+    }, 1800);
   }
 
   function enter() {
