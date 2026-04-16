@@ -1751,7 +1751,7 @@ const AuthUI = (() => {
         </div>
       </div>
 
-      <button class="entry-enter-btn" id="entry-enter-btn" disabled onclick="Auth.isLoggedIn() ? EntryModule.enter() : AuthUI.showAuthModal('signin')">Conectando…</button>
+      <button class="entry-enter-btn" id="entry-enter-btn" disabled onclick="AuthUI.showAuthModal('signin')">Conectando…</button>
     </div>
 
     <!-- VIEW: HOME -->
@@ -4596,7 +4596,6 @@ const EntryModule = (() => {
 
   function init() {
     _op = OPERATORS[Math.floor(Math.random()*OPERATORS.length)];
-    // Show spinner for 1.8s then reveal op card
     setTimeout(() => {
       const card = document.getElementById('entry-op-card');
       const conn = document.getElementById('entry-connecting');
@@ -4605,11 +4604,11 @@ const EntryModule = (() => {
       if(card) card.style.display = 'block';
       if(conn) conn.style.display = 'none';
       if(nameEl) nameEl.textContent = _op.name;
+      // Botón siempre habilitado — auth se maneja al click
       if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
-      // Also update header op badge
       const hdrOp = document.getElementById('hdr-op-name');
       if(hdrOp) hdrOp.textContent = _op.name.split(' ')[0];
-    }, 1800);
+    }, 1800); // 1.8s de "conexión" visual, independiente de Supabase
   }
 
   function enter() {
@@ -5355,8 +5354,15 @@ function devReset() {
 
 document.addEventListener('DOMContentLoaded', async () => {
   Store.load();
-  // Inicializar Auth (detecta sesión existente)
-  await Auth.init();
+  // Auth.init con timeout — no bloquea si Supabase tarda
+  try {
+    await Promise.race([
+      Auth.init(),
+      new Promise(resolve => setTimeout(resolve, 3000)) // max 3s
+    ]);
+  } catch(e) {
+    console.warn('[Auth] init fallback:', e.message);
+  }
   HeaderModule.refresh();
   VaultModule.refresh();
   LootModule.refresh();
