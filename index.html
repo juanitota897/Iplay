@@ -3078,12 +3078,25 @@ const Store = (() => {
       progress: { 1: { missions:0, wins:0, xp:0 } }
     },
     missions: {
-      completed: [],   // IDs de misiones diarias completadas hoy
-      totalDone: 0,    // total histórico
-      lastReset: 0,    // timestamp del último reset diario
-      levelMission: { completed: false, level: 0 }, // misión de nivel actual
+      completed: [],
+      totalDone: 0,
+      lastReset: 0,
+      levelMission: { completed: false, level: 0 },
+      // Contadores diarios para progreso de misiones reales
+      daily: {
+        bets: 0,          // apuestas realizadas hoy
+        combos: 0,        // combinadas de 2+ hoy
+        microbets: 0,     // microbets participadas hoy
+        microbetWins: 0,  // microbets ganadas hoy
+        consecutiveWins: 0, // racha actual de wins consecutivos
+        crashRounds: 0,   // rondas de crash jugadas hoy
+        crashCashedBefore2x: 0, // cobros antes de 2x hoy
+        fuelStart: 0,     // fuel al inicio del día (para misión vault)
+        highOddWin: false, // ganó cuota > 3.0 hoy
+        openedLoot: false, // abrió caja hoy
+      }
     },
-    xpBoost: { active: false, endsAt: 0 }, // doble XP por tiempo
+    xpBoost: { active: false, endsAt: 0 },
     microbet: { rounds: 0, wins: 0, stake: 100 },
     ranking:  { duelScore: 0 },
     lossStreak: 0,
@@ -3328,11 +3341,12 @@ const Store = (() => {
     S.vault.fuel += gain;
     S.vault.lossCount++;
     S.lossStreak++;
-    // 0 XP por perder microbet — solo gana XP quien acierta
     save();
     showVaultToast('+' + gain + ' pts combustible 🔥');
     VaultModule.refresh();
     _checkRescueTrigger();
+    // Trigger misión vault (acumular fuel)
+    if (typeof MissionsModule !== 'undefined') MissionsModule.checkTrigger('fuel', {});
   }
 
   function resetDemo() {
@@ -3720,10 +3734,12 @@ const MicroBet = (() => {
         Store.addXP(MICRO_XP);
         _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP');
         LootModule.refresh();
+        MissionsModule.checkTrigger('microbet', { won: true });
       } else {
         Store.save();
         Store.simulateLoss();
         _showResult('loss', '❌', 'Perdiste — +' + MICRO_FUEL_LOSS + ' fuel en tu Bóveda');
+        MissionsModule.checkTrigger('microbet', { won: false });
       }
       HeaderModule.refresh(); // actualiza energy bar
       _updateLiveStats();
@@ -4029,6 +4045,7 @@ const LootModule = (() => {
     const ul = S.loot.unlocked[tier];
     const op = S.loot.opened[tier];
     if (!ul[crateId] || op[crateId]) return;
+    MissionsModule.checkTrigger('loot', {});
     _pendingCrate = crateId;
     // Show overlay
     const lo = document.getElementById('loot-overlay');
@@ -4117,15 +4134,15 @@ const MissionsModule = (() => {
   // Cada misión tiene: título, descripción, XP, dificultad, botón texto
   // Los XP escalan con el nivel del usuario
   var DAILY_POOL = [
-    { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',    desc:'Realizá tu primera apuesta del día.',                  xpBase:40,  btn:'⚡ Simular Apuesta' },
-    { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',         desc:'Participá en 2 micro-apuestas en vivo.',               xpBase:45,  btn:'🎯 Simular Microbet' },
-    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:40,  btn:'🎰 Ir al Casino' },
-    { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',            desc:'Realizá una apuesta combinada de 2+ eventos.',         xpBase:90,  btn:'🔗 Simular Combinada' },
-    { id:'m_ganador',  diff:'med',  ico:'🏆', name:'Racha Ganadora',        desc:'Ganá 2 micro-apuestas seguidas.',                     xpBase:90,  btn:'🏆 Simular Ganancia' },
-    { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',   desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',      xpBase:80,  btn:'🛡️ Ver Bóveda' },
-    { id:'m_cuota',    diff:'hard', ico:'👑', name:'Cazador de Cuotas',     desc:'Acertá una predicción con cuota mayor a 3.0.',         xpBase:160, btn:'👑 Simular Pick' },
-    { id:'m_streak',   diff:'hard', ico:'🔥', name:'Racha Imparable',       desc:'Completá las otras 2 misiones del día sin errores.',   xpBase:160, btn:'🔥 Completar todo' },
-    { id:'m_casino2',  diff:'hard', ico:'💎', name:'El Gran Apostador',     desc:'Jugá 3 rondas del Crash en una sesión.',               xpBase:140, btn:'💎 Ir al Casino' },
+    { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',    desc:'Realizá tu primera apuesta del día.',                  xpBase:40,  btn:'⚡ Ir a Apuestas',  nav:'bets' },
+    { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',         desc:'Participá en 2 micro-apuestas en vivo.',               xpBase:45,  btn:'🎯 Ir a En Vivo',   nav:'live' },
+    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:40,  btn:'🎰 Ir al Casino',   nav:'casino' },
+    { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',            desc:'Realizá una apuesta combinada de 2+ eventos.',         xpBase:90,  btn:'🔗 Ir a Apuestas',  nav:'bets' },
+    { id:'m_ganador',  diff:'med',  ico:'🏆', name:'Racha Ganadora',        desc:'Ganá 2 micro-apuestas seguidas en vivo.',             xpBase:90,  btn:'🏆 Ir a En Vivo',   nav:'live' },
+    { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',   desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',      xpBase:80,  btn:'🛡️ Ver Bóveda',    nav:'vault' },
+    { id:'m_cuota',    diff:'hard', ico:'👑', name:'Cazador de Cuotas',     desc:'Acertá una apuesta con cuota mayor a 3.0.',            xpBase:160, btn:'👑 Ir a Apuestas',  nav:'bets' },
+    { id:'m_streak',   diff:'hard', ico:'🔥', name:'Racha Imparable',       desc:'Completá las otras 2 misiones del día.',               xpBase:160, btn:'🔥 Se completa sola', nav:null },
+    { id:'m_casino2',  diff:'hard', ico:'💎', name:'El Gran Apostador',     desc:'Jugá 3 rondas del Crash en una sesión.',               xpBase:140, btn:'💎 Ir al Casino',   nav:'casino' },
   ];
 
   // Misiones de nivel — una por nivel, se completan una sola vez
@@ -4162,6 +4179,21 @@ const MissionsModule = (() => {
       S.missions.completed  = [];
       S.missions.totalDone  = 0;
       S.missions.lastReset  = Date.now();
+      // Resetear contadores diarios
+      S.missions.daily = {
+        bets: 0, combos: 0, microbets: 0, microbetWins: 0,
+        consecutiveWins: 0, crashRounds: 0, crashCashedBefore2x: 0,
+        fuelStart: S.vault.fuel, highOddWin: false, openedLoot: false,
+      };
+      Store.save();
+    }
+    // Asegurar que daily existe aunque no haya reset
+    if (!S.missions.daily) {
+      S.missions.daily = {
+        bets: 0, combos: 0, microbets: 0, microbetWins: 0,
+        consecutiveWins: 0, crashRounds: 0, crashCashedBefore2x: 0,
+        fuelStart: S.vault.fuel, highOddWin: false, openedLoot: false,
+      };
       Store.save();
     }
   }
@@ -4208,9 +4240,22 @@ const MissionsModule = (() => {
       if (txtEl)  txtEl.innerHTML  = '<strong>' + m.ico + ' ' + m.name + '</strong><br>' + m.desc;
       if (xpEl)   xpEl.textContent = '+' + xp;
       if (btn) {
-        btn.onclick = function() { complete(m.id, xp); };
-        btn.textContent = isDone ? '✓ Completada' : m.btn;
-        btn.disabled = isDone;
+        var mission = m; // capture
+        if (isDone) {
+          btn.onclick = null;
+          btn.textContent = '✓ Completada';
+          btn.disabled = true;
+        } else if (mission.nav) {
+          btn.onclick = function() { Router.go(mission.nav); };
+          btn.textContent = mission.btn;
+          btn.disabled = false;
+        } else {
+          // Misión que se completa automáticamente (m_streak)
+          btn.onclick = null;
+          btn.textContent = mission.btn;
+          btn.disabled = true;
+          btn.style.opacity = '.6';
+        }
       }
       if (card) card.classList.toggle('done', isDone);
       if (prog) prog.style.width = isDone ? '100%' : '0%';
@@ -4301,7 +4346,85 @@ const MissionsModule = (() => {
     _renderLevelMission();
   }
 
-  return { complete: complete, completeLevelMission: completeLevelMission, refresh: refresh };
+  // ── checkTrigger: llamado por acciones reales ─────────────────
+  // Evalúa si alguna misión activa del día se completó
+  function checkTrigger(event, data) {
+    var S = Store.get();
+    if (!S.missions.daily) return;
+    var d = S.missions.daily;
+
+    // Actualizar contadores según el evento
+    switch(event) {
+      case 'bet':
+        d.bets++;
+        if (data && data.isCombo) d.combos++;
+        if (data && data.odd > 3.0 && data.won) d.highOddWin = true;
+        break;
+      case 'microbet':
+        d.microbets++;
+        if (data && data.won) {
+          d.microbetWins++;
+          d.consecutiveWins++;
+        } else {
+          d.consecutiveWins = 0;
+        }
+        break;
+      case 'crash':
+        d.crashRounds++;
+        if (data && data.cashedBefore2x) d.crashCashedBefore2x++;
+        break;
+      case 'fuel':
+        // se chequea contra fuelStart
+        break;
+      case 'loot':
+        d.openedLoot = true;
+        break;
+    }
+    Store.save();
+
+    // Chequear cada misión activa del día
+    _todayMissions.forEach(function(m) {
+      if (!m) return;
+      var done = new Set(S.missions.completed);
+      if (done.has(m.id)) return; // ya completada
+      var xp = _scaledXP(m.xpBase);
+      if (_isMissionComplete(m.id, d, S)) {
+        complete(m.id, xp);
+      }
+    });
+
+    // Chequear misión de streak (completar las 2 primeras)
+    _checkStreakMission(S, d);
+  }
+
+  function _isMissionComplete(mId, d, S) {
+    switch(mId) {
+      case 'm_apuesta':  return d.bets >= 1;
+      case 'm_microbet': return d.microbets >= 2;
+      case 'm_crash':    return d.crashCashedBefore2x >= 1;
+      case 'm_combo':    return d.combos >= 1;
+      case 'm_ganador':  return d.consecutiveWins >= 2;
+      case 'm_vault':    return (S.vault.fuel - d.fuelStart) >= 30;
+      case 'm_cuota':    return d.highOddWin === true;
+      case 'm_casino2':  return d.crashRounds >= 3;
+      case 'm_streak':   return false; // se maneja aparte
+      default: return false;
+    }
+  }
+
+  function _checkStreakMission(S, d) {
+    // m_streak: completar las otras 2 misiones del día
+    var done = new Set(S.missions.completed);
+    if (done.has('m_streak')) return;
+    var active = _todayMissions.filter(function(m){ return m && m.id !== 'm_streak'; });
+    var allOthersDone = active.every(function(m){ return m && done.has(m.id); });
+    if (allOthersDone && active.length >= 2) {
+      var streakM = _todayMissions.find(function(m){ return m && m.id === 'm_streak'; });
+      if (streakM) complete('m_streak', _scaledXP(streakM.xpBase));
+    }
+  }
+
+  return { complete: complete, completeLevelMission: completeLevelMission, refresh: refresh, checkTrigger: checkTrigger };
 })();
 
 /* ── CASINO MODULE ──────────────────────────────────────────── */
@@ -4431,9 +4554,12 @@ const CasinoModule = (() => {
     Store.save();
     Store.addGCoins(won);
     _trackReturn(won);
-    Store.addXP(15); // +15 XP fijo por cashout exitoso (economía v2)
+    Store.addXP(15);
     HeaderModule.refresh();
     _refreshBalanceLbl();
+    // Trigger misión crash: cobró antes de 2x
+    var cashedBefore2x = mult < 2.0;
+    MissionsModule.checkTrigger('crash', { cashedBefore2x: cashedBefore2x });
     _setUI({status:'COBRADO',multCls:'cashing',sub:'¡Ganaste '+won.toLocaleString('es-AR')+' G-Coins!',btnTxt:'Nueva ronda',btnCls:'',btnDis:false});
     _showBanner('win','✅ Cobraste '+won.toLocaleString('es-AR')+' G a '+mult.toFixed(2)+'x');
     setTimeout(_reset,2000); // resultado visible 2s, luego cooldown 5s
@@ -4458,6 +4584,8 @@ const CasinoModule = (() => {
       VaultModule.refresh();
       HeaderModule.refresh();
       Store.showVaultToast('+10 pts combustible 🔥');
+      MissionsModule.checkTrigger('crash', { cashedBefore2x: false });
+      MissionsModule.checkTrigger('fuel', {});
     }
     _refreshBalanceLbl();
     setTimeout(_reset,2000); // resultado visible 2s, luego cooldown 5s
@@ -4919,6 +5047,9 @@ const BetsModule = (() => {
     _renderHistory();
     Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada');
 
+    // Trigger misiones de apuesta
+    MissionsModule.checkTrigger('bet', { isCombo: isParlay, odd: totalOdd, won: false });
+
     const delay = 4000 + Math.random() * 6000;
     setTimeout(function(){ _resolve(pendingEntry.id, effectiveStake, xpGain, n); }, delay);
   }
@@ -5016,6 +5147,8 @@ const BetsModule = (() => {
         ? '🏆 ¡COMBINADA COMPLETA! +' + winAmount.toLocaleString('es-AR') + ' G'
         : '🏆 +' + winAmount.toLocaleString('es-AR') + ' G-Coins';
       Store.showGCoinToast(msg);
+      // Trigger misión de cuota alta
+      if (bet.odd > 3.0) MissionsModule.checkTrigger('bet', { isCombo: bet.isParlay, odd: bet.odd, won: true });
     } else if (nearMiss) {
       bet.amount = -stake;
       var consolXP = Math.round(xpGain * 0.25);
