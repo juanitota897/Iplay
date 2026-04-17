@@ -769,7 +769,9 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .casino-hdr{padding:12px 0 6px;}
 .casino-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;}
 .casino-sub{font-size:11px;color:var(--t3);}
-.crash-card{background:var(--bg1);border:1px solid rgba(57,255,20,.18);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 28px rgba(57,255,20,.05);}
+.crash-card{background:var(--bg1);border:1px solid rgba(57,255,20,.18);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 28px rgba(57,255,20,.05);transition:border .3s,box-shadow .3s;}
+@keyframes crash-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+.crash-shake{animation:crash-shake .5s ease-in-out;}
 .crash-topbar{display:flex;align-items:center;justify-content:space-between;padding:9px 13px 6px;border-bottom:1px solid rgba(255,255,255,.05);}
 .crash-status{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;color:var(--neon);letter-spacing:1.5px;text-transform:uppercase;}
 .crash-cooldown-bar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin:0 13px 6px;}
@@ -5274,6 +5276,14 @@ const CasinoModule = (() => {
     clearInterval(_cooldownInterval);
     _hideBanner();
 
+    // Resetear colores del gráfico y número
+    var me = document.getElementById('crash-mult');
+    if (me) me.style.color = '#39FF14';
+    var line = document.getElementById('crash-line');
+    var dot  = document.getElementById('crash-dot');
+    if (line) line.setAttribute('stroke', '#39FF14');
+    if (dot)  dot.setAttribute('fill', '#39FF14');
+
     // Si había apuesta pendiente, ejecutarla ahora que arrancó la ronda
     if (hadPending) {
       betPlaced = false; // se va a setear en true dentro de _placeBet
@@ -5295,15 +5305,48 @@ const CasinoModule = (() => {
     var finalMult = at;
     state = 'crashed';
     _addToHistory(finalMult, 'crash');
+
+    // Gráfico se pone rojo
+    var line = document.getElementById('crash-line');
+    var dot  = document.getElementById('crash-dot');
+    var area = document.getElementById('crash-area');
+    if (line) line.setAttribute('stroke', '#FF3355');
+    if (dot)  dot.setAttribute('fill', '#FF3355');
+
+    // Shake del card
+    var card = document.querySelector('.crash-card');
+    if (card) {
+      card.style.transition = 'none';
+      card.style.border = '1px solid rgba(255,51,85,.6)';
+      card.style.boxShadow = '0 0 24px rgba(255,51,85,.25)';
+      card.classList.add('crash-shake');
+      setTimeout(function() { card.classList.remove('crash-shake'); }, 500);
+    }
+
     // Marcar perdedores en el feed
     _players.forEach(function(p){ if (!p.cashout_at) p.lost = true; });
     _renderPlayers();
+
     if (betPlaced && !cashed) {
       Store.simulateLoss();
-      _showBanner('loss', '💥 Crash a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
+      _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
+    } else if (!betPlaced) {
+      _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x');
     }
-    _setUI({ status:'<span class="live-dot red"></span> CRASHED', multCls:'crashed', sub:'Crash a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
+
+    _setUI({ status:'<span class="live-dot red"></span> 💥 CRASHED', multCls:'crashed', sub:'Crasheó a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
     betPlaced = false;
+
+    // Resetear colores del gráfico después de un momento
+    setTimeout(function() {
+      if (line) line.setAttribute('stroke', '#39FF14');
+      if (dot)  dot.setAttribute('fill', '#39FF14');
+      if (card) {
+        card.style.border = '';
+        card.style.boxShadow = '';
+      }
+    }, 2000);
+
     _startCooldown(8);
   }
 
@@ -5312,7 +5355,25 @@ const CasinoModule = (() => {
     var el  = (performance.now() - _startT) / 1000;
     mult    = Math.round(Math.pow(Math.E, 0.08 * el) * 100) / 100;
     var me  = document.getElementById('crash-mult');
-    if(me) me.innerHTML = mult.toFixed(2) + '<span class="crash-mult-x">x</span>';
+
+    // Color dinámico según el multiplicador
+    var color;
+    if (mult < 1.5)      color = '#39FF14'; // verde
+    else if (mult < 2.5) color = '#F0D060'; // amarillo
+    else if (mult < 5)   color = '#FF6B35'; // naranja
+    else                 color = '#FF3355'; // rojo — zona de riesgo
+
+    if(me) {
+      me.innerHTML = mult.toFixed(2) + '<span class="crash-mult-x">x</span>';
+      me.style.color = color;
+    }
+
+    // Actualizar color del gráfico
+    var line = document.getElementById('crash-line');
+    var dot  = document.getElementById('crash-dot');
+    if (line) line.setAttribute('stroke', color);
+    if (dot)  dot.setAttribute('fill', color);
+
     var pct = Math.min(el / 15, 1);
     _pts.push({ x: pct * 290, y: Math.min(pct * mult * 5.5, 72) });
     _drawGraph();
@@ -5328,17 +5389,20 @@ const CasinoModule = (() => {
     var rem = secs;
     _setSub('Próxima ronda en ' + rem + 's');
     clearInterval(_cooldownInterval);
+
+    // Si ya apostaste en esta ronda, deshabilitar el botón durante el cooldown
+    var btnTxt = betPlaced ? 'Apostado ✓' : 'Apostar';
+    var btnDis = betPlaced; // no dejar apostar dos veces
+    _setUI({ status:'<span class="live-dot" style="background:var(--t3);animation:none"></span> Esperando', multCls:'', sub:'Próxima ronda en ' + secs + 's', btnTxt: btnTxt, btnDis: btnDis, btnCls:'' });
+
     _cooldownInterval = setInterval(function() {
       rem--;
       _setSub('Próxima ronda en ' + rem + 's');
       if (rem <= 0) {
         clearInterval(_cooldownInterval);
         _setSub('Esperando servidor…');
-        // Pedir al servidor que arranque una nueva ronda
-        _hostCall({ action: 'start' }).catch(function(){});
       }
     }, 1000);
-    _setUI({ status:'<span class="live-dot" style="background:var(--t3);animation:none"></span> Esperando', multCls:'', sub:'Próxima ronda en ' + secs + 's', btnTxt:'Apostar', btnDis:false, btnCls:'' });
   }
 
   // ── STAKE ─────────────────────────────────────────────────────
