@@ -373,24 +373,58 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .bets-confirm-btn{width:100%;margin-top:10px;padding:13px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
 .bets-confirm-btn:hover{transform:translateY(-1px);}
 .bets-confirm-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+/* ── MIS APUESTAS ── */
 .bets-history{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
 .bets-history-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--t2);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;}
 .bets-history-empty{font-size:11px;color:var(--t3);text-align:center;padding:8px 0;}
-.bets-hist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.04);}
-.bets-hist-item:last-child{border-bottom:none;padding-bottom:0;}
-.bets-hist-result{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0;}
-.bets-hist-result.win{background:rgba(57,255,20,.12);color:var(--neon);}
-.bets-hist-result.loss{background:rgba(255,51,85,.1);color:var(--red);}
-.bets-hist-result.pending{background:rgba(212,175,55,.08);color:var(--gold);}
-.bets-hist-info{flex:1;min-width:0;}
-.bets-hist-match{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.bets-hist-pick{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--t1);}
-.bets-hist-right{text-align:right;flex-shrink:0;}
-.bets-hist-amount{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;}
-.bets-hist-amount.win{color:var(--neon);}
-.bets-hist-amount.loss{color:var(--red);}
-.bets-hist-amount.pending{color:var(--gold);}
-.bets-hist-xp{font-size:9px;color:var(--t3);}
+.bet-ticket{border-radius:10px;border:1px solid rgba(255,255,255,.07);margin-bottom:8px;overflow:hidden;transition:border-color .3s;}
+.bet-ticket:last-child{margin-bottom:0;}
+.bet-ticket.pending{border-color:rgba(212,175,55,.25);}
+.bet-ticket.won{border-color:rgba(57,255,20,.3);}
+.bet-ticket.lost{border-color:rgba(255,51,85,.2);}
+.bet-ticket-hdr{display:flex;align-items:center;gap:8px;padding:9px 11px;background:rgba(255,255,255,.02);}
+.bet-ticket-badge{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:.6px;padding:2px 7px;border-radius:10px;flex-shrink:0;}
+.bet-ticket-badge.pending{background:rgba(212,175,55,.12);color:var(--gold);}
+.bet-ticket-badge.won{background:rgba(57,255,20,.12);color:var(--neon);}
+.bet-ticket-badge.lost{background:rgba(255,51,85,.1);color:var(--red);}
+.bet-ticket-meta{flex:1;min-width:0;}
+.bet-ticket-label{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t1);}
+.bet-ticket-date{font-size:9px;color:var(--t3);margin-top:1px;}
+.bet-ticket-right{text-align:right;flex-shrink:0;}
+.bet-ticket-amount{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;}
+.bet-ticket-amount.pending{color:var(--gold);}
+.bet-ticket-amount.won{color:var(--neon);}
+.bet-ticket-amount.lost{color:var(--red);}
+.bet-ticket-stake{font-size:9px;color:var(--t3);}
+.bet-ticket-legs{padding:0 11px 10px;}
+.bet-leg{display:flex;align-items:center;gap:7px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.bet-leg:last-child{border-bottom:none;}
+.bet-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;transition:background .4s;}
+.bet-leg-dot.pending{background:rgba(212,175,55,.4);}
+.bet-leg-dot.won{background:var(--neon);box-shadow:0 0 6px rgba(57,255,20,.5);}
+.bet-leg-dot.lost{background:var(--red);}
+.bet-leg-info{flex:1;min-width:0;}
+.bet-leg-match{font-size:10px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.bet-leg-pick{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;transition:color .4s;}
+.bet-leg-pick.pending{color:var(--t2);}
+.bet-leg-pick.won{color:var(--neon);}
+.bet-leg-pick.lost{color:var(--red);text-decoration:line-through;opacity:.7;}
+.bet-leg-odd{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;flex-shrink:0;transition:color .4s;}
+.bet-leg-odd.pending{color:var(--gold);}
+.bet-leg-odd.won{color:var(--neon);}
+.bet-leg-odd.lost{color:var(--red);opacity:.6;}
+.bet-leg-score{font-size:9px;color:var(--t3);margin-left:2px;}
+.bet-single{display:flex;align-items:center;gap:7px;padding:7px 11px 10px;}
+.bet-single-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.bet-single-info{flex:1;min-width:0;}
+.bet-single-match{font-size:10px;color:var(--t3);}
+.bet-single-pick{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;}
+.bet-single-pick.pending{color:var(--t2);}
+.bet-single-pick.won{color:var(--neon);}
+.bet-single-pick.lost{color:var(--red);}
+.bet-single-odd{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;}
+.bet-ticket-total{display:flex;justify-content:space-between;align-items:center;padding:4px 11px 9px;font-size:10px;color:var(--t3);}
+.bet-ticket-total strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;}
 
 /* ── TOAST G-COINS ── */
 .toast-gcoin{top:120px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--neon);box-shadow:0 8px 28px rgba(57,255,20,.12);}
@@ -3042,7 +3076,7 @@ const AuthUI = (() => {
 
         <!-- HISTORIAL -->
         <div class="bets-history">
-          <div class="bets-history-title">Últimas apuestas</div>
+          <div class="bets-history-title">🎟 Mis Apuestas</div>
           <div id="bets-history-list">
             <div class="bets-history-empty">Todavía no apostaste. ¡Empezá ahora!</div>
           </div>
@@ -6733,8 +6767,8 @@ const BetsModule = (() => {
       list.innerHTML = '<div class="bets-history-empty">Todavía no apostaste. ¡Empezá ahora!</div>';
       return;
     }
+
     list.innerHTML = history.map(function(b) {
-      // Supabase usa snake_case, fallback a camelCase para entradas locales temporales
       var status    = b.status || 'pending';
       var matchName = b.match_name || b.matchName || '—';
       var label     = b.label || '—';
@@ -6742,42 +6776,100 @@ const BetsModule = (() => {
       var stake     = b.stake || 0;
       var xpGain    = b.xp_gain || b.xpGain || 0;
       var isParlay  = b.is_parlay || b.isParlay || false;
+      var picks     = b.picks || [];
+      var resultData = b.result_data || [];
 
-      const isPending = status === 'pending';
-      const isWon     = status === 'won' || status === 'win';
-      const isLost    = status === 'lost' || status === 'loss';
-      const ico = isPending ? '⏳' : isWon ? '✓' : '✗';
-      const cls = isPending ? 'pending' : isWon ? 'win' : 'loss';
-      const winAmount = Math.round(stake * odd);
-      const amtTxt = isPending
-        ? stake.toLocaleString('es-AR') + ' G en juego'
+      var isPending = status === 'pending';
+      var isWon     = status === 'won' || status === 'win';
+      var isLost    = status === 'lost' || status === 'loss';
+      var cls       = isPending ? 'pending' : isWon ? 'won' : 'lost';
+
+      // Badge label
+      var badgeIco  = isPending ? '⏳ EN JUEGO' : isWon ? '✓ GANADA' : '✗ PERDIDA';
+
+      // Amounts
+      var winAmount  = Math.round(stake * odd);
+      var amtTxt     = isPending
+        ? '+' + winAmount.toLocaleString('es-AR') + ' G potencial'
         : isWon
           ? '+' + winAmount.toLocaleString('es-AR') + ' G'
           : '-' + stake.toLocaleString('es-AR') + ' G';
-      const xpTxt = isPending
-        ? '+10 XP participación'
-        : isWon
-          ? '+' + xpGain + ' XP'
-          : '+' + Math.round(xpGain * 0.25) + ' XP consolación';
-      const resultDetail = !isPending && b.result_data
-        ? '<div style="font-size:9px;color:var(--t3);margin-top:2px;">' +
-            (Array.isArray(b.result_data) ? b.result_data.map(function(r){
-              return (r.won ? '✅' : '❌') + ' ' + (r.score || '');
-            }).join(' · ') : '') +
-          '</div>'
-        : isPending ? '<div style="font-size:9px;color:var(--t3);margin-top:2px;">⏳ Esperando resultado del partido</div>' : '';
+      var stakeTxt   = stake.toLocaleString('es-AR') + ' G apostados · ' + odd.toFixed(2) + 'x';
 
-      return '<div class="bets-hist-item">' +
-        '<div class="bets-hist-result ' + cls + '">' + ico + '</div>' +
-        '<div class="bets-hist-info">' +
-          '<div class="bets-hist-match">' + matchName + '</div>' +
-          '<div class="bets-hist-pick">' + label + ' &middot; ' + odd.toFixed(2) + 'x</div>' +
-          resultDetail +
+      // Date
+      var dateStr = '';
+      if (b.created_at) {
+        var d = new Date(b.created_at);
+        dateStr = d.toLocaleDateString('es-AR', { day:'numeric', month:'short' }) + ' · ' +
+                  d.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit' });
+      }
+
+      // Build legs for parlay
+      var legsHtml = '';
+      if (isParlay && picks.length > 0) {
+        var legsRows = picks.map(function(p, idx) {
+          // Find result for this leg from result_data
+          var legResult = Array.isArray(resultData)
+            ? resultData.find(function(r){ return r.matchId === p.matchId; })
+            : null;
+          var legCls = isPending ? 'pending' : (legResult ? (legResult.won ? 'won' : 'lost') : 'pending');
+          var scoreHtml = legResult && legResult.score
+            ? '<span class="bet-leg-score">' + legResult.score + '</span>'
+            : '';
+          return '<div class="bet-leg">' +
+            '<div class="bet-leg-dot ' + legCls + '"></div>' +
+            '<div class="bet-leg-info">' +
+              '<div class="bet-leg-match">' + (p.matchName || '—') + '</div>' +
+              '<div class="bet-leg-pick ' + legCls + '">' + (p.label || p.pick || '—') + '</div>' +
+            '</div>' +
+            scoreHtml +
+            '<div class="bet-leg-odd ' + legCls + '">' + parseFloat(p.odd).toFixed(2) + 'x</div>' +
+          '</div>';
+        }).join('');
+
+        // Count won legs
+        var wonLegs = isPending ? 0 : (Array.isArray(resultData) ? resultData.filter(function(r){return r.won;}).length : 0);
+        var totalLegs = picks.length;
+        var progressTxt = isPending
+          ? totalLegs + ' partidos · cuota ' + odd.toFixed(2) + 'x'
+          : wonLegs + '/' + totalLegs + ' acertadas';
+
+        legsHtml = '<div class="bet-ticket-legs">' + legsRows + '</div>' +
+          '<div class="bet-ticket-total">' +
+            '<span>' + progressTxt + '</span>' +
+            '<strong style="color:' + (isWon ? 'var(--neon)' : isPending ? 'var(--gold)' : 'var(--red)') + '">' + amtTxt + '</strong>' +
+          '</div>';
+      } else {
+        // Single pick
+        var singlePick = picks[0] || {};
+        var singleResult = Array.isArray(resultData) && resultData[0] ? resultData[0] : null;
+        var singleCls = isPending ? 'pending' : (singleResult ? (singleResult.won ? 'won' : 'lost') : (isWon ? 'won' : 'lost'));
+        var scoreHtml = singleResult && singleResult.score
+          ? ' <span class="bet-leg-score">' + singleResult.score + '</span>'
+          : '';
+        legsHtml = '<div class="bet-single">' +
+          '<div class="bet-single-dot ' + singleCls + '" style="background:' + (singleCls==='won' ? 'var(--neon)' : singleCls==='lost' ? 'var(--red)' : 'rgba(212,175,55,.4)') + ';' + (singleCls==='won' ? 'box-shadow:0 0 6px rgba(57,255,20,.5);' : '') + '"></div>' +
+          '<div class="bet-single-info">' +
+            '<div class="bet-single-match">' + matchName + scoreHtml + '</div>' +
+            '<div class="bet-single-pick ' + singleCls + '">' + label + '</div>' +
+          '</div>' +
+          '<div class="bet-single-odd" style="color:' + (isWon ? 'var(--neon)' : isPending ? 'var(--gold)' : 'var(--red)') + '">' + amtTxt + '</div>' +
+        '</div>';
+      }
+
+      return '<div class="bet-ticket ' + cls + '">' +
+        '<div class="bet-ticket-hdr">' +
+          '<div class="bet-ticket-badge ' + cls + '">' + badgeIco + '</div>' +
+          '<div class="bet-ticket-meta">' +
+            '<div class="bet-ticket-label">' + (isParlay ? '🔗 Combinada ' + picks.length + ' picks' : label) + '</div>' +
+            '<div class="bet-ticket-date">' + dateStr + (isPending ? ' · ⏳ Esperando partido' : '') + '</div>' +
+          '</div>' +
+          '<div class="bet-ticket-right">' +
+            '<div class="bet-ticket-amount ' + cls + '">' + (isParlay ? odd.toFixed(2) + 'x' : odd.toFixed(2) + 'x') + '</div>' +
+            '<div class="bet-ticket-stake">' + stake.toLocaleString('es-AR') + ' G</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="bets-hist-right">' +
-          '<div class="bets-hist-amount ' + cls + '">' + amtTxt + '</div>' +
-          '<div class="bets-hist-xp">' + xpTxt + '</div>' +
-        '</div>' +
+        legsHtml +
       '</div>';
     }).join('');
   }
