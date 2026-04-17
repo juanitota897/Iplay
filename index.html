@@ -5268,7 +5268,8 @@ const CasinoModule = (() => {
         }
         if (r.status === 'waiting') {
           _roundId = r.id;
-          _players = [];
+          // Preservar jugadores locales pendientes si hay apuesta en vuelo
+          if (!_pendingBet) { _players = []; }
           _renderPlayers();
           _startCooldown(5);
         }
@@ -5514,9 +5515,9 @@ const CasinoModule = (() => {
     _setSub('Próxima ronda en ' + rem + 's');
     clearInterval(_cooldownInterval);
 
-    // Si ya apostaste en esta ronda, deshabilitar el botón durante el cooldown
-    var btnTxt = betPlaced ? 'Apostado ✓' : 'Apostar';
-    var btnDis = betPlaced; // no dejar apostar dos veces
+    // Mostrar estado correcto si hay apuesta pendiente o ya apostada
+    var btnTxt = (_pendingBet || betPlaced) ? 'Esperando…' : 'Apostar';
+    var btnDis = _pendingBet || betPlaced;
     _setUI({ status:'<span class="live-dot" style="background:var(--t3);animation:none"></span> Esperando', multCls:'', sub:'Próxima ronda en ' + secs + 's', btnTxt: btnTxt, btnDis: btnDis, btnCls:'' });
 
     _cooldownInterval = setInterval(function() {
@@ -5575,6 +5576,16 @@ const CasinoModule = (() => {
       _setSub('✓ Apuesta registrada — esperando inicio…');
       var btn = document.getElementById('crash-action-btn');
       if(btn) { btn.textContent = 'Esperando…'; btn.disabled = true; }
+      // Aparecer en el feed inmediatamente (optimista)
+      var user = Auth.getUser();
+      if (user) {
+        var uname = (Store.get().username || (user.email || '').split('@')[0]);
+        var existsInFeed = _players.some(function(p){ return p.user_id === user.id; });
+        if (!existsInFeed) {
+          _players.unshift({ user_id: user.id, username: uname, stake: stake, cashout_at: null, lost: false, pending: true });
+          _renderPlayers();
+        }
+      }
       return;
     }
   }
