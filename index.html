@@ -1666,7 +1666,15 @@ button{font-family:inherit;cursor:pointer;}
 // ── SUPABASE CONFIG ──────────────────────────────────────────────
 const SUPABASE_URL = 'https://jtxvwzcolsbdviskhxpj.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
-const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const _sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: {
+    persistSession: true,
+    storageKey: 'glayer_auth',
+    storage: window.localStorage,
+    autoRefreshToken: true,
+    detectSessionInUrl: false,
+  }
+});
 
 // ── AUTH MODULE ──────────────────────────────────────────────────
 const Auth = (() => {
@@ -1949,8 +1957,8 @@ const AuthUI = (() => {
           var usernameEl = document.getElementById('auth-username');
           var username = (usernameEl ? usernameEl.value.trim() : '') || email.split('@')[0];
           await Auth.signUp(email, password, username);
-          errEl.style.display = 'block'; errEl.style.color = 'var(--neon)';
-          errEl.textContent = 'Revisa tu email para confirmar la cuenta';
+          modal.remove();
+          EntryModule.enter();
         } else {
           await Auth.signIn(email, password);
           modal.remove();
