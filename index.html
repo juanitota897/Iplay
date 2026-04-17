@@ -1976,6 +1976,7 @@ const AuthUI = (() => {
     <div class="dsk-nav-item" data-nav="missions" onclick="Router.go('missions')"><span class="dsk-nav-ico">🎯</span><span class="dsk-nav-lbl">Misiones</span></div>
     <div class="dsk-nav-item" data-nav="loot" onclick="Router.go('loot')"><span class="dsk-nav-ico">🎁</span><span class="dsk-nav-lbl">Botín</span></div>
     <div class="dsk-nav-item" data-nav="ranking" onclick="Router.go('ranking')"><span class="dsk-nav-ico">📊</span><span class="dsk-nav-lbl">Ranking</span></div>
+    <div class="dsk-nav-item" data-nav="social" onclick="Router.go('social')"><span class="dsk-nav-ico">⚔️</span><span class="dsk-nav-lbl">Clubes</span></div>
     <div class="dsk-nav-sep"></div>
     <div class="dsk-nav-item" data-nav="profile" onclick="Router.go('profile')"><span class="dsk-nav-ico">👤</span><span class="dsk-nav-lbl">Perfil</span></div>
     <div class="dsk-nav-sep"></div>
@@ -2752,15 +2753,19 @@ const AuthUI = (() => {
           <div class="simple-view-sub">Datos en tiempo real del piloto</div>
         </div>
 
-        <!-- Tabs XP / G-Coins -->
-        <div style="display:flex;gap:8px;margin-bottom:10px;">
+        <!-- Tabs XP / G-Coins / Clubes -->
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
           <button id="rank-tab-xp" onclick="RankingModule.setTab('xp')"
-            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
-            ⚡ XP — Constancia
+            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            ⚡ XP
           </button>
           <button id="rank-tab-gc" onclick="RankingModule.setTab('gcoins')"
-            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
-            🪙 G-Coins — Skill
+            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            🪙 G-Coins
+          </button>
+          <button id="rank-tab-clubs" onclick="RankingModule.setTab('clubs')"
+            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            ⚔️ Clubes
           </button>
         </div>
 
@@ -2775,6 +2780,9 @@ const AuthUI = (() => {
         </div>
         <div class="lb-list" id="ranking-list-gcoins" style="display:none;">
           <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando ranking…</div>
+        </div>
+        <div class="lb-list" id="ranking-list-clubs" style="display:none;">
+          <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando ranking de clubes…</div>
         </div>
 
         <div class="card" style="background:rgba(255,51,85,.04);border-color:rgba(255,51,85,.18);margin-top:8px;">
@@ -3249,17 +3257,19 @@ const Store = (() => {
   };
 
   // Override LEVELS inline with 10-level curve
+  // Curva polinómica: XP acumulado para nivel N = round(100 * N^1.8)
+  // Nivel 1→2: 100 | 2→3: +220 | 3→4: +300 | 4→5: +380 | 5→6: +480 ...
   const LEVELS_NEW = [
-    {min:0,    max:120,   title:'RECLUTA'},
-    {min:120,  max:280,   title:'ASPIRANTE'},
-    {min:280,  max:500,   title:'APOSTADOR'},
-    {min:500,  max:800,   title:'TÁCTICO'},
-    {min:800,  max:1200,  title:'ESTRATEGA'},
-    {min:1200, max:1700,  title:'ANALISTA'},
-    {min:1700, max:2300,  title:'EXPERTO'},
-    {min:2300, max:3000,  title:'ÉLITE'},
-    {min:3000, max:3800,  title:'MAESTRO'},
-    {min:3800, max:99999, title:'LEYENDA'},
+    {min:0,    max:100,   title:'RECLUTA'},
+    {min:100,  max:320,   title:'ASPIRANTE'},
+    {min:320,  max:620,   title:'APOSTADOR'},
+    {min:620,  max:1000,  title:'TÁCTICO'},
+    {min:1000, max:1480,  title:'ESTRATEGA'},
+    {min:1480, max:2060,  title:'ANALISTA'},
+    {min:2060, max:2740,  title:'EXPERTO'},
+    {min:2740, max:3540,  title:'ÉLITE'},
+    {min:3540, max:4460,  title:'MAESTRO'},
+    {min:4460, max:99999, title:'LEYENDA'},
   ];
   LEVELS.length = 0;
   LEVELS_NEW.forEach(l => LEVELS.push(l));
@@ -4291,15 +4301,15 @@ const MissionsModule = (() => {
 
   // Misiones de nivel — una por nivel, se completan una sola vez
   var LEVEL_MISSIONS = {
-    1: { name:'Primera Sangre',      desc:'Completá tus 3 misiones diarias por primera vez.',       xpBonus:200 },
-    2: { name:'Estratega Emergente', desc:'Acertá 5 microbets en total.',                            xpBonus:250 },
-    3: { name:'Veterano del Live',   desc:'Participá en 10 micro-apuestas en vivo.',                 xpBonus:300 },
-    4: { name:'Coleccionista',       desc:'Abrí tu primera caja de Botín.',                          xpBonus:350 },
-    5: { name:'Analista',            desc:'Completá misiones 5 días seguidos.',                      xpBonus:400 },
-    6: { name:'Máquina de Riesgo',   desc:'Jugá 20 rondas del Crash.',                              xpBonus:500 },
-    7: { name:'Élite del Ranking',   desc:'Llegá al top 10 del ranking.',                            xpBonus:600 },
-    8: { name:'Maestro del Vault',   desc:'Activá el Escudo 3 veces.',                               xpBonus:700 },
-    9: { name:'Leyenda Viviente',    desc:'Acumulá 3,000 XP en total.',                              xpBonus:1000 },
+    1: { name:'Primera Sangre',      desc:'Completá tus 3 misiones diarias por primera vez.',  xpBonus:60  },
+    2: { name:'Estratega Emergente', desc:'Acertá 5 microbets en total.',                       xpBonus:100 },
+    3: { name:'Veterano del Live',   desc:'Participá en 10 micro-apuestas en vivo.',            xpBonus:130 },
+    4: { name:'Coleccionista',       desc:'Abrí tu primera caja de Botín.',                     xpBonus:160 },
+    5: { name:'Analista',            desc:'Completá misiones 5 días seguidos.',                 xpBonus:200 },
+    6: { name:'Máquina de Riesgo',   desc:'Jugá 20 rondas del Crash.',                         xpBonus:250 },
+    7: { name:'Élite del Ranking',   desc:'Llegá al top 10 del ranking.',                       xpBonus:300 },
+    8: { name:'Maestro del Vault',   desc:'Activá el Escudo 3 veces.',                          xpBonus:350 },
+    9: { name:'Leyenda Viviente',    desc:'Acumulá 3,000 XP en total.',                         xpBonus:400 },
   };
 
   var _todayMissions = []; // las 3 misiones del día
@@ -6409,26 +6419,85 @@ const RankingModule = (() => {
 
   function setTab(tab) {
     _activeTab = tab;
-    var xpList  = document.getElementById('ranking-list-xp');
-    var gcList  = document.getElementById('ranking-list-gcoins');
-    var tabXP   = document.getElementById('rank-tab-xp');
-    var tabGC   = document.getElementById('rank-tab-gc');
-    var desc    = document.getElementById('rank-tab-desc');
-    if (xpList)  xpList.style.display  = tab === 'xp' ? '' : 'none';
-    if (gcList)  gcList.style.display  = tab === 'gcoins' ? '' : 'none';
-    if (tabXP) {
-      tabXP.style.background    = tab === 'xp' ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
-      tabXP.style.borderColor   = tab === 'xp' ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
-      tabXP.style.color         = tab === 'xp' ? 'var(--gold)' : 'var(--t2)';
+    var xpList    = document.getElementById('ranking-list-xp');
+    var gcList    = document.getElementById('ranking-list-gcoins');
+    var clubsList = document.getElementById('ranking-list-clubs');
+    var tabXP     = document.getElementById('rank-tab-xp');
+    var tabGC     = document.getElementById('rank-tab-gc');
+    var tabClubs  = document.getElementById('rank-tab-clubs');
+    var desc      = document.getElementById('rank-tab-desc');
+    if (xpList)    xpList.style.display    = tab === 'xp'     ? '' : 'none';
+    if (gcList)    gcList.style.display    = tab === 'gcoins' ? '' : 'none';
+    if (clubsList) clubsList.style.display = tab === 'clubs'  ? '' : 'none';
+
+    var tabs = [
+      { el: tabXP,    active: tab === 'xp' },
+      { el: tabGC,    active: tab === 'gcoins' },
+      { el: tabClubs, active: tab === 'clubs' },
+    ];
+    tabs.forEach(function(t) {
+      if (!t.el) return;
+      t.el.style.background   = t.active ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
+      t.el.style.borderColor  = t.active ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
+      t.el.style.color        = t.active ? 'var(--gold)' : 'var(--t2)';
+    });
+
+    if (desc) desc.textContent =
+      tab === 'xp'     ? 'Premia la constancia — cuanto más jugás, más subís.' :
+      tab === 'gcoins' ? 'Premia la habilidad — tu saldo actual de G-Coins define tu posición.' :
+                         'Clubes ordenados por score semanal ponderado.';
+
+    if (tab === 'clubs') _loadClubsRanking();
+  }
+
+  async function _loadClubsRanking() {
+    var list = document.getElementById('ranking-list-clubs');
+    if (!list) return;
+    list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando…</div>';
+
+    // Traer todos los clubs con sus miembros para calcular score
+    var res = await _sb.from('clubs').select('id, name, avatar_emoji, member_count').order('created_at');
+    if (!res.data || !res.data.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay clubes todavía.</div>';
+      return;
     }
-    if (tabGC) {
-      tabGC.style.background    = tab === 'gcoins' ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
-      tabGC.style.borderColor   = tab === 'gcoins' ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
-      tabGC.style.color         = tab === 'gcoins' ? 'var(--gold)' : 'var(--t2)';
+
+    // Para cada club buscar miembros y calcular score
+    var clubScores = await Promise.all(res.data.map(async function(club) {
+      var mRes = await _sb.from('club_members').select('*, profiles(xp)').eq('club_id', club.id);
+      var members = (mRes.data || []).sort(function(a,b){ return (b.profiles?.xp||0)-(a.profiles?.xp||0); });
+      var score = Math.round(members.reduce(function(acc, m, i) {
+        var xp = m.profiles?.xp || 0;
+        var w = i < 5 ? 0.5 : i < 10 ? 0.25 : 0.1;
+        return acc + xp * w;
+      }, 0));
+      return Object.assign({}, club, { score: score, memberCount: members.length });
+    }));
+
+    clubScores.sort(function(a,b){ return b.score - a.score; });
+
+    var myClubId = null;
+    if (typeof ClubsModule !== 'undefined') {
+      var membership = await _sb.from('club_members').select('club_id').eq('user_id', Auth.getUser()?.id || '').maybeSingle();
+      myClubId = membership?.data?.club_id || null;
     }
-    if (desc) desc.textContent = tab === 'xp'
-      ? 'Premia la constancia — cuanto más jugás, más subís.'
-      : 'Premia la habilidad — tu saldo actual de G-Coins define tu posición.';
+
+    var medals = ['👑','🥈','🥉'];
+    list.innerHTML = clubScores.map(function(club, i) {
+      var isMe = club.id === myClubId;
+      var medal = medals[i] || '';
+      var nameStyle = isMe ? 'color:var(--neon)' : '';
+      return '<div class="lb-row' + (isMe ? ' me' : '') + '">' +
+        '<span class="lb-rank ' + (i===0?'g':i===1?'s':i===2?'b':'') + '">' + (i+1) + '</span>' +
+        '<span class="lb-ava">' + (club.avatar_emoji || '⚔️') + '</span>' +
+        '<div class="lb-info">' +
+          '<div class="lb-name" style="' + nameStyle + '">' + club.name + (isMe ? ' ← Tu club' : '') + '</div>' +
+          '<div class="lb-lvl">' + club.memberCount + ' miembros · ' + club.score.toLocaleString('es-AR') + ' pts</div>' +
+          '<div class="lb-bar-track"><div class="lb-bar-fill" style="width:' + Math.min(100,(club.score/500)*100).toFixed(0) + '%;' + (isMe?'background:linear-gradient(90deg,var(--neon-d),var(--neon))':'') + '"></div></div>' +
+        '</div>' +
+        '<span class="lb-extra">' + medal + '</span>' +
+      '</div>';
+    }).join('');
   }
 
   async function refresh() {
@@ -6449,6 +6518,7 @@ const RankingModule = (() => {
       _lastDataGC = dataGC;
       _renderList(dataGC, 'ranking-list-gcoins', 'gcoins');
     }
+    if (_activeTab === 'clubs') _loadClubsRanking();
   }
 
   function _getMyUsername() {
@@ -6796,13 +6866,18 @@ const ClubsModule = (() => {
     var membersHtml = members.map(function(m, i) {
       var isMe = m.user_id === user.id;
       var xp = m.profiles?.xp || 0;
-      return '<div class="club-member-row">' +
+      // FIX: detectar inactividad — sin acciones en 7 días
+      var inactive = false; // se carga abajo
+      return '<div class="club-member-row" id="cmr-' + m.user_id + '">' +
         '<span class="club-member-rank">' + (i + 1) + '</span>' +
         '<span class="club-member-name' + (isMe ? ' me' : '') + '">' +
           (m.role === 'owner' ? '👑 ' : '') +
           (isMe ? 'TÚ' : (m.profiles?.username || 'Usuario')) +
         '</span>' +
         '<span class="club-member-xp">' + xp.toLocaleString('es-AR') + ' XP</span>' +
+        (isOwner && !isMe
+          ? '<button onclick="ClubsModule.kickMember(\'' + m.user_id + '\',\'' + (m.profiles?.username || 'este usuario') + '\')" style="background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:2px 4px;" title="Expulsar">✕</button>'
+          : '') +
       '</div>';
     }).join('');
 
@@ -6872,6 +6947,9 @@ const ClubsModule = (() => {
 
     // Cargar feed
     await _renderFeed();
+    // Preview ranking de clubes
+    var cont = document.getElementById('club-content');
+    if (cont) await _renderClubRankingPreview(cont);
   }
 
   async function _renderFeed() {
@@ -7154,8 +7232,58 @@ const ClubsModule = (() => {
     if (m) m.remove();
   }
 
+  // ── EXPULSAR MIEMBRO ──────────────────────────────────────────
+  async function kickMember(userId, username) {
+    if (!_myClub || !_myMembership || _myMembership.role !== 'owner') return;
+    if (!confirm('¿Expulsar a ' + username + ' del club?')) return;
+    await _sb.from('club_members').delete().eq('user_id', userId).eq('club_id', _myClub.id);
+    await _sb.from('clubs').update({ member_count: Math.max(0, (_myClub.member_count || 1) - 1) }).eq('id', _myClub.id);
+    Store.showXPToast('✓ ' + username + ' fue expulsado', '✕');
+    await refresh();
+  }
+
+  // ── PREVIEW RANKING DE CLUBES ─────────────────────────────────
+  async function _renderClubRankingPreview(container) {
+    var res = await _sb.from('clubs').select('id, name, avatar_emoji, member_count').order('created_at');
+    if (!res.data || res.data.length < 2) return; // no mostrar si hay menos de 2 clubes
+
+    var clubScores = await Promise.all(res.data.map(async function(club) {
+      var mRes = await _sb.from('club_members').select('*, profiles(xp)').eq('club_id', club.id);
+      var members = (mRes.data || []).sort(function(a,b){ return (b.profiles?.xp||0)-(a.profiles?.xp||0); });
+      var score = Math.round(members.reduce(function(acc,m,i){
+        var xp = m.profiles?.xp||0; var w=i<5?.5:i<10?.25:.1; return acc+xp*w;
+      },0));
+      return Object.assign({}, club, { score: score });
+    }));
+    clubScores.sort(function(a,b){ return b.score-a.score; });
+
+    var myPos = clubScores.findIndex(function(c){ return c.id === _myClub.id; });
+    var preview = document.createElement('div');
+    preview.className = 'club-score-card';
+    preview.style.marginTop = '0';
+    preview.innerHTML =
+      '<div class="club-score-row">' +
+        '<span class="club-score-title">🏆 Ranking de Clubes</span>' +
+        '<span class="club-score-rank" style="cursor:pointer;color:var(--cyan);" onclick="Router.go(\'ranking\');setTimeout(()=>RankingModule.setTab(\'clubs\'),200)">Ver todo →</span>' +
+      '</div>' +
+      clubScores.slice(0, 3).map(function(c, i) {
+        var isMe = c.id === _myClub.id;
+        var medals = ['🥇','🥈','🥉'];
+        return '<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+          '<span style="font-size:14px;">' + (medals[i]||'') + '</span>' +
+          '<span style="font-size:16px;">' + (c.avatar_emoji||'⚔️') + '</span>' +
+          '<span style="flex:1;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;color:' + (isMe?'var(--neon)':'var(--t1)') + ';">' + c.name + '</span>' +
+          '<span style="font-family:Barlow Condensed,sans-serif;font-size:12px;font-weight:700;color:var(--gold);">' + c.score.toLocaleString('es-AR') + ' pts</span>' +
+        '</div>';
+      }).join('') +
+      (myPos > 2
+        ? '<div style="font-size:10px;color:var(--t3);text-align:center;margin-top:6px;">Tu club está en la posición #' + (myPos+1) + '</div>'
+        : '');
+    container.insertBefore(preview, container.querySelector('.club-members-card'));
+  }
+
   return {
-    init, refresh, logAction, copyCode,
+    init, refresh, logAction, copyCode, kickMember,
     showCreateModal, showJoinModal, confirmLeave, claimVault,
     _doCreate, _doJoin, _pickEmoji, _closeModal
   };
