@@ -1800,13 +1800,12 @@ const SupaStore = (() => {
     // Esto evita que un loadProfile lento pise acciones que el usuario ya realizó.
     var localXP    = S.xp     || 0;
     var serverXP   = data.xp  || 0;
-    var localGC    = S.gcoins || 0;
-    var serverGC   = data.g_coins || 0;
+    var serverGC   = data.g_coins != null ? data.g_coins : (S.gcoins || 0);
 
-    // Regla: tomar el mayor valor para XP y G-Coins (protege contra regresión)
-    S.xp         = Math.max(localXP,  serverXP);
-    S.gcoins     = Math.max(localGC,  serverGC);
-    // Energy, streak y fuel: servidor gana (no se pueden incrementar sin una acción real)
+    // XP: tomar el mayor (protege contra regresión)
+    // G-Coins: confiar en el servidor siempre — es la fuente de verdad
+    S.xp         = Math.max(localXP, serverXP);
+    S.gcoins     = serverGC;
     S.energy     = data.energy     != null ? data.energy     : S.energy;
     S.streak     = data.streak     != null ? data.streak     : S.streak;
     S.vault.fuel = data.vault_fuel != null ? data.vault_fuel : S.vault.fuel;
