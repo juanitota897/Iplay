@@ -4139,13 +4139,33 @@ const VaultModule = (() => {
 
 /* ── LOOT MODULE ────────────────────────────────────────────── */
 const LootModule = (() => {
-  const POOL = [
-    {ico:'🌟',txt:'+750 XP — JACKPOT!',   sub:'Recompensa LEGENDARIA',xp:750},
-    {ico:'🏆',txt:'+350 XP BONUS',         sub:'Rara desbloqueada',    xp:350},
-    {ico:'💎',txt:'+50 XP + Badge Raro',   sub:'Coleccionable al Altar',xp:50},
-    {ico:'⚡',txt:'+200 XP FLASH',          sub:'Energía de temporada', xp:200},
-    {ico:'🛡️',txt:'+500 Combustible',       sub:'Bóveda recargada',     xp:0, fuel:500},
-    {ico:'🔥',txt:'+150 XP Racha',          sub:'Combustible activo',   xp:150},
+  // Pools separados por rareza — XP calibrado contra curva polinómica
+  // Común: recompensas pequeñas (~5-15% del nivel siguiente)
+  // Rara:  recompensas medias  (~15-25%)
+  // Épica: recompensas grandes (~25-40%)
+  const POOL_COMMON = [
+    {ico:'⚡',txt:'+20 XP — Energía',        sub:'Buen comienzo',          xp:20},
+    {ico:'🔥',txt:'+25 XP — Racha',           sub:'Seguí así',              xp:25},
+    {ico:'🌱',txt:'+15 XP + 50 Fuel',         sub:'Combustible acumulado',  xp:15, fuel:50},
+    {ico:'💫',txt:'+30 XP — Flash',            sub:'Momento de suerte',      xp:30},
+    {ico:'🛡️',txt:'+100 Fuel',                sub:'Bóveda recargada',       xp:0,  fuel:100},
+    {ico:'⭐',txt:'+20 XP — Estrella',        sub:'Coleccionable común',    xp:20},
+  ];
+  const POOL_RARE = [
+    {ico:'💜',txt:'+80 XP — Raro',            sub:'Recompensa especial',    xp:80},
+    {ico:'🏆',txt:'+60 XP + 200 Fuel',        sub:'Combo de valor',         xp:60, fuel:200},
+    {ico:'💎',txt:'+100 XP — Cristal',         sub:'Hallazgo valioso',       xp:100},
+    {ico:'🌟',txt:'+70 XP + Badge Raro',       sub:'Coleccionable al Altar', xp:70},
+    {ico:'⚡',txt:'+90 XP — Carga Rara',       sub:'Energía concentrada',    xp:90},
+    {ico:'🔮',txt:'+75 XP + 150 Fuel',         sub:'Magia de bóveda',        xp:75, fuel:150},
+  ];
+  const POOL_EPIC = [
+    {ico:'👑',txt:'+200 XP — ÉPICO',           sub:'Recompensa legendaria',  xp:200},
+    {ico:'💥',txt:'+180 XP + 500 Fuel',        sub:'Explosión épica',        xp:180, fuel:500},
+    {ico:'🌠',txt:'+220 XP — Estrella Épica',  sub:'Máximo brillo',          xp:220},
+    {ico:'🔱',txt:'+160 XP + 300 Fuel',        sub:'Poder del tridente',     xp:160, fuel:300},
+    {ico:'⚔️',txt:'+250 XP — MAESTRO',         sub:'Solo para élites',       xp:250},
+    {ico:'🏅',txt:'+190 XP + 400 Fuel',        sub:'Medalla de honor',       xp:190, fuel:400},
   ];
   let _pendingCrate=null, _inv=[];
 
@@ -4217,7 +4237,10 @@ const LootModule = (() => {
     const btn = document.getElementById('loot-open-btn');
     if(btn) btn.disabled=true;
     setTimeout(() => {
-      const reward = POOL[Math.floor(Math.random()*POOL.length)];
+      // FIX: usar pool según rareza de la caja
+      const poolMap = { common: POOL_COMMON, rare: POOL_RARE, epic: POOL_EPIC };
+      const pool = poolMap[_pendingCrate] || POOL_COMMON;
+      const reward = pool[Math.floor(Math.random()*pool.length)];
       document.getElementById('loot-box-chest').style.display='none';
       const ri = document.getElementById('loot-box-ico');
       const rt = document.getElementById('loot-box-txt');
