@@ -6720,6 +6720,7 @@ const HomeModule = (() => {
     if(g('home-rank-fill')) g('home-rank-fill').style.width = li.pct+'%';
     // Posición real desde Supabase (async, no bloquea el render)
     if (Auth.isLoggedIn()) {
+      if(g('home-rank-num')) g('home-rank-num').textContent = '…';
       SupaStore.getLeaderboard().then(function(rows) {
         if (!rows || !rows.length) return;
         var myUsername = Auth.getUser().email.split('@')[0];
