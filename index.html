@@ -5565,9 +5565,101 @@ const BetsModule = (() => {
       BetsModule.refreshLiveList();
       console.log('[BetsModule] Partidos cargados:', _matches.length);
 
+      // ── 4. THE ODDS API: cuotas reales (async, no bloquea render) ─
+      _loadRealOdds();
+
     } catch(e) {
       console.warn('[BetsModule] Error general:', e.message);
     }
+  }
+
+  // ── ODDS REALES desde The Odds API (via Supabase proxy) ────────
+  const ODDS_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/odds-proxy';
+
+  async function _loadRealOdds() {
+    try {
+      const r = await fetch(ODDS_PROXY, {
+        headers: { 'Authorization': 'Bearer ' + SUPA_KEY }
+      });
+      if (!r.ok) return;
+      const games = await r.json();
+      if (!Array.isArray(games) || !games.length) return;
+
+      var updated = 0;
+      _matches.forEach(function(match) {
+        var best = _findOddsMatch(match.home, match.away, games);
+        if (!best) return;
+        match.odds = best;
+        updated++;
+      });
+
+      if (updated > 0) {
+        console.log('[Odds] Cuotas reales aplicadas a', updated, 'partidos');
+        _renderMatches();
+        _renderSlip();
+      }
+    } catch(e) {
+      console.warn('[Odds] Error cargando cuotas reales:', e.message);
+    }
+  }
+
+  // Matching por nombre de equipo — normaliza y busca similitud
+  function _findOddsMatch(homeName, awayName, games) {
+    var norm = function(s) {
+      return (s || '').toLowerCase()
+        .replace(/fc|afc|cf|sc|ac|bc|united|city|athletic|club|de|the|\./g, '')
+        .replace(/\s+/g, ' ').trim();
+    };
+    var nh = norm(homeName);
+    var na = norm(awayName);
+
+    var best = null;
+    var bestScore = 0;
+
+    games.forEach(function(g) {
+      if (!g.bookmakers || !g.bookmakers.length) return;
+      var gh = norm(g.home_team);
+      var ga = norm(g.away_team);
+
+      // Score de similitud simple — cuántas palabras coinciden
+      var scoreH = _wordMatch(nh, gh);
+      var scoreA = _wordMatch(na, ga);
+      var total  = scoreH + scoreA;
+
+      if (total > bestScore && scoreH > 0 && scoreA > 0) {
+        bestScore = total;
+        best = g;
+      }
+    });
+
+    if (!best || bestScore < 1) return null;
+
+    // Tomar el bookmaker con más mercados (primero de la lista)
+    var bm = best.bookmakers[0];
+    var h2h = bm.markets && bm.markets.find(function(m){ return m.key === 'h2h'; });
+    if (!h2h || !h2h.outcomes || h2h.outcomes.length < 2) return null;
+
+    var outcomes = h2h.outcomes;
+    var homeOut  = outcomes.find(function(o){ return norm(o.name) === norm(best.home_team); });
+    var awayOut  = outcomes.find(function(o){ return norm(o.name) === norm(best.away_team); });
+    var drawOut  = outcomes.find(function(o){ return o.name === 'Draw'; });
+
+    if (!homeOut || !awayOut) return null;
+
+    var clamp = function(v, mn, mx) { return Math.max(mn, Math.min(mx, Math.round(v * 100) / 100)); };
+    return {
+      h: clamp(homeOut.price, 1.10, 15.00),
+      d: drawOut ? clamp(drawOut.price, 2.20, 5.00) : _calcOddsFromElo(homeName, awayName, '').d,
+      a: clamp(awayOut.price, 1.10, 15.00),
+    };
+  }
+
+  function _wordMatch(a, b) {
+    var wa = a.split(' ').filter(function(w){ return w.length > 2; });
+    var wb = b.split(' ').filter(function(w){ return w.length > 2; });
+    var hits = 0;
+    wa.forEach(function(w) { if (wb.some(function(x){ return x.includes(w) || w.includes(x); })) hits++; });
+    return hits;
   }
 
   function refresh() {
@@ -6223,7 +6315,7 @@ const BetsModule = (() => {
     var clamp = function(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); };
     return {
       h: clamp(1 / (probH * BOOKMAKER_MARGIN), 1.10, 15.00),
-      d: clamp(1 / (probD * BOOKMAKER_MARGIN), 2.40, 8.00),
+      d: clamp(1 / (probD * BOOKMAKER_MARGIN), 2.40, 4.50),
       a: clamp(1 / (probA * BOOKMAKER_MARGIN), 1.10, 15.00),
     };
   }
@@ -6626,9 +6718,20 @@ const HomeModule = (() => {
     const gapXP = Math.max(0, li.next - li.xp - 10);
     if(g('home-rank-gap'))  g('home-rank-gap').textContent  = 'A '+gapXP+' XP del siguiente nivel';
     if(g('home-rank-fill')) g('home-rank-fill').style.width = li.pct+'%';
-    const rankMap = [8,6,4,3,2];
-    const rank = rankMap[Math.min(li.level-1, rankMap.length-1)];
-    if(g('home-rank-num'))  g('home-rank-num').textContent  = '#'+rank;
+    // Posición real desde Supabase (async, no bloquea el render)
+    if (Auth.isLoggedIn()) {
+      SupaStore.getLeaderboard().then(function(rows) {
+        if (!rows || !rows.length) return;
+        var myUsername = Auth.getUser().email.split('@')[0];
+        var pos = rows.findIndex(function(r){ return r.username === myUsername; });
+        if (pos >= 0 && g('home-rank-num')) g('home-rank-num').textContent = '#' + (pos + 1);
+      }).catch(function(){});
+    } else {
+      // Sin sesión — mostrar posición estimada por nivel
+      const rankMap = [8,6,4,3,2];
+      const rank = rankMap[Math.min(li.level-1, rankMap.length-1)];
+      if(g('home-rank-num')) g('home-rank-num').textContent = '#'+rank;
+    }
   }
 
   function _setLootBox(el, unlocked, opened) {
