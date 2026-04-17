@@ -222,6 +222,34 @@ button{font-family:inherit;cursor:pointer;}
 
 .bmc-expand-btn{width:100%;padding:7px;border:none;background:rgba(255,255,255,.03);color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border-top:1px solid rgba(255,255,255,.04);transition:background .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
 .bmc-expand-btn:hover{background:rgba(255,255,255,.06);color:var(--t2);}
+
+/* ── LIGHT MODE ── */
+body.light-mode{
+  --gold:#B8860B; --gold-l:#DAA520; --gold-d:#8B6914;
+  --neon:#1A8A00; --neon-d:#0D5500;
+  --plasma:#E05520;
+  --shield:#2255CC; --rare:#7C3AED;
+  --red:#CC1133; --red-d:rgba(204,17,51,0.1);
+  --cyan:#0099CC;
+  --bg0:#F5F5F1; --bg1:#FFFFFF; --bg2:#EFEFEB; --bg3:#E8E8E4; --bg4:#E0E0DC; --bg5:#D8D8D4;
+  --t1:#1A1A2E; --t2:#555570; --t3:#888899;
+  --border:rgba(184,134,11,0.15); --border-b:rgba(184,134,11,0.4);
+  background:#EAEAE6;color:var(--t1);
+}
+body.light-mode #app{background:var(--bg0);}
+body.light-mode .card{background:var(--bg1);}
+body.light-mode #app-header{background:linear-gradient(180deg,rgba(245,245,241,.99),rgba(245,245,241,.96));}
+body.light-mode #bottom-nav{background:rgba(245,245,241,.98);}
+body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(--bg1);}
+
+/* ── THEME TOGGLE ── */
+#theme-toggle-btn{
+  background:none;border:none;font-size:16px;cursor:pointer;
+  padding:6px 10px;color:var(--t2);transition:transform .2s;
+  border-radius:8px;
+}
+#theme-toggle-btn:hover{transform:scale(1.15);background:rgba(255,255,255,.06);}
+@media(max-width:767px){#theme-toggle-btn{display:none;}}
 .bmc-detail{display:none;border-top:1px solid rgba(255,255,255,.04);}
 .bmc-detail.open{display:block;}
 .bmc-detail-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.04);}
@@ -2027,6 +2055,7 @@ const AuthUI = (() => {
           <span class="hdr-streak-num" id="hdr-streak">7</span>
           <span class="hdr-streak-lbl">racha</span>
         </div>
+        <button id="theme-toggle-btn" onclick="ThemeModule.toggle()" title="Cambiar tema">🌙</button>
       </div>
     </div>
     <div class="hdr-energy">
@@ -3022,28 +3051,34 @@ const AuthUI = (() => {
     <div class="dsk-right-section">
       <div class="dsk-stat-row">
         <span class="dsk-stat-row-lbl">XP Total</span>
-        <span class="dsk-stat-row-val" id="dsk-r-xp">300</span>
+        <span class="dsk-stat-row-val" id="dsk-r-xp" style="color:var(--gold);font-size:15px;">300</span>
       </div>
       <div class="dsk-stat-row">
         <span class="dsk-stat-row-lbl">Nivel</span>
-        <span class="dsk-stat-row-val" id="dsk-r-level">1 — Recluta</span>
+        <span class="dsk-stat-row-val" id="dsk-r-level" style="color:var(--gold);">1 — Recluta</span>
       </div>
       <div class="dsk-stat-row">
         <span class="dsk-stat-row-lbl">Racha</span>
-        <span class="dsk-stat-row-val" id="dsk-r-streak">7 🔥</span>
+        <span class="dsk-stat-row-val" id="dsk-r-streak" style="color:var(--neon);font-size:15px;">0 🔥</span>
       </div>
       <div class="dsk-stat-row">
-        <span class="dsk-stat-row-lbl">Fuel</span>
-        <span class="dsk-stat-row-val" id="dsk-r-fuel">240 pts</span>
+        <span class="dsk-stat-row-lbl">Fuel 🔥</span>
+        <span class="dsk-stat-row-val" id="dsk-r-fuel" style="color:var(--plasma);">0 pts</span>
       </div>
       <div class="dsk-stat-row">
-        <span class="dsk-stat-row-lbl">Micro-wins</span>
-        <span class="dsk-stat-row-val" id="dsk-r-wins">0</span>
+        <span class="dsk-stat-row-lbl">Micro-wins ⚡</span>
+        <span class="dsk-stat-row-val" id="dsk-r-wins" style="color:var(--cyan);">0</span>
       </div>
     </div>
 
     <!-- Top ranking -->
-    <div class="dsk-right-title">🏆 Ranking</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px 8px;border-bottom:1px solid rgba(255,255,255,.04);">
+      <span class="dsk-right-title" style="padding:0;border:none;margin:0;">🏆 Ranking</span>
+      <div style="display:flex;align-items:center;gap:6px;font-size:9px;font-weight:700;font-family:'Barlow Condensed',sans-serif;letter-spacing:.4px;">
+        <span style="color:var(--neon);">▲ Sube</span>
+        <span style="color:var(--red);">▼ Baja</span>
+      </div>
+    </div>
     <div class="dsk-right-section" id="dsk-ranking-list">
       <div style="font-size:10px;color:var(--t3);text-align:center;padding:8px 0;">Cargando…</div>
     </div>
@@ -7761,11 +7796,10 @@ const RankingModule = (() => {
   function _renderRightPanel(rows) {
     var panel = document.getElementById('dsk-ranking-list');
     if (!panel) return;
-    var myUsername = _getMyUsername();
+    var myId = Auth.getUser() ? Auth.getUser().id : null;
     var li = Store.getLevelInfo();
 
     if (!rows || !rows.length) {
-      // Sin datos del servidor — mostrar solo el usuario actual
       panel.innerHTML =
         '<div class="dsk-rank-row" style="border-top:1px dashed rgba(57,255,20,.15);padding-top:8px;">' +
           '<span class="dsk-rank-pos" style="color:var(--neon);">#1</span>' +
@@ -7775,56 +7809,52 @@ const RankingModule = (() => {
       return;
     }
 
-    // Encontrar posición del usuario
-    var myIdx = -1;
-    for (var i = 0; i < rows.length; i++) {
-      if (rows[i].username === myUsername) { myIdx = i; break; }
-    }
-
+    var myIdx = rows.findIndex(function(r){ return r.id === myId; });
+    var total = rows.length;
     var html = '';
-    var posColors = ['var(--gold)', 'var(--t2)', 'var(--plasma)'];
 
-    if (myIdx <= 2) {
-      // Estoy en el top 3 — mostrar top 3
-      for (var j = 0; j < Math.min(3, rows.length); j++) {
-        var r = rows[j];
-        var isMe = j === myIdx;
-        var col = posColors[j] || 'var(--t3)';
-        html +=
-          '<div class="dsk-rank-row">' +
-            '<span class="dsk-rank-pos" style="color:' + col + ';">' + (j+1) + '</span>' +
-            '<span class="dsk-rank-name' + (isMe ? ' dsk-rank-me' : '') + '">' + (isMe ? 'TÚ' : r.username) + '</span>' +
-            '<span class="dsk-rank-xp" style="' + (isMe ? 'color:var(--neon);' : '') + '">' + r.xp.toLocaleString('es-AR') + ' XP</span>' +
-          '</div>';
-      }
-    } else {
-      // No estoy en top 3 — mostrar #1 + el de arriba + yo + el de abajo
-      var show = [];
-      show.push({ row: rows[0], pos: 1, isTop: true });
-      if (myIdx > 1) show.push({ row: null, pos: -1, isDivider: true }); // separador
-      if (myIdx > 0) show.push({ row: rows[myIdx - 1], pos: myIdx, isAbove: true });
-      show.push({ row: rows[myIdx], pos: myIdx + 1, isMe: true });
-      if (myIdx < rows.length - 1) show.push({ row: rows[myIdx + 1], pos: myIdx + 2, isBelow: true });
+    // Mostrar top 3 siempre + posición del usuario si no está en top 3
+    var toShow = rows.slice(0, Math.min(3, total));
+    var medals = ['👑','🥈','🥉'];
+    var posColors = ['var(--gold)', '#C0C0C0', '#CD7F32'];
 
-      for (var k = 0; k < show.length; k++) {
-        var item = show[k];
-        if (item.isDivider) {
-          html += '<div style="text-align:center;font-size:10px;color:var(--t3);padding:2px 0;">•••</div>';
-          continue;
-        }
-        var r2 = item.row;
-        var col2 = item.isTop ? 'var(--gold)' : item.isMe ? 'var(--neon)' : 'var(--t3)';
-        var nameCls = item.isMe ? ' dsk-rank-me' : '';
-        var xpStyle = item.isMe ? 'color:var(--neon);' : '';
-        var borderTop = (item.isAbove && !item.isTop) ? 'margin-top:4px;border-top:1px dashed rgba(255,255,255,.06);padding-top:6px;' : '';
-        html +=
-          '<div class="dsk-rank-row" style="' + borderTop + '">' +
-            '<span class="dsk-rank-pos" style="color:' + col2 + ';">' + item.pos + '</span>' +
-            '<span class="dsk-rank-name' + nameCls + '">' + (item.isMe ? 'TÚ' : r2.username) + '</span>' +
-            '<span class="dsk-rank-xp" style="' + xpStyle + '">' + r2.xp.toLocaleString('es-AR') + ' XP</span>' +
-          '</div>';
-      }
+    toShow.forEach(function(r, j) {
+      var isMe = r.id === myId;
+      // Flecha: top 3 sube, últimos 2 bajan, medio neutro
+      var arrow = '';
+      if (j < Math.ceil(total * 0.4)) arrow = '<span style="color:var(--neon);font-size:11px;font-weight:800;">▲</span>';
+      else if (j >= total - 2) arrow = '<span style="color:var(--red);font-size:11px;font-weight:800;">▼</span>';
+      else arrow = '<span style="color:var(--t3);font-size:11px;">–</span>';
+
+      html +=
+        '<div class="dsk-rank-row" style="' + (isMe ? 'background:rgba(57,255,20,.04);border-radius:6px;padding:5px 4px;' : '') + '">' +
+          '<span style="font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;width:18px;text-align:center;color:' + (posColors[j] || 'var(--t3)') + ';">' + (j+1) + '</span>' +
+          '<span style="font-size:13px;width:18px;text-align:center;">' + (medals[j] || '') + '</span>' +
+          '<span class="dsk-rank-name' + (isMe ? ' dsk-rank-me' : '') + '" style="flex:1;">' + (isMe ? 'TÚ' : r.username) + '</span>' +
+          arrow +
+          '<span class="dsk-rank-xp" style="' + (isMe ? 'color:var(--neon);' : '') + 'margin-left:4px;">' + (r.xp||0).toLocaleString('es-AR') + '</span>' +
+        '</div>';
+    });
+
+    // Si el usuario no está en top 3, mostrar su posición
+    if (myIdx > 2) {
+      html += '<div style="text-align:center;font-size:10px;color:var(--t3);padding:4px 0;">•••</div>';
+      var me = rows[myIdx];
+      var myArrow = myIdx >= total - 2
+        ? '<span style="color:var(--red);font-size:11px;font-weight:800;">▼</span>'
+        : '<span style="color:var(--t3);font-size:11px;">–</span>';
+      html +=
+        '<div class="dsk-rank-row" style="background:rgba(57,255,20,.04);border-radius:6px;padding:5px 4px;">' +
+          '<span style="font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;width:18px;text-align:center;color:var(--neon);">' + (myIdx+1) + '</span>' +
+          '<span style="font-size:13px;width:18px;text-align:center;">🎮</span>' +
+          '<span class="dsk-rank-name dsk-rank-me" style="flex:1;">TÚ</span>' +
+          myArrow +
+          '<span class="dsk-rank-xp" style="color:var(--neon);margin-left:4px;">' + (me.xp||0).toLocaleString('es-AR') + '</span>' +
+        '</div>';
     }
+
+    // Footer con total de jugadores
+    html += '<div style="text-align:center;font-size:9px;color:var(--t3);padding:6px 0;border-top:1px solid rgba(255,255,255,.04);margin-top:4px;">' + total + ' jugadores · Reset lunes</div>';
 
     panel.innerHTML = html;
   }
@@ -8608,6 +8638,38 @@ const PublicProfile = (() => {
 })();
 window.PublicProfile = PublicProfile;
 
+/* ── THEME MODULE ───────────────────────────────────────────── */
+const ThemeModule = (() => {
+  const KEY = 'glayer_theme';
+
+  function init() {
+    var saved = localStorage.getItem(KEY);
+    if (saved === 'light') _apply('light');
+    else _apply('dark');
+  }
+
+  function toggle() {
+    var current = localStorage.getItem(KEY) || 'dark';
+    var next = current === 'dark' ? 'light' : 'dark';
+    _apply(next);
+    localStorage.setItem(KEY, next);
+  }
+
+  function _apply(theme) {
+    var btn = document.getElementById('theme-toggle-btn');
+    if (theme === 'light') {
+      document.body.classList.add('light-mode');
+      if (btn) btn.textContent = '☀️';
+    } else {
+      document.body.classList.remove('light-mode');
+      if (btn) btn.textContent = '🌙';
+    }
+    localStorage.setItem(KEY, theme);
+  }
+
+  return { init, toggle };
+})();
+
 function devReset() {
   try {
     localStorage.removeItem('glayer_tutorialSeen');
@@ -8643,6 +8705,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── FIN RESET FORZADO ────────────────────────────────────────
 
   Store.load();
+  ThemeModule.init();
   // Restaurar boost de doble XP si seguía activo
   (function() {
     var S = Store.get();
