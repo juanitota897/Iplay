@@ -5042,17 +5042,24 @@ const MissionsModule = (() => {
   return { complete: complete, completeLevelMission: completeLevelMission, refresh: refresh, checkTrigger: checkTrigger };
 })();
 
-/* ── CASINO MODULE ──────────────────────────────────────────── */
+
+/* ── CASINO MODULE (multiplayer crash) ──────────────────────── */
 const CasinoModule = (() => {
+  const CRASH_HOST = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/crash-host';
+  const SUPA_KEY_C = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
+
   var state='idle', mult=1, crashAt=1, stake=50, betPlaced=false, cashed=false, round=1;
   let _cooldownTimer=null, _cooldownInterval=null;
-  let _pendingBet=false; // apuesta registrada durante cooldown
+  let _pendingBet=false;
   let _raf=null, _startT=0, _pts=[];
-  let _history=[]; // últimos 10 resultados: {val, type:'crash'|'cashout'}
+  let _history=[];
+  let _roundId=null, _roundSub=null, _betsSub=null;
+  let _players=[];
 
+  // ── HISTORIAL COMPARTIDO ──────────────────────────────────────
   function _addToHistory(val, type) {
     _history.unshift({val, type});
-    if (_history.length > 10) _history.pop();
+    if (_history.length > 15) _history.pop();
     _renderCrashHistory();
   }
 
@@ -5070,6 +5077,192 @@ const CasinoModule = (() => {
     el.innerHTML = '<span class="crash-history-lbl">Últimas:</span>' + (pills || '<span style="font-size:10px;color:var(--t3)">Sin rondas aún</span>');
   }
 
+  // ── FEED DE JUGADORES ─────────────────────────────────────────
+  function _renderPlayers() {
+    var el = document.getElementById('crash-players');
+    if (!el) return;
+    if (!_players.length) {
+      el.innerHTML = '<div style="font-size:10px;color:var(--t3);padding:6px 0;">Esperando jugadores…</div>';
+      return;
+    }
+    el.innerHTML = _players.map(function(p) {
+      var cls   = p.cashout_at ? 'color:var(--neon)' : p.lost ? 'color:var(--red);opacity:.5' : 'color:var(--t2)';
+      var ico   = p.cashout_at ? '✓' : p.lost ? '✗' : '⏳';
+      var right = p.cashout_at
+        ? '<span style="font-family:Barlow Condensed,sans-serif;font-size:12px;font-weight:800;color:var(--neon);">+' + Math.round(p.stake * p.cashout_at).toLocaleString('es-AR') + ' G · ' + p.cashout_at.toFixed(2) + 'x</span>'
+        : p.lost
+          ? '<span style="font-size:11px;color:var(--red);">-' + p.stake.toLocaleString('es-AR') + ' G</span>'
+          : '<span style="font-size:11px;color:var(--t3);">' + p.stake.toLocaleString('es-AR') + ' G</span>';
+      return '<div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,.04);">' +
+        '<span style="font-size:12px;width:14px;text-align:center;">' + ico + '</span>' +
+        '<span style="flex:1;font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:700;' + cls + ';">' + (p.username || 'Anónimo') + '</span>' +
+        right +
+      '</div>';
+    }).join('');
+  }
+
+  // ── SUPABASE REALTIME ─────────────────────────────────────────
+  function _subscribeRealtime() {
+    // Unsub previas
+    if (_roundSub) _roundSub.unsubscribe();
+    if (_betsSub)  _betsSub.unsubscribe();
+
+    // Escuchar cambios en crash_rounds
+    _roundSub = _sb.channel('crash-rounds')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_rounds' }, function(payload) {
+        var r = payload.new;
+        if (!r) return;
+        if (r.status === 'running' && state !== 'running') {
+          _roundId = r.id;
+          crashAt  = r.crash_at;
+          _startMultiplayer();
+        }
+        if (r.status === 'crashed' && state === 'running') {
+          _crashMultiplayer(r.crash_at);
+        }
+        if (r.status === 'waiting') {
+          _roundId = r.id;
+          _players = [];
+          _renderPlayers();
+          _startCooldown(5);
+        }
+      })
+      .subscribe();
+
+    // Escuchar apuestas nuevas y cashouts
+    _betsSub = _sb.channel('crash-bets')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'crash_bets' }, function(payload) {
+        var b = payload.new;
+        if (!b || b.round_id !== _roundId) return;
+        // Actualizar o agregar jugador
+        var idx = _players.findIndex(function(p){ return p.user_id === b.user_id; });
+        var player = { user_id: b.user_id, username: b.username, stake: b.stake, cashout_at: b.cashout_at, lost: b.profit === 0 };
+        if (idx >= 0) _players[idx] = player;
+        else _players.unshift(player);
+        _renderPlayers();
+      })
+      .subscribe();
+  }
+
+  // ── API CALLS ─────────────────────────────────────────────────
+  async function _hostCall(body) {
+    try {
+      var r = await fetch(CRASH_HOST, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + SUPA_KEY_C },
+        body: JSON.stringify(body)
+      });
+      return r.json();
+    } catch(e) { return { error: e.message }; }
+  }
+
+  async function _placeBet() {
+    if (!Auth.isLoggedIn() || !_roundId) return;
+    var user = Auth.getUser();
+    var username = (user.email || '').split('@')[0];
+    // Intentar usar username de profiles
+    try {
+      var { data: prof } = await _sb.from('profiles').select('username').eq('id', user.id).maybeSingle();
+      if (prof && prof.username) username = prof.username;
+    } catch(e) {}
+
+    Store.addGCoins(-stake);
+    HeaderModule.refresh();
+
+    await _sb.from('crash_bets').insert({
+      round_id:  _roundId,
+      user_id:   user.id,
+      username:  username,
+      stake:     stake,
+    });
+    betPlaced = true;
+    cashed    = false;
+  }
+
+  async function _doCashout() {
+    if (!Auth.isLoggedIn() || !_roundId || !betPlaced || cashed) return;
+    var user = Auth.getUser();
+    var res  = await _hostCall({ action: 'cashout', round_id: _roundId, user_id: user.id, current_mult: mult });
+    if (res.error) return;
+    cashed = true;
+    var profit = res.profit;
+    Store.addGCoins(profit);
+    Store.addXP(20);
+    HeaderModule.refresh();
+    _addToHistory(mult, 'cashout');
+    _showBanner('win', '✓ Cobraste ' + profit.toLocaleString('es-AR') + ' G a ' + mult.toFixed(2) + 'x');
+    MissionsModule.checkTrigger('crash', { cashedBefore2x: mult < 2 });
+    _setUI({ status:'<span class="live-dot neon"></span> Cobrado', sub:'+ ' + profit.toLocaleString('es-AR') + ' G-Coins', btnTxt:'Cobrado ✓', btnDis:true, btnCls:'' });
+  }
+
+  // ── CICLO MULTIPLAYER ─────────────────────────────────────────
+  function _startMultiplayer() {
+    state   = 'running';
+    mult    = 1;
+    _pts    = [];
+    _startT = performance.now();
+    betPlaced = _pendingBet;
+    _pendingBet = false;
+    cashed  = false;
+    clearTimeout(_cooldownTimer);
+    clearInterval(_cooldownInterval);
+    _hideBanner();
+    _setUI({ status:'<span class="live-dot neon"></span> En curso', multCls:'', sub:'Cobrá antes del crash', btnTxt:'💰 COBRAR', btnDis:!betPlaced, btnCls:'cobrar' });
+    _raf = requestAnimationFrame(_frame);
+  }
+
+  function _crashMultiplayer(at) {
+    cancelAnimationFrame(_raf);
+    var finalMult = at;
+    state = 'crashed';
+    _addToHistory(finalMult, 'crash');
+    // Marcar perdedores en el feed
+    _players.forEach(function(p){ if (!p.cashout_at) p.lost = true; });
+    _renderPlayers();
+    if (betPlaced && !cashed) {
+      Store.simulateLoss();
+      _showBanner('loss', '💥 Crash a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
+    }
+    _setUI({ status:'<span class="live-dot red"></span> CRASHED', multCls:'crashed', sub:'Crash a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
+    betPlaced = false;
+    _startCooldown(8);
+  }
+
+  function _frame() {
+    if (state !== 'running') return;
+    var el  = (performance.now() - _startT) / 1000;
+    mult    = Math.round(Math.pow(Math.E, 0.08 * el) * 100) / 100;
+    var me  = document.getElementById('crash-mult');
+    if(me) me.innerHTML = mult.toFixed(2) + '<span class="crash-mult-x">x</span>';
+    var pct = Math.min(el / 15, 1);
+    _pts.push({ x: pct * 290, y: Math.min(pct * mult * 5.5, 72) });
+    _drawGraph();
+    _raf = requestAnimationFrame(_frame);
+  }
+
+  // ── COOLDOWN (entre rondas) ───────────────────────────────────
+  function _startCooldown(secs) {
+    state = 'idle';
+    var me = document.getElementById('crash-mult');
+    if(me) me.innerHTML = '—';
+    _pts = []; _drawGraph();
+    var rem = secs;
+    _setSub('Próxima ronda en ' + rem + 's');
+    clearInterval(_cooldownInterval);
+    _cooldownInterval = setInterval(function() {
+      rem--;
+      _setSub('Próxima ronda en ' + rem + 's');
+      if (rem <= 0) {
+        clearInterval(_cooldownInterval);
+        _setSub('Esperando servidor…');
+        // Pedir al servidor que arranque una nueva ronda
+        _hostCall({ action: 'start' }).catch(function(){});
+      }
+    }, 1000);
+    _setUI({ status:'<span class="live-dot" style="background:var(--t3);animation:none"></span> Esperando', multCls:'', sub:'Próxima ronda en ' + secs + 's', btnTxt:'Apostar', btnDis:false, btnCls:'' });
+  }
+
+  // ── STAKE ─────────────────────────────────────────────────────
   function _maxStake() {
     const gc = Store.get().gcoins || 0;
     return Math.max(50, Math.floor(gc * 0.8));
@@ -5087,242 +5280,61 @@ const CasinoModule = (() => {
     const mx = _maxStake();
     stake = v === 0 ? mx : Math.max(50, Math.min(v, mx));
     document.querySelectorAll('.crash-stake-btn').forEach(b => b.classList.toggle('active', b === btn));
-    const inp = document.getElementById('crash-stake-input');
+    var inp = document.getElementById('crash-stake-input');
     if(inp) inp.value = stake;
     _refreshBalanceLbl();
   }
 
   function setStakeManual(val) {
     const mx = _maxStake();
-    const parsed = parseInt(val) || 50;
-    stake = Math.max(50, Math.min(parsed, mx));
+    var v = parseInt(val) || 50;
+    stake = Math.max(50, Math.min(v, mx));
     document.querySelectorAll('.crash-stake-btn').forEach(b => b.classList.remove('active'));
-    _refreshBalanceLbl();
   }
 
+  // ── ACTION BUTTON ─────────────────────────────────────────────
   function action() {
-    if (state==='cooldown') {
-      // Registrar apuesta para la próxima ronda
-      const gc = Store.get().gcoins || 0;
-      if (gc < 50) { Store.showVaultToast('Sin G-Coins suficientes'); return; }
-      _pendingBet = true;
-      const btn = document.getElementById('crash-action-btn');
-      if (btn) { btn.textContent = '✓ Apostado — espera la ronda'; btn.disabled = true; }
+    if (state === 'running' && betPlaced && !cashed) {
+      _doCashout();
       return;
     }
-    if (state==='idle') _start();
-    else if (state==='running'&&betPlaced&&!cashed) _cashOut();
-  }
-
-  function _start(fromAuto) {
-    const gc = Store.get().gcoins || 0;
-    // Si viene de auto-start por cooldown y no hay pending bet ni fue manual, no apostar
-    if (fromAuto && !_pendingBet) {
-      // Ronda corre pero sin apuesta — solo visual
-      _runRoundNoBet(); return;
+    if (state === 'idle') {
+      const S = Store.get();
+      if ((S.gcoins || 0) < stake) { Store.showVaultToast('Sin G-Coins suficientes'); return; }
+      _pendingBet = true;
+      _placeBet();
+      _trackWager(stake);
+      _setSub('✓ Apuesta registrada — esperando inicio…');
+      var btn = document.getElementById('crash-action-btn');
+      if(btn) { btn.textContent = 'Esperando…'; btn.disabled = true; }
+      return;
     }
-    if (gc < 50) { Store.showVaultToast('Sin G-Coins suficientes'); _pendingBet=false; _runRoundNoBet(); return; }
-    const effectiveStake = Math.max(50, Math.min(stake, _maxStake(), gc));
-    stake = effectiveStake;
-    Store.addGCoins(-effectiveStake);
-    _trackWager(effectiveStake);
-    _refreshBalanceLbl();
-    // Notify tutorial if active
-    if (typeof Tutorial !== 'undefined') Tutorial.notifyAction('crash');
-    state='countdown'; mult=1; crashAt=_genCrash(); betPlaced=true; cashed=false; _pts=[];
-    _setUI({status:'INICIANDO',multCls:'',sub:'Comienza en…',btnTxt:'Esperá…',btnDis:true,btnCls:''});
-    _hideBanner();
-    var cd=3;
-    const si=setInterval(()=>{
-      cd--;
-      if(cd<=0){clearInterval(si);_run();}
-      else _setSub('Comienza en '+cd+'…');
-    },1000);
   }
 
-  function _run() {
-    state='running'; _startT=performance.now(); mult=1; _pts=[{x:0,y:0}];
-    _setUI({status:'EN VUELO',multCls:'',sub:'¡Cobrá antes del crash!',btnTxt:'💸 Cobrar',btnDis:false,btnCls:'cobrar'});
-    function frame(now) {
-      const el=(now-_startT)/1000;
-      const rawMult = 1 + el*0.45 + el*el*0.12;
-      // Verificar crash ANTES de redondear para no saltear crashAt bajos
-      if(rawMult >= crashAt) { mult = crashAt; _crash(); return; }
-      mult = Math.round(rawMult*100)/100;
-      const me=document.getElementById('crash-mult');
-      if(me) me.innerHTML=mult.toFixed(2)+'<span class="crash-mult-x">x</span>';
-      const pct=Math.min(el/15,1);
-      _pts.push({x:pct*290, y:Math.min(pct*mult*5.5, 72)});
-      _drawGraph();
-      _raf=requestAnimationFrame(frame);
-    }
-    _raf=requestAnimationFrame(frame);
-  }
-
-  function _cashOut() {
-    if(state!=='running'||!betPlaced||cashed) return;
-    cashed=true; cancelAnimationFrame(_raf); state='crashed';
-    _addToHistory(mult, 'cashout'); // registrar en historial
-    const won=Math.round(stake*mult);
-    const S2=Store.get();
-    S2.energy=Math.max(0,(S2.energy||200)-3); // energy: 3 por crash
-    Store.save();
-    Store.addGCoins(won);
-    _trackReturn(won);
-    Store.addXP(15);
-    HeaderModule.refresh();
-    _refreshBalanceLbl();
-    // Trigger misión crash: cobró antes de 2x
-    var cashedBefore2x = mult < 2.0;
-    MissionsModule.checkTrigger('crash', { cashedBefore2x: cashedBefore2x });
-    if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('crash_played');
-    _setUI({status:'COBRADO',multCls:'cashing',sub:'¡Ganaste '+won.toLocaleString('es-AR')+' G-Coins!',btnTxt:'Nueva ronda',btnCls:'',btnDis:false});
-    _showBanner('win','✅ Cobraste '+won.toLocaleString('es-AR')+' G a '+mult.toFixed(2)+'x');
-    setTimeout(_reset,2000); // resultado visible 2s, luego cooldown 5s
-  }
-
-  function _crash() {
-    cancelAnimationFrame(_raf); state='crashed';
-    _addToHistory(crashAt, 'crash'); // registrar en historial antes de mostrar
-    const me=document.getElementById('crash-mult');
-    if(me) me.innerHTML=crashAt.toFixed(2)+'<span class="crash-mult-x">x</span>';
-    _setUI({status:'CRASHED',multCls:'crashed',sub:'Crash en '+crashAt.toFixed(2)+'x — perdiste '+stake.toLocaleString('es-AR')+' G',btnTxt:'Nueva ronda',btnCls:'',btnDis:false});
-    _showBanner('loss','💥 Crashed en '+crashAt.toFixed(2)+'x');
-    round++;
-    const rn=document.getElementById('crash-rnd'); if(rn) rn.textContent=round;
-    if(betPlaced&&!cashed) {
-      // 0 XP por crash perdido, +10 fuel fijo (economía v2)
-      const S2 = Store.get();
-      S2.energy = Math.max(0, (S2.energy || 200) - 3); // energy: 3 por crash
-      S2.vault.fuel += 10;
-      S2.vault.lossCount++;
-      Store.save();
-      VaultModule.refresh();
-      HeaderModule.refresh();
-      Store.showVaultToast('+10 pts combustible 🔥');
-      MissionsModule.checkTrigger('crash', { cashedBefore2x: false });
-      MissionsModule.checkTrigger('fuel', {});
-    }
-    _refreshBalanceLbl();
-    setTimeout(_reset,2000); // resultado visible 2s, luego cooldown 5s
-  }
-
-  function _reset() {
-    betPlaced=false; cashed=false; _pts=[]; _drawGraph();
-    const me=document.getElementById('crash-mult');
-    if(me) me.innerHTML='1.00<span class="crash-mult-x">x</span>';
-    _hideBanner();
-    _startCooldown(5); // 5 segundos de cooldown antes de la próxima ronda
-  }
-
-  function _startCooldown(seconds) {
-    state='cooldown'; _pendingBet=false;
-    var remaining=seconds;
-    const bar=document.getElementById('crash-cooldown-bar');
-    const fill=document.getElementById('crash-cooldown-fill');
-    const btn=document.getElementById('crash-action-btn');
-    if(bar) bar.style.display='block';
-    if(fill) fill.style.width='100%';
-
-    _setUI({
-      status:'PRÓXIMA RONDA',
-      multCls:'',
-      sub:'Siguiente ronda en ' + remaining + 's — apostá ahora',
-      btnTxt:'Apostar ahora →',
-      btnDis:false,
-      btnCls:''
-    });
-
-    clearInterval(_cooldownInterval);
-    _cooldownInterval = setInterval(()=>{
-      remaining--;
-      const pct = (remaining/seconds)*100;
-      if(fill) fill.style.width=pct+'%';
-      const sub2 = remaining > 0
-        ? 'Siguiente ronda en ' + remaining + 's — apostá ahora'
-        : 'Arrancando…';
-      _setSub(sub2);
-      if(remaining<=0){
-        clearInterval(_cooldownInterval);
-        if(bar) bar.style.display='none';
-        // Si apostó durante el cooldown, arrancar con apuesta
-        if(_pendingBet) _start(false);
-        else _runRoundNoBet();
-      }
-    },1000);
-  }
-
-  function _runRoundNoBet() {
-    // Ronda automática sin apuesta — corre el juego visualmente
-    state='running'; _startT=performance.now(); mult=1; _pts=[{x:0,y:0}];
-    betPlaced=false; cashed=false;
-    crashAt=_genCrash();
-    round++;
-    const rn=document.getElementById('crash-rnd'); if(rn) rn.textContent=round;
-    _setUI({status:'EN VUELO',multCls:'',sub:'Ronda en curso — no apostaste',btnTxt:'Apostar →',btnDis:false,btnCls:''});
-    function frame(now) {
-      const el=(now-_startT)/1000;
-      const rawMult=1+el*0.45+el*el*0.12;
-      if(rawMult>=crashAt){
-        mult=crashAt;
-        _addToHistory(crashAt,'crash');
-        const me=document.getElementById('crash-mult');
-        if(me) me.innerHTML=crashAt.toFixed(2)+'<span class="crash-mult-x">x</span>';
-        _setUI({status:'CRASHED',multCls:'crashed',sub:'Crash en '+crashAt.toFixed(2)+'x',btnTxt:'Apostar →',btnDis:false,btnCls:''});
-        round++;
-        const rn2=document.getElementById('crash-rnd'); if(rn2) rn2.textContent=round;
-        setTimeout(_reset,2500);
-        return;
-      }
-      mult=Math.round(rawMult*100)/100;
-      const me=document.getElementById('crash-mult');
-      if(me) me.innerHTML=mult.toFixed(2)+'<span class="crash-mult-x">x</span>';
-      const pct=Math.min(el/15,1);
-      _pts.push({x:pct*290, y:Math.min(pct*mult*5.5, 72)});
-      _drawGraph();
-      _raf=requestAnimationFrame(frame);
-    }
-    _raf=requestAnimationFrame(frame);
-  }
-
-  function _genCrash() {
-    // Provably fair crash algorithm — 4% house edge
-    // 4% chance of instant crash at 1.00
-    if (Math.random() < 0.04) return 1.00;
-    // Otherwise: crash = 0.99 / (1 - r)
-    // This gives heavy distribution near 1x with rare high multiples
-    const r = Math.random();
-    return Math.max(1.01, Math.round((0.99 / (1 - r)) * 100) / 100);
-  }
-
-  function _trackWager(stakeAmt) {
+  function _trackWager(s) {
     const S = Store.get();
-    if (!S._houseMetrics) S._houseMetrics = { wagered: 0, returned: 0, rounds: 0 };
-    S._houseMetrics.wagered += stakeAmt;
+    if (!S._houseMetrics) S._houseMetrics = { wagered:0, returned:0, rounds:0 };
+    S._houseMetrics.wagered += s;
     S._houseMetrics.rounds++;
     Store.save();
   }
 
-  function _trackReturn(returnAmt) {
-    const S = Store.get();
-    if (!S._houseMetrics) S._houseMetrics = { wagered: 0, returned: 0, rounds: 0 };
-    S._houseMetrics.returned += returnAmt;
-    Store.save();
-  }
-
-  function _setUI({status,multCls,sub,btnTxt,btnDis,btnCls}) {
-    const g=id=>document.getElementById(id);
-    const cs=g('crash-status');
-    if(cs){ cs.innerHTML='<span class="live-dot '+(state==='crashed'?'red':'neon')+'"></span>'+status; cs.className='crash-status'+(state==='crashed'?' crashed':''); }
-    const me=g('crash-mult');
-    if(me) me.className='crash-mult'+(multCls?' '+multCls:'');
-    const ab=g('crash-action-btn');
+  // ── UI HELPERS ────────────────────────────────────────────────
+  function _setUI({status, multCls, sub, btnTxt, btnDis, btnCls}) {
+    const g = id => document.getElementById(id);
+    const cs = g('crash-status');
+    if(cs){ cs.innerHTML = '<span class="live-dot '+(state==='crashed'?'red':'neon')+'"></span>'+status; cs.className='crash-status'+(state==='crashed'?' crashed':''); }
+    const me = g('crash-mult');
+    if(me) me.className = 'crash-mult'+(multCls?' '+multCls:'');
+    const ab = g('crash-action-btn');
     if(ab){ ab.textContent=btnTxt; ab.disabled=btnDis; ab.className='crash-action-btn'+(btnCls?' '+btnCls:''); }
     _setSub(sub);
+    _refreshBalanceLbl();
   }
-  function _setSub(t){ const e=document.getElementById('crash-sub'); if(e) e.textContent=t; }
-  function _showBanner(type,txt){ const b=document.getElementById('crash-result-banner'); const t=document.getElementById('crash-result-txt'); if(b){ b.className='crash-result-banner show '+type; } if(t) t.textContent=txt; }
-  function _hideBanner(){ const b=document.getElementById('crash-result-banner'); if(b) b.className='crash-result-banner'; }
+
+  function _setSub(t) { const e=document.getElementById('crash-sub'); if(e) e.textContent=t; }
+  function _showBanner(type,txt) { const b=document.getElementById('crash-result-banner'); const t=document.getElementById('crash-result-txt'); if(b){ b.className='crash-result-banner show '+type; } if(t) t.textContent=txt; }
+  function _hideBanner() { const b=document.getElementById('crash-result-banner'); if(b) b.className='crash-result-banner'; }
 
   function _drawGraph() {
     const line=document.getElementById('crash-line');
@@ -5339,14 +5351,56 @@ const CasinoModule = (() => {
     dot.setAttribute('cx',''+last.x); dot.setAttribute('cy',''+last.y);
   }
 
-  function init() {
+  // ── INIT ─────────────────────────────────────────────────────
+  async function init() {
     setStake(50, document.querySelector('.crash-stake-btn'));
     _refreshBalanceLbl();
-    // Arrancar con cooldown corto de 3s para dar tiempo a cargar UI
-    _startCooldown(3);
+    _subscribeRealtime();
+
+    // Agregar contenedor de jugadores al DOM si no existe
+    var crashCard = document.querySelector('.crash-card');
+    if (crashCard && !document.getElementById('crash-players-wrap')) {
+      var pw = document.createElement('div');
+      pw.id = 'crash-players-wrap';
+      pw.style.cssText = 'padding:8px 13px;border-top:1px solid rgba(255,255,255,.05);';
+      pw.innerHTML = '<div style="font-family:Barlow Condensed,sans-serif;font-size:9px;font-weight:700;color:var(--t3);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;">👥 Jugadores en esta ronda</div><div id="crash-players"></div>';
+      var histEl = crashCard.querySelector('.crash-history');
+      if (histEl) crashCard.insertBefore(pw, histEl);
+      else crashCard.appendChild(pw);
+    }
+
+    // Ver si hay ronda activa
+    var res = await _hostCall({ action: 'status' });
+    if (res.round) {
+      _roundId = res.round.id;
+      if (res.round.status === 'running') {
+        crashAt = res.round.crash_at;
+        _startMultiplayer();
+      } else if (res.round.status === 'waiting') {
+        _startCooldown(5);
+      }
+    } else {
+      // Arrancar primera ronda
+      _hostCall({ action: 'start' }).catch(function(){});
+      _startCooldown(6);
+    }
+
+    // Cargar historial de las últimas 15 rondas
+    _sb.from('crash_rounds')
+      .select('crash_at, status')
+      .eq('status', 'crashed')
+      .order('id', { ascending: false })
+      .limit(15)
+      .then(function(res) {
+        if (!res.data) return;
+        _history = res.data.map(function(r){ return { val: r.crash_at, type: 'crash' }; });
+        _renderCrashHistory();
+      });
   }
+
   return { init, action, setStake, setStakeManual };
 })();
+
 
 /* ── PROFILE MODULE ─────────────────────────────────────────── */
 const ProfileModule = (() => {
