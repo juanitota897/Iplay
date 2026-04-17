@@ -174,7 +174,26 @@ button{font-family:inherit;cursor:pointer;}
 .btn-ghost:hover{background:rgba(255,255,255,.08);}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important;}
 
-/* ── G-COINS WALLET ── */
+/* ── MATCH DETAIL ACCORDION ── */
+.bmc-expand-btn{width:100%;padding:7px;border:none;background:rgba(255,255,255,.03);color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border-top:1px solid rgba(255,255,255,.04);transition:background .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
+.bmc-expand-btn:hover{background:rgba(255,255,255,.06);color:var(--t2);}
+.bmc-detail{display:none;border-top:1px solid rgba(255,255,255,.04);}
+.bmc-detail.open{display:block;}
+.bmc-detail-tabs{display:flex;border-bottom:1px solid rgba(255,255,255,.04);}
+.bmc-dtab{flex:1;padding:8px;border:none;background:none;color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;transition:all .15s;border-bottom:2px solid transparent;}
+.bmc-dtab.active{color:var(--gold);border-bottom-color:var(--gold);}
+.bmc-market-section{padding:10px 12px;}
+.bmc-market-title{font-size:9px;color:var(--t3);font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;margin-top:8px;}
+.bmc-market-title:first-child{margin-top:0;}
+.bmc-market-row{display:flex;gap:5px;margin-bottom:5px;}
+.bmc-market-btn{flex:1;padding:8px 4px;border-radius:8px;border:1px solid rgba(255,255,255,.07);background:rgba(255,255,255,.03);cursor:pointer;text-align:center;transition:all .15s;}
+.bmc-market-btn:hover{background:rgba(212,175,55,.07);border-color:rgba(212,175,55,.2);}
+.bmc-market-btn.selected{background:rgba(57,255,20,.08);border-color:rgba(57,255,20,.35);}
+.bmc-market-btn.disabled{opacity:.4;cursor:not-allowed;}
+.bmc-market-lbl{display:block;font-size:9px;color:var(--t3);font-weight:700;margin-bottom:2px;}
+.bmc-market-odd{display:block;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:var(--gold);}
+.bmc-market-btn.selected .bmc-market-odd{color:var(--neon);}
+.bmc-live-badge-inline{display:inline-flex;align-items:center;gap:3px;font-size:9px;color:var(--red);font-weight:700;padding:2px 6px;background:rgba(255,51,85,.08);border-radius:6px;margin-bottom:6px;}
 .hdr-gcoin{display:flex;align-items:center;gap:4px;padding:3px 8px;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.25);border-radius:14px;cursor:pointer;transition:background .15s;}
 .hdr-gcoin:hover{background:rgba(212,175,55,.15);}
 .hdr-gcoin-ico{font-size:12px;line-height:1;}
@@ -2309,55 +2328,9 @@ const AuthUI = (() => {
           <div class="live-stat-item"><span class="live-stat-lbl">XP</span><span class="live-stat-val" id="live-stat-xp">0</span></div>
         </div>
         <div class="live-matches-block">
-          <div class="matches-ttl">⚡ Más en vivo</div>
-          <div class="match-card hot">
-            <div class="match-top">
-              <span class="match-league">🇦🇷 Superliga · Fecha 22</span>
-              <span class="match-live-tag"><span class="live-dot red"></span>67'</span>
-            </div>
-            <div class="match-teams">
-              <div class="match-side"><span class="match-team-name">BOCA JRS</span><span class="match-score">1</span></div>
-              <span class="match-sep">—</span>
-              <div class="match-side away"><span class="match-score">0</span><span class="match-team-name">RIVER PL.</span></div>
-            </div>
-            <div class="match-odds">
-              <div class="match-odd"><span class="match-odd-l">1</span><span class="match-odd-v">1.85</span></div>
-              <div class="match-odd"><span class="match-odd-l">X</span><span class="match-odd-v">3.20</span></div>
-              <div class="match-odd"><span class="match-odd-l">2</span><span class="match-odd-v">4.00</span></div>
-            </div>
-            <div class="match-micro-badge" id="match-micro-badge">⚡ Micro-evento activo</div>
-          </div>
-          <div class="match-card">
-            <div class="match-top">
-              <span class="match-league">🇪🇸 La Liga · J31</span>
-              <span class="match-live-tag"><span class="live-dot red"></span>33'</span>
-            </div>
-            <div class="match-teams">
-              <div class="match-side"><span class="match-team-name">REAL MAD.</span><span class="match-score">0</span></div>
-              <span class="match-sep">—</span>
-              <div class="match-side away"><span class="match-score">0</span><span class="match-team-name">BARCELONA</span></div>
-            </div>
-            <div class="match-odds">
-              <div class="match-odd"><span class="match-odd-l">1</span><span class="match-odd-v">2.10</span></div>
-              <div class="match-odd"><span class="match-odd-l">X</span><span class="match-odd-v">3.40</span></div>
-              <div class="match-odd"><span class="match-odd-l">2</span><span class="match-odd-v">3.15</span></div>
-            </div>
-          </div>
-          <div class="match-card">
-            <div class="match-top">
-              <span class="match-league">⚽ UCL · QF</span>
-              <span class="match-live-tag" style="color:var(--t3)">HOY · 21:00</span>
-            </div>
-            <div class="match-teams">
-              <div class="match-side"><span class="match-team-name">MAN CITY</span><span class="match-score" style="color:var(--t3)">—</span></div>
-              <span class="match-sep" style="opacity:.35">vs</span>
-              <div class="match-side away"><span class="match-score" style="color:var(--t3)">—</span><span class="match-team-name">PSG</span></div>
-            </div>
-            <div class="match-odds">
-              <div class="match-odd"><span class="match-odd-l">1</span><span class="match-odd-v">1.95</span></div>
-              <div class="match-odd"><span class="match-odd-l">X</span><span class="match-odd-v">3.60</span></div>
-              <div class="match-odd mission-odd"><span class="match-odd-l">★ MIS.</span><span class="match-odd-v">5.20</span></div>
-            </div>
+          <div class="matches-ttl">⚡ Partidos</div>
+          <div id="live-matches-list">
+            <div style="padding:12px;text-align:center;font-size:11px;color:var(--t3);">Cargando partidos…</div>
           </div>
         </div>
       </div><!-- /view-scroll -->
@@ -3579,6 +3552,7 @@ const Router = (() => {
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
     if (viewId === 'bets')     BetsModule.refresh();
+    if (viewId === 'live')     BetsModule.refreshLiveList();
     // Ocultar sticky slip cuando no estás en bets
     if (viewId !== 'bets') {
       var ss = document.getElementById('bets-sticky-slip');
@@ -5393,6 +5367,7 @@ const BetsModule = (() => {
       _apiLoaded = true;
       _renderMatches();
       _renderSlip();
+      BetsModule.refreshLiveList(); // actualizar lista en En Vivo también
 
       // Cargar cuotas reales en background para cada partido
       _loadOddsForAll();
@@ -5837,12 +5812,13 @@ const BetsModule = (() => {
       });
     }
     list.innerHTML = filtered.map(function(m) {
-      const isLive = m.live;
-      const mPick  = _picks.find(function(p){ return p.matchId === m.id; });
-      const liveHtml = isLive
+      var isLive = m.live;
+      var mPick  = _picks.find(function(p){ return p.matchId === m.id; });
+      var liveHtml = isLive
         ? '<span class="bmc-live-badge"><span class="live-dot red"></span>EN VIVO &middot; ' + m.homeG + '&ndash;' + m.awayG + '</span>'
         : '<span class="bmc-time">' + m.time + '</span>';
-      const selBorder = mPick ? 'border-color:rgba(57,255,20,.35);' : '';
+      var selBorder = mPick ? 'border-color:rgba(57,255,20,.35);' : '';
+      var tab = _activeTab[m.id] || 'resultado';
       return '<div class="bets-match-card" style="margin-bottom:8px;' + selBorder + '">' +
         '<div class="bmc-header">' +
           '<span class="bmc-league">' + m.leagueName + '</span>' + liveHtml +
@@ -5860,9 +5836,19 @@ const BetsModule = (() => {
           _oddBtn(m, 'd', m.odds.d, 'X &middot; Empate', 'Empate', mPick) +
           _oddBtn(m, 'a', m.odds.a, '2 &middot; ' + m.away.split(' ')[0], m.away + ' gana', mPick) +
         '</div>' +
-        (m.odds.h < MIN_ODD || m.odds.d < MIN_ODD || m.odds.a < MIN_ODD
-          ? '<div style="padding:3px 8px;font-size:9px;color:var(--t3);">* Cuota mín. ' + MIN_ODD.toFixed(2) + 'x para combinadas</div>'
-          : '') +
+        // Botón expandir
+        '<button class="bmc-expand-btn" id="bmc-exp-' + m.id + '" onclick="BetsModule.toggleDetail(\'' + m.id + '\')">' +
+          '▼ Ver mercados' +
+        '</button>' +
+        // Accordion detalle
+        '<div class="bmc-detail" id="bmc-detail-' + m.id + '">' +
+          '<div class="bmc-detail-tabs">' +
+            '<button class="bmc-dtab' + (tab==='resultado'?' active':'') + '" data-tab="resultado" onclick="BetsModule.switchDetailTab(\'' + m.id + '\',\'resultado\')">Resultado</button>' +
+            '<button class="bmc-dtab' + (tab==='goles'?' active':'') + '" data-tab="goles" onclick="BetsModule.switchDetailTab(\'' + m.id + '\',\'goles\')">Goles</button>' +
+            '<button class="bmc-dtab' + (tab==='envivo'?' active':'') + '" data-tab="envivo" onclick="BetsModule.switchDetailTab(\'' + m.id + '\',\'envivo\')">' + (isLive ? '⚡ En Vivo' : '🔒 En Vivo') + '</button>' +
+          '</div>' +
+          '<div id="bmc-detail-content-' + m.id + '"></div>' +
+        '</div>' +
       '</div>';
     }).join('');
   }
@@ -5879,6 +5865,165 @@ const BetsModule = (() => {
       '<span class="bmc-odd-val">' + odd.toFixed(2) + '</span>' +
     '</button>';
   }
+
+  // ── CUOTAS DERIVADAS ──────────────────────────────────────────
+  function _deriveOdds(odds) {
+    var h = odds.h, d = odds.d, a = odds.a;
+    var clamp = function(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); };
+    return {
+      // Doble oportunidad
+      dc1x: clamp(h * 0.52, 1.10, 2.50),
+      dcx2: clamp(a * 0.52, 1.10, 2.50),
+      dc12: clamp(Math.min(h, a) * 0.70, 1.10, 2.50),
+      // BTTS
+      bttsY: clamp((h + a) / 3.3, 1.55, 2.20),
+      bttsN: clamp(d * 1.05, 1.45, 2.10),
+      // Goles
+      over15: clamp(1.20 + (1 / h) * 0.25, 1.20, 1.80),
+      under15: clamp(3.80 - (1 / h) * 0.5, 2.80, 5.50),
+      over25: clamp(h * a / 4.2, 1.55, 3.20),
+      under25: clamp(d * 1.25, 1.30, 2.40),
+      over35: clamp(h * a / 2.8, 2.20, 5.00),
+      under35: clamp(1.25 + (1 / d) * 0.3, 1.20, 1.70),
+      // Resultado descanso
+      ht1: clamp(h * 1.45, 1.80, 5.00),
+      htx: clamp(d * 0.85, 1.50, 2.80),
+      ht2: clamp(a * 1.45, 1.80, 6.00),
+    };
+  }
+
+  // ── DETALLE DEL PARTIDO ───────────────────────────────────────
+  let _openMatchId = null;
+  let _activeTab   = {};
+
+  function toggleDetail(matchId) {
+    var detail = document.getElementById('bmc-detail-' + matchId);
+    if (!detail) return;
+    var isOpen = detail.classList.contains('open');
+    // Cerrar todos
+    document.querySelectorAll('.bmc-detail.open').forEach(function(d){ d.classList.remove('open'); });
+    document.querySelectorAll('.bmc-expand-btn').forEach(function(b){ b.textContent = '▼ Ver mercados'; });
+    if (!isOpen) {
+      detail.classList.add('open');
+      var btn = document.getElementById('bmc-exp-' + matchId);
+      if (btn) btn.textContent = '▲ Cerrar mercados';
+      _openMatchId = matchId;
+      if (!_activeTab[matchId]) _activeTab[matchId] = 'resultado';
+      _renderDetailTab(matchId);
+    } else {
+      _openMatchId = null;
+    }
+  }
+
+  function switchDetailTab(matchId, tab) {
+    _activeTab[matchId] = tab;
+    var detail = document.getElementById('bmc-detail-' + matchId);
+    if (detail) {
+      detail.querySelectorAll('.bmc-dtab').forEach(function(t){
+        t.classList.toggle('active', t.dataset.tab === tab);
+      });
+    }
+    _renderDetailTab(matchId);
+  }
+
+  function _renderDetailTab(matchId) {
+    var m = _matches.find(function(x){ return x.id === matchId; });
+    if (!m) return;
+    var content = document.getElementById('bmc-detail-content-' + matchId);
+    if (!content) return;
+    var tab = _activeTab[matchId] || 'resultado';
+    var d = _deriveOdds(m.odds);
+
+    function mBtn(side, odd, lbl, marketName) {
+      var fullLabel = marketName + ': ' + lbl;
+      var mPick = _picks.find(function(p){ return p.matchId === m.id && p.pick === side; });
+      var sel = mPick && mPick.marketName === marketName;
+      var blocked = odd < MIN_ODD;
+      var cls = 'bmc-market-btn' + (sel ? ' selected' : '') + (blocked ? ' disabled' : '');
+      return '<button class="' + cls + '" data-mid="' + m.id + '" data-side="' + side + '_' + marketName.replace(/\s/g,'_') + '" data-odd="' + odd.toFixed(2) + '" data-label="' + fullLabel.replace(/"/g,'') + '">' +
+        '<span class="bmc-market-lbl">' + lbl + '</span>' +
+        '<span class="bmc-market-odd">' + odd.toFixed(2) + '</span>' +
+      '</button>';
+    }
+
+    var html = '';
+    if (tab === 'resultado') {
+      html +=
+        '<div class="bmc-market-title">Resultado Final</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('res_h', m.odds.h, m.home.split(' ')[0] + ' gana', 'Resultado') +
+          mBtn('res_d', m.odds.d, 'Empate', 'Resultado') +
+          mBtn('res_a', m.odds.a, m.away.split(' ')[0] + ' gana', 'Resultado') +
+        '</div>' +
+        '<div class="bmc-market-title">Doble Oportunidad</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('dc_1x', d.dc1x, m.home.split(' ')[0] + ' o Empate', 'Doble Op.') +
+          mBtn('dc_x2', d.dcx2, 'Empate o ' + m.away.split(' ')[0], 'Doble Op.') +
+          mBtn('dc_12', d.dc12, m.home.split(' ')[0] + ' o ' + m.away.split(' ')[0], 'Doble Op.') +
+        '</div>' +
+        '<div class="bmc-market-title">Resultado al Descanso</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('ht_1', d.ht1, m.home.split(' ')[0] + ' gana', 'Descanso') +
+          mBtn('ht_x', d.htx, 'Empate HT', 'Descanso') +
+          mBtn('ht_2', d.ht2, m.away.split(' ')[0] + ' gana', 'Descanso') +
+        '</div>';
+    } else if (tab === 'goles') {
+      html +=
+        '<div class="bmc-market-title">Ambos Equipos Anotan</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('btts_y', d.bttsY, 'Sí — BTTS', 'BTTS') +
+          mBtn('btts_n', d.bttsN, 'No — BTTS', 'BTTS') +
+        '</div>' +
+        '<div class="bmc-market-title">Total Goles</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('ov15', d.over15, 'Más de 1.5', 'Total goles') +
+          mBtn('un15', d.under15, 'Menos de 1.5', 'Total goles') +
+        '</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('ov25', d.over25, 'Más de 2.5', 'Total goles') +
+          mBtn('un25', d.under25, 'Menos de 2.5', 'Total goles') +
+        '</div>' +
+        '<div class="bmc-market-row">' +
+          mBtn('ov35', d.over35, 'Más de 3.5', 'Total goles') +
+          mBtn('un35', d.under35, 'Menos de 3.5', 'Total goles') +
+        '</div>';
+    } else if (tab === 'envivo') {
+      if (!m.live) {
+        html = '<div style="padding:16px;text-align:center;font-size:11px;color:var(--t3);">Mercados en vivo disponibles cuando el partido comience.</div>';
+      } else {
+        html +=
+          '<div class="bmc-live-badge-inline"><span class="live-dot red"></span>EN VIVO · ' + (m.minute||'?') + "'" + '</div>' +
+          '<div class="bmc-market-title">Próximo en Anotar</div>' +
+          '<div class="bmc-market-row">' +
+            mBtn('nts_h', clamp(m.odds.h * 0.85, 1.40, 4.00), m.home.split(' ')[0], 'Próx. gol') +
+            mBtn('nts_n', 9.00, 'Sin gol', 'Próx. gol') +
+            mBtn('nts_a', clamp(m.odds.a * 0.85, 1.40, 4.00), m.away.split(' ')[0], 'Próx. gol') +
+          '</div>' +
+          '<div class="bmc-market-title">Próxima Tarjeta</div>' +
+          '<div class="bmc-market-row">' +
+            mBtn('nc_h', clamp(m.odds.h * 0.9, 1.50, 3.50), m.home.split(' ')[0], 'Próx. tarjeta') +
+            mBtn('nc_a', clamp(m.odds.a * 0.9, 1.50, 3.50), m.away.split(' ')[0], 'Próx. tarjeta') +
+          '</div>' +
+          '<div class="bmc-market-title">Próximo Córner</div>' +
+          '<div class="bmc-market-row">' +
+            mBtn('corn_h', clamp(m.odds.h * 0.88, 1.45, 3.20), m.home.split(' ')[0], 'Próx. córner') +
+            mBtn('corn_a', clamp(m.odds.a * 0.88, 1.45, 3.20), m.away.split(' ')[0], 'Próx. córner') +
+          '</div>';
+      }
+    }
+
+    content.innerHTML = '<div class="bmc-market-section">' + html + '</div>';
+
+    // Rebind click en content
+    content.onclick = function(e) {
+      var btn = e.target.closest('.bmc-market-btn');
+      if (!btn || btn.classList.contains('disabled')) return;
+      pickOdd(btn.dataset.mid, btn.dataset.side, parseFloat(btn.dataset.odd), btn.dataset.label);
+      _renderDetailTab(matchId); // re-render para actualizar selección
+    };
+  }
+
+  function clamp(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); }
 
   // ── Historial con soporte combinadas y near-miss ───────────────
   function _renderHistory() {
@@ -5926,7 +6071,50 @@ const BetsModule = (() => {
     }).join('');
   }
 
-  return { refresh, refreshWallet, setLeague, setStake, pickOdd, removePick, confirm };
+  // ── LISTA DE PARTIDOS EN SECCIÓN EN VIVO ─────────────────────
+  function refreshLiveList() {
+    var list = document.getElementById('live-matches-list');
+    if (!list) return;
+    if (!_matches.length) {
+      list.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--t3);">Cargando partidos…</div>';
+      return;
+    }
+    // Mostrar en vivo primero, después próximos — máximo 5
+    var sorted = _matches.slice().sort(function(a, b){
+      if (a.live && !b.live) return -1;
+      if (!a.live && b.live) return 1;
+      return 0;
+    }).slice(0, 5);
+
+    var hasMicroBadge = false;
+    list.innerHTML = sorted.map(function(m) {
+      var isLive = m.live;
+      var tag = isLive
+        ? '<span class="match-live-tag"><span class="live-dot red"></span>' + (m.minute || '?') + "'" + '</span>'
+        : '<span class="match-live-tag" style="color:var(--t3)">HOY · ' + m.time + '</span>';
+      var sh = function(n) { return n && n.length > 8 ? n.slice(0, 8).toUpperCase() : (n || '').toUpperCase(); };
+      var microBadge = (isLive && !hasMicroBadge) ? '<div class="match-micro-badge" id="match-micro-badge">⚡ Micro-evento activo</div>' : '';
+      if (isLive && !hasMicroBadge) hasMicroBadge = true;
+      return '<div class="match-card' + (isLive ? ' hot' : '') + '" onclick="Router.go(\'bets\')" style="cursor:pointer;">' +
+        '<div class="match-top">' +
+          '<span class="match-league">' + m.leagueName + '</span>' + tag +
+        '</div>' +
+        '<div class="match-teams">' +
+          '<div class="match-side"><span class="match-team-name">' + sh(m.home) + '</span>' + (isLive ? '<span class="match-score">' + m.homeG + '</span>' : '') + '</div>' +
+          '<span class="match-sep"' + (isLive ? '' : ' style="opacity:.35"') + '>' + (isLive ? '—' : 'vs') + '</span>' +
+          '<div class="match-side away">' + (isLive ? '<span class="match-score">' + m.awayG + '</span>' : '') + '<span class="match-team-name">' + sh(m.away) + '</span></div>' +
+        '</div>' +
+        '<div class="match-odds">' +
+          '<div class="match-odd"><span class="match-odd-l">1</span><span class="match-odd-v">' + m.odds.h.toFixed(2) + '</span></div>' +
+          '<div class="match-odd"><span class="match-odd-l">X</span><span class="match-odd-v">' + m.odds.d.toFixed(2) + '</span></div>' +
+          '<div class="match-odd"><span class="match-odd-l">2</span><span class="match-odd-v">' + m.odds.a.toFixed(2) + '</span></div>' +
+        '</div>' +
+        microBadge +
+      '</div>';
+    }).join('');
+  }
+
+  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, removePick, confirm, toggleDetail, switchDetailTab };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
