@@ -3687,7 +3687,7 @@ const LiveProvider = (() => {
   const API_BASE = 'https://v3.football.api-sports.io';
 
   // IDs de las ligas que queremos cubrir
-  const LEAGUE_IDS = {
+  let LEAGUE_IDS = {
     39:  '🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',
     140: '🇪🇸 La Liga',
     135: '🇮🇹 Serie A',
@@ -3738,28 +3738,33 @@ const LiveProvider = (() => {
     const data = await _apiFetch('/fixtures?live=all');
 
     if (!data || !data.length) {
-      // No hay partidos en vivo — usar fallback simulado
       console.log('[LiveProvider] No hay partidos en vivo, usando fallback');
       _connectFallback();
       return;
     }
 
-    // Filtrar por nuestras ligas y elegir el más importante
+    // Filtrar por nuestras ligas preferidas
     const relevant = data.filter(f => LEAGUE_IDS[f.league.id]);
 
-    if (!relevant.length) {
-      _connectFallback();
-      return;
-    }
-
-    // Elegir el partido con más espectadores o el primero de la liga más importante
-    const leaguePriority = [2, 39, 140, 135, 78, 61, 128, 3];
     let best = null;
-    for (const lid of leaguePriority) {
-      best = relevant.find(f => f.league.id === lid);
-      if (best) break;
+    if (relevant.length) {
+      // Hay partidos de nuestras ligas — elegir el más importante
+      const leaguePriority = [2, 39, 140, 135, 78, 61, 128, 3];
+      for (const lid of leaguePriority) {
+        best = relevant.find(f => f.league.id === lid);
+        if (best) break;
+      }
+      if (!best) best = relevant[0];
+    } else {
+      // No hay de nuestras ligas — usar cualquier partido en vivo
+      // Agregar la liga al mapa dinámicamente
+      best = data[0];
+      const leagueName = best.league.country
+        ? '🌍 ' + best.league.name
+        : '⚽ ' + best.league.name;
+      LEAGUE_IDS[best.league.id] = leagueName;
+      console.log('[LiveProvider] Sin ligas preferidas, usando:', best.league.name);
     }
-    if (!best) best = relevant[0];
 
     _fixtureId = best.fixture.id;
     _match = {
@@ -5283,40 +5288,150 @@ const AdminModule = (() => {
 /* ── BETS MODULE ────────────────────────────────────────────── */
 const BetsModule = (() => {
 
-  const MATCHES = [
-    { id:'m1', league:'ucl',        leagueName:'⭐ Champions League', home:'Real Madrid',  away:'Man City',    time:'20:45', live:true,  homeG:1, awayG:0, odds:{h:1.85, d:3.50, a:4.20} },
-    { id:'m2', league:'ucl',        leagueName:'⭐ Champions League', home:'Barcelona',    away:'PSG',         time:'20:45', live:true,  homeG:0, awayG:1, odds:{h:2.10, d:3.30, a:3.60} },
+  // IDs de ligas → config de display
+  const LEAGUE_CONFIG = {
+    2:   { key:'ucl',        name:'⭐ Champions League',   flag:'🏆' },
+    3:   { key:'ucl',        name:'🏆 Europa League',      flag:'🏆' },
+    39:  { key:'epl',        name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+    140: { key:'laliga',     name:'🇪🇸 La Liga',            flag:'🇪🇸' },
+    135: { key:'seriea',     name:'🇮🇹 Serie A',             flag:'🇮🇹' },
+    78:  { key:'bundesliga', name:'🇩🇪 Bundesliga',          flag:'🇩🇪' },
+    61:  { key:'ligue1',     name:'🇫🇷 Ligue 1',             flag:'🇫🇷' },
+    128: { key:'arg',        name:'🇦🇷 Liga Argentina',      flag:'🇦🇷' },
+    529: { key:'arg',        name:'🇦🇷 Copa Argentina',      flag:'🇦🇷' },
+  };
+
+  const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268';
+  const API_BASE = 'https://v3.football.api-sports.io';
+
+  // Fallback estático si la API falla
+  const MATCHES_FALLBACK = [
+    { id:'m1', league:'ucl',        leagueName:'⭐ Champions League', home:'Real Madrid',  away:'Man City',    time:'20:45', live:false, homeG:0, awayG:0, odds:{h:1.85, d:3.50, a:4.20} },
     { id:'m3', league:'epl',        leagueName:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',  home:'Arsenal',      away:'Liverpool',   time:'17:30', live:false, homeG:0, awayG:0, odds:{h:2.40, d:3.20, a:3.00} },
-    { id:'m4', league:'epl',        leagueName:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League',  home:'Man United',   away:'Chelsea',     time:'15:00', live:false, homeG:0, awayG:0, odds:{h:2.80, d:3.10, a:2.60} },
     { id:'m5', league:'laliga',     leagueName:'🇪🇸 La Liga',         home:'Atlético',     away:'Sevilla',     time:'21:00', live:false, homeG:0, awayG:0, odds:{h:1.95, d:3.40, a:4.00} },
-    { id:'m6', league:'laliga',     leagueName:'🇪🇸 La Liga',         home:'Real Betis',   away:'Valencia',    time:'19:00', live:true,  homeG:2, awayG:1, odds:{h:2.20, d:3.10, a:3.40} },
     { id:'m7', league:'seriea',     leagueName:'🇮🇹 Serie A',          home:'Juventus',     away:'Inter',       time:'20:45', live:false, homeG:0, awayG:0, odds:{h:2.60, d:3.00, a:2.80} },
-    { id:'m8', league:'seriea',     leagueName:'🇮🇹 Serie A',          home:'AC Milan',     away:'Napoli',      time:'18:00', live:true,  homeG:0, awayG:0, odds:{h:2.30, d:3.20, a:3.10} },
     { id:'m9', league:'bundesliga', leagueName:'🇩🇪 Bundesliga',       home:'Bayern',       away:'Dortmund',    time:'18:30', live:false, homeG:0, awayG:0, odds:{h:1.70, d:3.80, a:5.00} },
     { id:'m10',league:'ligue1',     leagueName:'🇫🇷 Ligue 1',          home:'PSG',          away:'Marseille',   time:'21:00', live:false, homeG:0, awayG:0, odds:{h:1.55, d:4.00, a:6.00} },
-    { id:'m11',league:'arg',        leagueName:'🇦🇷 Liga Argentina',   home:'Boca Jrs',     away:'River Plate', time:'21:30', live:true,  homeG:1, awayG:1, odds:{h:2.50, d:3.00, a:2.90} },
-    { id:'m12',league:'arg',        leagueName:'🇦🇷 Liga Argentina',   home:'Racing',       away:'Independ.',   time:'19:00', live:false, homeG:0, awayG:0, odds:{h:2.10, d:3.20, a:3.60} },
+    { id:'m11',league:'arg',        leagueName:'🇦🇷 Liga Argentina',   home:'Boca Jrs',     away:'River Plate', time:'21:30', live:false, homeG:0, awayG:0, odds:{h:2.50, d:3.00, a:2.90} },
   ];
 
+  let _matches = MATCHES_FALLBACK.slice(); // empieza con fallback, se reemplaza con API
+  let _apiLoaded = false;
+
   // ── CONSTANTES COMBINADAS ──────────────────────────────────────
-  const MAX_PICKS    = 6;     // máximo de selecciones
-  const MIN_ODD      = 1.25;  // cuota mínima por selección
-  const XP_MULTI     = { 1:1, 2:1.5, 3:2, 4:3, 5:5, 6:5 }; // multiplicador XP por picks
-  const WIN_RATE_SINGLE = 0.48;  // 48% win rate apuesta simple
-  const WIN_RATE_PARLAY = 0.42;  // 42% win rate combinada (por pata)
+  const MAX_PICKS    = 6;
+  const MIN_ODD      = 1.25;
+  const XP_MULTI     = { 1:1, 2:1.5, 3:2, 4:3, 5:5, 6:5 };
+  const WIN_RATE_SINGLE = 0.48;
+  const WIN_RATE_PARLAY = 0.42;
 
   let _currentLeague = 'all';
-  let _picks = [];   // array de picks: [{matchId, pick, odd, label, matchName, live}]
+  let _picks = [];
   let _stake = 100;
 
-  // Compatibilidad con código que usa _slip
   Object.defineProperty(window, '_slip', { get: () => _picks[0] || null });
+
+  // ── CARGAR PARTIDOS REALES ────────────────────────────────────
+  async function _loadRealFixtures() {
+    try {
+      const leagueIds = Object.keys(LEAGUE_CONFIG).join('-');
+      // Traer partidos en vivo + próximos de hoy de nuestras ligas
+      const today = new Date().toISOString().slice(0, 10);
+      const [liveRes, nextRes] = await Promise.all([
+        fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } }),
+        fetch(API_BASE + '/fixtures?date=' + today + '&timezone=America/Argentina/Buenos_Aires', { headers: { 'x-apisports-key': API_KEY } }),
+      ]);
+
+      const liveJson = await liveRes.json();
+      const nextJson = await nextRes.json();
+
+      const liveFixtures = (liveJson.response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
+      const todayFixtures = (nextJson.response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
+
+      // Combinar: en vivo primero, después los de hoy que no están en vivo
+      const liveIds = new Set(liveFixtures.map(f => f.fixture.id));
+      const upcoming = todayFixtures.filter(f => !liveIds.has(f.fixture.id) && f.fixture.status.short === 'NS');
+
+      const combined = [...liveFixtures, ...upcoming];
+
+      if (!combined.length) return; // mantener fallback
+
+      // Convertir a formato interno
+      _matches = combined.map(function(f, i) {
+        const cfg = LEAGUE_CONFIG[f.league.id];
+        const isLive = f.fixture.status.short === '1H' || f.fixture.status.short === '2H' ||
+                       f.fixture.status.short === 'HT' || f.fixture.status.short === 'ET';
+
+        // Formatear hora local AR
+        const kickoff = new Date(f.fixture.date);
+        const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
+
+        // Cuotas: intentar parsear de la respuesta si vienen
+        const oddsData = f.odds?.bookmakers?.[0]?.bets?.find(b => b.name === 'Match Winner');
+        const odds = oddsData ? {
+          h: parseFloat(oddsData.values.find(v => v.value === 'Home')?.odd || 2.00),
+          d: parseFloat(oddsData.values.find(v => v.value === 'Draw')?.odd || 3.20),
+          a: parseFloat(oddsData.values.find(v => v.value === 'Away')?.odd || 3.50),
+        } : { h: 2.00, d: 3.20, a: 3.50 }; // cuotas genéricas si no vienen
+
+        return {
+          id:         'api_' + f.fixture.id,
+          fixtureId:  f.fixture.id,
+          league:     cfg.key,
+          leagueName: cfg.name,
+          home:       f.teams.home.name,
+          away:       f.teams.away.name,
+          time:       timeStr,
+          live:       isLive,
+          homeG:      f.goals.home || 0,
+          awayG:      f.goals.away || 0,
+          minute:     f.fixture.status.elapsed || 0,
+          odds:       odds,
+        };
+      });
+
+      _apiLoaded = true;
+      _renderMatches();
+      _renderSlip();
+
+      // Cargar cuotas reales en background para cada partido
+      _loadOddsForAll();
+
+    } catch(e) {
+      console.warn('[BetsModule] Error cargando fixtures:', e.message);
+      // Mantener fallback
+    }
+  }
+
+  // Cargar cuotas reales de todos los partidos en background
+  async function _loadOddsForAll() {
+    for (const m of _matches) {
+      if (!m.fixtureId) continue;
+      try {
+        const res = await fetch(API_BASE + '/odds?fixture=' + m.fixtureId + '&bookmaker=8', {
+          headers: { 'x-apisports-key': API_KEY }
+        });
+        const json = await res.json();
+        const bets = json.response?.[0]?.bookmakers?.[0]?.bets;
+        const mw = bets?.find(b => b.name === 'Match Winner');
+        if (mw) {
+          m.odds.h = parseFloat(mw.values.find(v => v.value === 'Home')?.odd || m.odds.h);
+          m.odds.d = parseFloat(mw.values.find(v => v.value === 'Draw')?.odd || m.odds.d);
+          m.odds.a = parseFloat(mw.values.find(v => v.value === 'Away')?.odd || m.odds.a);
+        }
+        await new Promise(r => setTimeout(r, 300)); // 300ms entre requests para no saturar
+      } catch(e) {}
+    }
+    _renderMatches(); // re-render con cuotas reales
+  }
 
   function refresh() {
     refreshWallet();
     _renderMatches();
     _renderHistory();
     _renderSlip();
+    // Cargar datos reales solo una vez por sesión
+    if (!_apiLoaded) _loadRealFixtures();
   }
 
   function refreshWallet() {
@@ -5345,7 +5460,12 @@ const BetsModule = (() => {
   function _renderMatches() {
     const list = document.getElementById('bets-matches-list');
     if (!list) return;
-    const filtered = _currentLeague === 'all' ? MATCHES : MATCHES.filter(m => m.league === _currentLeague);
+    const filtered = _currentLeague === 'all' ? _matches : _matches.filter(m => m.league === _currentLeague);
+
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay partidos disponibles para esta liga hoy.</div>';
+      return;
+    }
     list.innerHTML = filtered.map(m => {
       const isLive = m.live;
       const slipMatch = _slip && _slip.matchId === m.id;
@@ -5389,7 +5509,7 @@ const BetsModule = (() => {
 
   // ── pickOdd: soporte multi-pick (combinadas) ──────────────────
   function pickOdd(matchId, pick, odd, label) {
-    const match = MATCHES.find(m => m.id === matchId);
+    const match = _matches.find(m => m.id === matchId);
     if (!match) return;
 
     // Cuota mínima — validar antes de agregar
@@ -5702,7 +5822,11 @@ const BetsModule = (() => {
   function _renderMatches() {
     const list = document.getElementById('bets-matches-list');
     if (!list) return;
-    const filtered = _currentLeague === 'all' ? MATCHES : MATCHES.filter(function(m){ return m.league === _currentLeague; });
+    const filtered = _currentLeague === 'all' ? _matches : _matches.filter(function(m){ return m.league === _currentLeague; });
+    if (!filtered.length) {
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay partidos disponibles para esta liga hoy.</div>';
+      return;
+    }
     if (!list._delegated) {
       list._delegated = true;
       list.addEventListener('click', function(e) {
