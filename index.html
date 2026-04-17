@@ -881,7 +881,7 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .crash-stake-btns{display:flex;gap:5px;}
 .crash-stake-btn{padding:4px 9px;border-radius:6px;border:1px solid rgba(212,175,55,.22);background:rgba(212,175,55,.06);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;}
 .crash-stake-btn.active,.crash-stake-btn:hover{background:rgba(212,175,55,.16);border-color:var(--gold);}
-.crash-action-btn{flex-shrink:0;padding:11px 16px;border-radius:var(--r-md);border:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,var(--neon-d),var(--neon));color:#000;box-shadow:0 4px 16px rgba(57,255,20,.18);}
+.crash-action-btn{flex-shrink:0;padding:11px 16px;border-radius:var(--r-md);border:none;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;transition:all .2s;background:linear-gradient(135deg,var(--neon-d),var(--neon));color:#000;box-shadow:0 4px 16px rgba(57,255,20,.18);touch-action:manipulation;-webkit-tap-highlight-color:transparent;user-select:none;}
 .crash-action-btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none;}
 .crash-action-btn.cobrar{background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;box-shadow:0 4px 16px rgba(212,175,55,.22);}
 .crash-result-banner{display:none;align-items:center;justify-content:center;gap:7px;padding:9px 13px;border-top:1px solid rgba(255,255,255,.05);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;}
@@ -1885,28 +1885,27 @@ const SupaStore = (() => {
     var data = res.data;
     var S = Store.get();
 
-    // FIX: Protección contra sobrescritura con datos viejos.
-    // Solo aplicamos datos del servidor si son mayores (XP/G-Coins más altos),
-    // o si no hay datos locales válidos (primera carga / perfil nuevo).
-    // Esto evita que un loadProfile lento pise acciones que el usuario ya realizó.
-    var localXP    = S.xp     || 0;
-    var serverXP   = data.xp  || 0;
-    var serverGC   = data.g_coins != null ? data.g_coins : (S.gcoins || 0);
-
-    // XP: tomar el mayor (protege contra regresión)
-    // G-Coins: confiar en el servidor siempre — es la fuente de verdad
+    // Supabase es la fuente de verdad para G-Coins y todos los campos de economía.
+    // XP: tomar el mayor entre local y server para proteger contra regresión
+    // (ej: si el sync tardó y el local tiene XP más reciente)
+    var localXP  = S.xp || 0;
+    var serverXP = data.xp || 0;
     S.xp         = Math.max(localXP, serverXP);
-    S.gcoins     = serverGC;
-    S.energy     = data.energy     != null ? data.energy     : S.energy;
-    S.streak     = data.streak     != null ? data.streak     : S.streak;
-    S.vault.fuel = data.vault_fuel != null ? data.vault_fuel : S.vault.fuel;
+
+    // G-Coins: siempre server — addGCoins() sincroniza en tiempo real
+    S.gcoins     = data.g_coins     != null ? data.g_coins     : (S.gcoins || 0);
+    S.energy     = data.energy      != null ? data.energy      : S.energy;
+    S.streak     = data.streak      != null ? data.streak      : S.streak;
+    S.vault.fuel = data.vault_fuel  != null ? data.vault_fuel  : S.vault.fuel;
     S.rescue     = { used: data.rescue_used || 0, lastTs: data.rescue_last_ts ? new Date(data.rescue_last_ts).getTime() : 0 };
 
     Store.save();
-    // Si el servidor tenía XP mayor, sincronizar de vuelta para que quede consistente
-    if (serverXP > localXP || serverGC > localGC) {
+
+    // Si el XP local era mayor, sincronizarlo al servidor
+    if (localXP > serverXP) {
       await syncProfile();
     }
+
     HeaderModule.refresh();
     VaultModule.refresh();
     Store.checkRescue();
@@ -2783,7 +2782,7 @@ const AuthUI = (() => {
                 <input class="crash-stake-input" id="crash-stake-input" type="number" min="50" placeholder="Ingresá un monto" oninput="CasinoModule.setStakeManual(this.value)"/>
               </div>
             </div>
-            <button class="crash-action-btn" id="crash-action-btn" onclick="CasinoModule.action()">Apostar</button>
+            <button class="crash-action-btn" id="crash-action-btn">Apostar</button>
           </div>
           <div class="crash-result-banner" id="crash-result-banner">
             <span id="crash-result-txt"></span>
@@ -5326,11 +5325,11 @@ const CasinoModule = (() => {
     cashed    = false;
   }
 
-  async function _doCashout() {
+  async function _doCashout(capturedMult) {
     if (!Auth.isLoggedIn() || !_roundId || !betPlaced || cashed) return;
     if (state !== 'running') return;
     cashed = true; // marcar inmediatamente para evitar doble tap
-    var cashoutMult = mult; // capturar el multiplicador en este momento exacto
+    var cashoutMult = capturedMult || mult; // usar el mult capturado en touchstart si existe
     var ab = document.getElementById('crash-action-btn');
     if (ab) { ab.disabled = true; ab.textContent = '⏳ Cobrando…'; }
 
@@ -5561,9 +5560,9 @@ const CasinoModule = (() => {
   }
 
   // ── ACTION BUTTON ─────────────────────────────────────────────
-  function action() {
+  function action(capturedMult) {
     if (state === 'running' && betPlaced && !cashed) {
-      _doCashout();
+      _doCashout(capturedMult);
       return;
     }
     if (state === 'idle') {
@@ -5635,6 +5634,23 @@ const CasinoModule = (() => {
     setStake(50, document.querySelector('.crash-stake-btn'));
     _refreshBalanceLbl();
     _subscribeRealtime();
+
+    // ── Botón de cashout: touchstart para eliminar delay de 300ms en mobile ──
+    var actionBtn = document.getElementById('crash-action-btn');
+    if (actionBtn) {
+      var _touchFired = false;
+      actionBtn.addEventListener('touchstart', function(e) {
+        e.preventDefault(); // evita el click fantasma posterior
+        _touchFired = true;
+        var capturedMult = mult; // capturar mult en el momento exacto del toque
+        action(capturedMult);
+        setTimeout(function(){ _touchFired = false; }, 500);
+      }, { passive: false });
+      actionBtn.addEventListener('click', function() {
+        if (_touchFired) return; // ya lo manejó touchstart
+        action(mult);
+      });
+    }
 
     // Agregar contenedor de jugadores al DOM si no existe
     var crashCard = document.querySelector('.crash-card');
