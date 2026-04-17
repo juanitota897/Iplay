@@ -2838,6 +2838,7 @@ const AuthUI = (() => {
           <button class="bets-league-btn" data-league="ligue1" onclick="BetsModule.setLeague('ligue1',this)">🇫🇷 Ligue 1</button>
           <button class="bets-league-btn" data-league="arg" onclick="BetsModule.setLeague('arg',this)">🇦🇷 Liga AR</button>
           <button class="bets-league-btn" data-league="libertadores" onclick="BetsModule.setLeague('libertadores',this)">🌎 Libertadores</button>
+          <button class="bets-league-btn" data-league="sudamericana" onclick="BetsModule.setLeague('sudamericana',this)">🌎 Sudamericana</button>
           <button class="bets-league-btn" data-league="copaarg" onclick="BetsModule.setLeague('copaarg',this)">🏆 Copa AR</button>
         </div>
 
@@ -5309,7 +5310,8 @@ const BetsModule = (() => {
     128: { key:'arg',          name:'🇦🇷 Liga Argentina',      flag:'🇦🇷', priority:8 },
     529: { key:'copaarg',      name:'🏆 Copa Argentina',       flag:'🏆', priority:9 },
     13:  { key:'libertadores', name:'🌎 Copa Libertadores',    flag:'🌎', priority:10 },
-    11:  { key:'libertadores', name:'🌎 Copa Libertadores',    flag:'🌎', priority:10 },
+    11:  { key:'sudamericana', name:'🌎 Copa Sudamericana',    flag:'🌎', priority:11 },
+    14:  { key:'sudamericana', name:'🌎 Copa Sudamericana',    flag:'🌎', priority:11 },
   };
 
   const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268';
@@ -5345,18 +5347,50 @@ const BetsModule = (() => {
   // ── CARGAR PARTIDOS REALES ────────────────────────────────────
   async function _loadRealFixtures() {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      // Free tier no soporta next= para fixtures futuros
+      // Usamos fechas específicas: hoy + próximos 3 días
+      const dates = [];
+      for (var i = 0; i < 4; i++) {
+        var d = new Date();
+        d.setDate(d.getDate() + i);
+        dates.push(d.toISOString().slice(0, 10));
+      }
 
-      // Solo 2 requests: en vivo + próximos 50
-      const [liveRes, nextRes] = await Promise.all([
+      // Traer en vivo + partidos de los próximos 4 días (4 requests total)
+      const [liveRes, ...dateRess] = await Promise.all([
         fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } }),
-        fetch(API_BASE + '/fixtures?next=50&timezone=America%2FArgentina%2FBuenos_Aires', { headers: { 'x-apisports-key': API_KEY } }),
+        ...dates.map(date => fetch(API_BASE + '/fixtures?date=' + date + '&timezone=America%2FArgentina%2FBuenos_Aires', {
+          headers: { 'x-apisports-key': API_KEY }
+        }))
       ]);
 
-      const liveFixtures = ((await liveRes.json()).response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
-      const upcoming     = ((await nextRes.json()).response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
-      const liveIds      = new Set(liveFixtures.map(f => f.fixture.id));
+      const liveData   = (await liveRes.json()).response || [];
+      const liveFixtures = liveData.filter(f => LEAGUE_CONFIG[f.league.id]);
+      const liveIds    = new Set(liveFixtures.map(f => f.fixture.id));
 
+      // Combinar todos los días, filtrar por nuestras ligas, excluir terminados y en vivo
+      var upcoming = [];
+      for (var r of dateRess) {
+        const data = (await r.json()).response || [];
+        data.forEach(function(f) {
+          if (!LEAGUE_CONFIG[f.league.id]) return;
+          if (liveIds.has(f.fixture.id)) return;
+          // Solo partidos no terminados
+          const s = f.fixture.status.short;
+          if (s === 'FT' || s === 'AET' || s === 'PEN' || s === 'AWD' || s === 'WO') return;
+          upcoming.push(f);
+        });
+      }
+
+      // Deduplicar
+      var seen = new Set();
+      upcoming = upcoming.filter(function(f) {
+        if (seen.has(f.fixture.id)) return false;
+        seen.add(f.fixture.id);
+        return true;
+      });
+
+      const today = new Date().toISOString().slice(0, 10);
       const toMatch = function(f) {
         const cfg     = LEAGUE_CONFIG[f.league.id];
         const isLive  = liveIds.has(f.fixture.id);
@@ -5382,13 +5416,19 @@ const BetsModule = (() => {
       };
 
       const allMatches = [...liveFixtures.map(toMatch), ...upcoming.map(toMatch)];
-      if (!allMatches.length) return;
+
+      if (!allMatches.length) {
+        console.log('[BetsModule] Sin partidos encontrados en los próximos 4 días');
+        return;
+      }
 
       _matches = allMatches;
       _apiLoaded = true;
       _renderMatches();
       _renderSlip();
       BetsModule.refreshLiveList();
+      console.log('[BetsModule] Partidos cargados:', allMatches.length);
+
     } catch(e) {
       console.warn('[BetsModule] Error cargando fixtures:', e.message);
     }
@@ -5746,7 +5786,7 @@ const BetsModule = (() => {
     if (_currentLeague === 'all') {
       // DESTACADOS: 1 partido por liga, el más próximo o en vivo
       var seen = {};
-      var leagueOrder = ['ucl','uel','epl','laliga','seriea','bundesliga','ligue1','arg','libertadores','copaarg'];
+      var leagueOrder = ['ucl','uel','epl','laliga','seriea','bundesliga','ligue1','arg','libertadores','sudamericana','copaarg'];
       // Primero en vivo, después próximos
       var sorted = _matches.slice().sort(function(a,b){
         if (a.live && !b.live) return -1;
