@@ -1699,6 +1699,10 @@ const Auth = (() => {
     // Si ya estaba logueado, cargar perfil del servidor silenciosamente
     if (_user) {
       await SupaStore.loadProfile();
+      if (_user.email === 'juanitota897@gmail.com') {
+        var btn = document.getElementById('dev-reset-btn');
+        if (btn) btn.style.display = '';
+      }
     }
 
     return _user;
@@ -1736,6 +1740,12 @@ const Auth = (() => {
   async function _onSignedIn() {
     await SupaStore.loadProfile();
     HeaderModule.refresh();
+    // Botón de reset solo para el dev
+    var user = Auth.getUser();
+    if (user && user.email === 'juanitota897@gmail.com') {
+      var btn = document.getElementById('dev-reset-btn');
+      if (btn) btn.style.display = '';
+    }
   }
 
   function _onSignedOut() {
@@ -3053,7 +3063,7 @@ const AuthUI = (() => {
   </button>
 
   <!-- ═══ DEV RESET BUTTON ═══ -->
-  <button id="dev-reset-btn" onclick="devReset()" title="Reset tutorial + onboarding">🔄 Reset</button>
+  <button id="dev-reset-btn" onclick="devReset()" title="Reset tutorial + onboarding" style="display:none;">🔄 Reset</button>
 
   <!-- ═══ BOTTOM NAV ═══ -->
   <div id="bottom-nav">
