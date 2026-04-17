@@ -220,6 +220,23 @@ button{font-family:inherit;cursor:pointer;}
 .bets-hero-sub{font-size:11px;color:var(--t3);line-height:1.4;}
 .bets-leagues{display:flex;gap:7px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch;}
 .bets-leagues::-webkit-scrollbar{display:none;}
+/* Wrapper con flechas */
+.bets-leagues-wrap{position:relative;display:flex;align-items:center;gap:4px;}
+.bets-leagues-arrow{
+  display:none;
+  flex-shrink:0;width:28px;height:28px;
+  border-radius:50%;border:1px solid rgba(212,175,55,.25);
+  background:rgba(212,175,55,.07);
+  color:var(--gold);font-size:18px;line-height:1;
+  cursor:pointer;transition:all .15s;
+  align-items:center;justify-content:center;
+}
+.bets-leagues-arrow:hover{background:rgba(212,175,55,.18);border-color:rgba(212,175,55,.5);}
+@media(min-width:768px){
+  .bets-leagues-wrap{overflow:hidden;}
+  .bets-leagues-arrow{display:flex;}
+  .bets-leagues{flex:1;overflow-x:hidden;scroll-behavior:smooth;}
+}
 .bets-league-btn{flex-shrink:0;padding:5px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.3px;cursor:pointer;transition:all .2s;white-space:nowrap;}
 .bets-league-btn.active{background:rgba(212,175,55,.1);border-color:rgba(212,175,55,.35);color:var(--gold);}
 .bets-match-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden;}
@@ -2827,8 +2844,10 @@ const AuthUI = (() => {
         </div>
 
         <!-- LIGA FILTER -->
-        <div class="bets-leagues" id="bets-leagues">
-          <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">⭐ Destacados</button>
+        <div class="bets-leagues-wrap">
+          <button class="bets-leagues-arrow left" id="bets-arrow-left" onclick="BetsModule.scrollLeagues(-1)" aria-label="Scroll izquierda">‹</button>
+          <div class="bets-leagues" id="bets-leagues">
+            <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">⭐ Destacados</button>
           <button class="bets-league-btn" data-league="ucl" onclick="BetsModule.setLeague('ucl',this)">🏆 Champions</button>
           <button class="bets-league-btn" data-league="epl" onclick="BetsModule.setLeague('epl',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
           <button class="bets-league-btn" data-league="laliga" onclick="BetsModule.setLeague('laliga',this)">🇪🇸 La Liga</button>
@@ -2841,7 +2860,11 @@ const AuthUI = (() => {
           <button class="bets-league-btn" data-league="libertadores" onclick="BetsModule.setLeague('libertadores',this)">🌎 Libertadores</button>
           <button class="bets-league-btn" data-league="sudamericana" onclick="BetsModule.setLeague('sudamericana',this)">🌎 Sudamericana</button>
           <button class="bets-league-btn" data-league="copaarg" onclick="BetsModule.setLeague('copaarg',this)">🏆 Copa AR</button>
-        </div>
+          <button class="bets-league-btn" data-league="brasileirao" onclick="BetsModule.setLeague('brasileirao',this)">🇧🇷 Brasileirao</button>
+          <button class="bets-league-btn" data-league="championship" onclick="BetsModule.setLeague('championship',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship</button>
+          </div><!-- /bets-leagues -->
+          <button class="bets-leagues-arrow right" id="bets-arrow-right" onclick="BetsModule.scrollLeagues(1)" aria-label="Scroll derecha">›</button>
+        </div><!-- /bets-leagues-wrap -->
 
         <!-- MATCHES LIST -->
         <div id="bets-matches-list"></div>
@@ -5313,6 +5336,8 @@ const BetsModule = (() => {
     13:  { key:'libertadores', name:'🌎 Copa Libertadores',    flag:'🌎', priority:10 },
     11:  { key:'sudamericana', name:'🌎 Copa Sudamericana',    flag:'🌎', priority:11 },
     14:  { key:'sudamericana', name:'🌎 Copa Sudamericana',    flag:'🌎', priority:11 },
+    71:  { key:'brasileirao',  name:'🇧🇷 Brasileirao',         flag:'🇧🇷', priority:12 },
+    40:  { key:'championship', name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship',     flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', priority:13 },
   };
 
   const API_KEY  = 'c7d7da22a499bfd42a7cd5ae35845268';
@@ -5338,7 +5363,9 @@ const BetsModule = (() => {
     { code:'BL1', key:'bundesliga', name:'🇩🇪 Bundesliga',          priority:6 },
     { code:'FL1', key:'ligue1',     name:'🇫🇷 Ligue 1',             priority:7 },
     { code:'DED', key:'eredivisie', name:'🇳🇱 Eredivisie',          priority:8 },
-    { code:'PPL', key:'primeiraliga',name:'🇵🇹 Primeira Liga',      priority:9 },
+    { code:'PPL', key:'primeiraliga', name:'🇵🇹 Primeira Liga',     priority:9  },
+    { code:'BSA', key:'brasileirao',  name:'🇧🇷 Brasileirao',        priority:10 },
+    { code:'ELC', key:'championship', name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship',    priority:11 },
   ];
 
   // Fallback estático si la API falla
@@ -5964,6 +5991,28 @@ const BetsModule = (() => {
     'Ipswich Town': 1860, 'Ipswich Town FC': 1860,
     'Leicester City': 1870, 'Leicester City FC': 1870,
     'Southampton': 1850, 'Southampton FC': 1850,
+    // Championship (Segunda Inglaterra)
+    'Leeds United': 1880, 'Leeds United FC': 1880,
+    'Burnley': 1870, 'Burnley FC': 1870,
+    'Sheffield United': 1860, 'Sheffield United FC': 1860,
+    'Middlesbrough': 1840, 'Middlesbrough FC': 1840,
+    'Sunderland': 1840, 'Sunderland AFC': 1840,
+    'Norwich City': 1850, 'Norwich City FC': 1850,
+    'Coventry City': 1840, 'Coventry City FC': 1840,
+    'Preston North End': 1830, 'Preston North End FC': 1830,
+    'Millwall': 1830, 'Millwall FC': 1830,
+    'Watford': 1840, 'Watford FC': 1840,
+    'West Bromwich Albion': 1840, 'West Bromwich Albion FC': 1840,
+    'Stoke City': 1830, 'Stoke City FC': 1830,
+    'Hull City': 1830, 'Hull City AFC': 1830,
+    'Bristol City': 1820, 'Bristol City FC': 1820,
+    'Swansea City': 1830, 'Swansea City AFC': 1830,
+    'Queens Park Rangers': 1820, 'QPR': 1820,
+    'Oxford United': 1820, 'Oxford United FC': 1820,
+    'Cardiff City': 1820, 'Cardiff City FC': 1820,
+    'Plymouth Argyle': 1810, 'Plymouth Argyle FC': 1810,
+    'Derby County': 1830, 'Derby County FC': 1830,
+    'Blackburn Rovers': 1820, 'Blackburn Rovers FC': 1820,
     // La Liga
     'Sevilla': 1920, 'Sevilla FC': 1920,
     'Real Betis': 1900, 'Real Betis Balompié': 1900,
@@ -6412,7 +6461,20 @@ const BetsModule = (() => {
     scroller.scrollTo({ top: top, behavior: 'smooth' });
   }
 
-  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip };
+  function scrollLeagues(dir) {
+    var el = document.getElementById('bets-leagues');
+    if (!el) return;
+    el.scrollLeft += dir * 160;
+    // actualizar visibilidad de flechas
+    setTimeout(function() {
+      var l = document.getElementById('bets-arrow-left');
+      var r = document.getElementById('bets-arrow-right');
+      if (l) l.style.opacity = el.scrollLeft <= 0 ? '0.3' : '1';
+      if (r) r.style.opacity = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4 ? '0.3' : '1';
+    }, 150);
+  }
+
+  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip, scrollLeagues };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
