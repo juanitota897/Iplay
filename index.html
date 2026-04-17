@@ -499,6 +499,10 @@ button{font-family:inherit;cursor:pointer;}
 .fo-bet.picked{background:rgba(57,255,20,.1);border-color:rgba(57,255,20,.45);color:var(--neon);}
 .fo-pick-reg{display:none;text-align:center;padding:0 16px 14px;font-size:11px;color:var(--neon-d);font-family:'Barlow Condensed',sans-serif;font-weight:700;}
 .fo-pick-reg.show{display:block;}
+/* Stake buttons microbet */
+.fo-stake-btn{flex:1;padding:6px 4px;border-radius:8px;border:1px solid rgba(212,175,55,.2);background:rgba(212,175,55,.05);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;}
+.fo-stake-btn.active{background:rgba(212,175,55,.12);border-color:rgba(212,175,55,.45);color:var(--gold);}
+.fo-stake-btn:disabled{opacity:.4;cursor:not-allowed;}
 
 /* ═══════════════════════════════════════
    VIEW: BÓVEDA
@@ -3115,8 +3119,15 @@ const AuthUI = (() => {
       </div>
       <div class="fo-divider"></div>
       <div class="fo-stake-row">
-        <span class="fo-stake-lbl">💰 Stake</span>
-        <span class="fo-stake-val" id="fo-stake">$50</span>
+        <span class="fo-stake-lbl">🪙 Stake</span>
+        <span class="fo-stake-val" id="fo-stake">50 G</span>
+      </div>
+      <!-- FIX: botones de stake en G-Coins -->
+      <div style="display:flex;gap:5px;margin-bottom:8px;">
+        <button class="fo-stake-btn active" data-stake="50"  onclick="MicroBet.setStake(50,this)">50</button>
+        <button class="fo-stake-btn"        data-stake="100" onclick="MicroBet.setStake(100,this)">100</button>
+        <button class="fo-stake-btn"        data-stake="250" onclick="MicroBet.setStake(250,this)">250</button>
+        <button class="fo-stake-btn"        data-stake="500" onclick="MicroBet.setStake(500,this)">500</button>
       </div>
       <div class="fo-bets">
         <button class="fo-bet" id="fo-btn-a" onclick="MicroBet.pick('A')">—</button>
@@ -3204,6 +3215,7 @@ const AuthUI = (() => {
 /* ── STORE ─────────────────────────────────────────────────── */
 const Store = (() => {
   const KEY = 'glayer_v5';
+  const KEY_CFG = 'glayer_mbconfig'; // FIX: config separada del reset general
   const LEVELS = [
     {min:0,    max:500,  title:'RECLUTA'},
     {min:500,  max:1200, title:'ASPIRANTE'},
@@ -3293,6 +3305,11 @@ const Store = (() => {
         S.bets    = Object.assign({}, DEFAULT.bets,     parsed.bets    || {});
         if (!S.bets.history) S.bets.history = [];
         S.mbConfig.types = Object.assign({}, DEFAULT.mbConfig.types, (parsed.mbConfig||{}).types||{});
+        // FIX: también cargar config separada (sobrevive al reset)
+        try {
+          var savedCfg = localStorage.getItem(KEY_CFG);
+          if (savedCfg) S.mbConfig = Object.assign({}, S.mbConfig, JSON.parse(savedCfg));
+        } catch(e) {}
         if (S.gcoins === undefined) S.gcoins = DEFAULT.gcoins;
         if (!S.loot.unlocked[S.loot.tier]) S.loot.unlocked[S.loot.tier] = {common:false,rare:false,epic:false};
         if (!S.loot.opened[S.loot.tier])   S.loot.opened[S.loot.tier]   = {common:false,rare:false,epic:false};
@@ -3304,7 +3321,11 @@ const Store = (() => {
   }
 
   function save() {
-    try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e) {}
+    try {
+      localStorage.setItem(KEY, JSON.stringify(S));
+      // FIX: guardar config en key separada para que sobreviva resets
+      localStorage.setItem(KEY_CFG, JSON.stringify(S.mbConfig));
+    } catch(e) {}
   }
 
   function get() { return S; }
@@ -3876,26 +3897,29 @@ const MicroBet = (() => {
 
     if (hadPick) {
       const S = Store.get();
+      const stake = ev.stake || S.microbet.stake || 50;
       S.microbet.rounds++;
-      // Energy: trackear sin bloquear (piloto v1)
       S.energy = Math.max(0, (S.energy || 200) - MICRO_ENERGY);
-      const win = Math.random() < 0.55; // 55% win rate microbet
+      const win = Math.random() < 0.55;
       if (win) {
+        const won = Math.round(stake * 1.8); // multiplicador 1.8x en microbet
         S.microbet.wins++;
         if (S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier].wins++;
         Store.save();
         Store.addXP(MICRO_XP);
-        _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP');
+        Store.addGCoins(won); // FIX: acreditar ganancia
+        _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP · +' + won.toLocaleString('es-AR') + ' G');
         LootModule.refresh();
         MissionsModule.checkTrigger('microbet', { won: true });
         if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('microbet_win');
       } else {
+        // FIX: en derrota el stake ya fue descontado al hacer pick, solo agregar fuel
         Store.save();
         Store.simulateLoss();
-        _showResult('loss', '❌', 'Perdiste — +' + MICRO_FUEL_LOSS + ' fuel en tu Bóveda');
+        _showResult('loss', '❌', 'Perdiste ' + stake.toLocaleString('es-AR') + ' G · +' + MICRO_FUEL_LOSS + ' fuel');
         MissionsModule.checkTrigger('microbet', { won: false });
       }
-      HeaderModule.refresh(); // actualiza energy bar
+      HeaderModule.refresh();
       _updateLiveStats();
     }
     _syncHomeMBBadge(false, null);
@@ -3960,7 +3984,7 @@ const MicroBet = (() => {
     const foReg  = document.getElementById('fo-pick-reg');
     if(foType) foType.textContent = def.type;
     if(foQ)    foQ.textContent    = def.q;
-    if(foStake) foStake.textContent = '$' + Store.get().microbet.stake;
+    if(foStake) foStake.textContent = (Store.get().microbet.stake || 50) + ' G';
     if(foBa)  { foBa.textContent = def.optA; foBa.disabled=false; foBa.className='fo-bet'; }
     if(foBb)  { foBb.textContent = def.optB; foBb.disabled=false; foBb.className='fo-bet'; }
     if(foReg) foReg.classList.remove('show');
@@ -3972,7 +3996,16 @@ const MicroBet = (() => {
 
   function pick(side) {
     if (!ev || ev.phase !== 'active' || ev.pick) return;
+    // FIX: verificar y descontar G-Coins al hacer pick
+    const S = Store.get();
+    const stake = S.microbet.stake || 50;
+    if ((S.gcoins || 0) < stake) {
+      Store.showVaultToast('Sin G-Coins suficientes (' + stake + ' requeridos)');
+      return;
+    }
+    Store.addGCoins(-stake); // descontar stake
     ev.pick = side;
+    ev.stake = stake; // guardar stake en el evento
     // Notify tutorial if active
     if (typeof Tutorial !== 'undefined') Tutorial.notifyAction('microbet');
     const ba = document.getElementById('mb-btn-a');
@@ -4095,10 +4128,19 @@ const MicroBet = (() => {
     if(dskEvt && active) dskEvt.textContent = eventType || '—';
   }
 
+  function setStake(amount, btn) {
+    const S = Store.get();
+    S.microbet.stake = Math.max(50, Math.min(amount, S.gcoins || 50));
+    Store.save();
+    document.querySelectorAll('.fo-stake-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+    const foStake = document.getElementById('fo-stake');
+    if (foStake) foStake.textContent = S.microbet.stake + ' G';
+  }
+
   function getPhase() { return ev ? ev.phase : 'waiting'; }
   function getEventDef() { return ev && ev.phase==='active' ? ev.eventDef : null; }
 
-  return { init, pick, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
+  return { init, pick, setStake, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
 })();
 
 /* ── VAULT MODULE ───────────────────────────────────────────── */
