@@ -5317,7 +5317,15 @@ const BetsModule = (() => {
   const API_KEY  = 'c7d7da22a499bfd42a7cd5ae35845268';
   const API_BASE = 'https://v3.football.api-sports.io';
   const FD_KEY   = 'd8248f5724094cfaa8d7bad6c653bb1f';
-  const FD_BASE  = 'https://api.football-data.org/v4';
+  const FD_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/football-proxy';
+  const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
+
+  async function _fdFetch(path) {
+    const target = 'https://api.football-data.org/v4' + path;
+    const url = FD_PROXY + '?url=' + encodeURIComponent(target) + '&token=' + FD_KEY;
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + SUPA_KEY } });
+    return r.json();
+  }
 
   // Competiciones football-data.org para fixtures futuros (5 grandes + Champions + Europa)
   const FD_COMPETITIONS = [
@@ -5366,10 +5374,7 @@ const BetsModule = (() => {
       // ── 1. FOOTBALL-DATA.ORG: Champions, Europa, 5 grandes ───────
       await Promise.all(FD_COMPETITIONS.map(async function(comp) {
         try {
-          const r = await fetch(FD_BASE + '/competitions/' + comp.code + '/matches?status=SCHEDULED', {
-            headers: { 'X-Auth-Token': FD_KEY }
-          });
-          const j = await r.json();
+          const j = await _fdFetch('/competitions/' + comp.code + '/matches?status=SCHEDULED');
           (j.matches || []).slice(0, 3).forEach(function(m) {
             const kickoff = new Date(m.utcDate);
             const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
