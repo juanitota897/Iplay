@@ -769,22 +769,77 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .casino-hdr{padding:12px 0 6px;}
 .casino-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px;}
 .casino-sub{font-size:11px;color:var(--t3);}
-.crash-card{background:var(--bg1);border:1px solid rgba(57,255,20,.18);border-radius:var(--r-lg);overflow:hidden;box-shadow:0 8px 28px rgba(57,255,20,.05);transition:border .3s,box-shadow .3s;}
-@keyframes crash-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-6px)}30%{transform:translateX(6px)}45%{transform:translateX(-4px)}60%{transform:translateX(4px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
+
+/* ── CRASH CARD ── */
+.crash-card{
+  background:var(--bg1);
+  border:1px solid rgba(57,255,20,.18);
+  border-radius:var(--r-lg);
+  overflow:hidden;
+  box-shadow:0 8px 28px rgba(57,255,20,.05);
+  transition:border-color .4s,box-shadow .4s,background .4s;
+  position:relative;
+}
+.crash-card.risk {
+  border-color:rgba(255,107,53,.4);
+  box-shadow:0 8px 28px rgba(255,107,53,.12);
+}
+.crash-card.danger {
+  border-color:rgba(255,51,85,.5);
+  box-shadow:0 8px 28px rgba(255,51,85,.18);
+}
+.crash-card.crashed-state {
+  border-color:rgba(255,51,85,.7);
+  box-shadow:0 0 40px rgba(255,51,85,.3);
+}
+
+/* Crash overlay — aparece encima del gráfico cuando crashea */
+#crash-overlay{
+  display:none;
+  position:absolute;
+  top:0;left:0;right:0;bottom:0;
+  background:rgba(255,51,85,.08);
+  z-index:10;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  pointer-events:none;
+}
+#crash-overlay.show{display:flex;}
+#crash-overlay-txt{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:32px;
+  font-weight:800;
+  color:var(--red);
+  letter-spacing:2px;
+  text-shadow:0 0 24px rgba(255,51,85,.6);
+  animation:crash-pulse .4s ease-in-out;
+}
+#crash-overlay-mult{
+  font-family:'Barlow Condensed',sans-serif;
+  font-size:18px;
+  font-weight:700;
+  color:rgba(255,51,85,.7);
+  letter-spacing:1px;
+}
+@keyframes crash-pulse{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
+@keyframes crash-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-5px)}60%{transform:translateX(5px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
 .crash-shake{animation:crash-shake .5s ease-in-out;}
+@keyframes mult-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
+.crash-mult.pulsing{animation:mult-pulse .6s ease-in-out infinite;}
+
 .crash-topbar{display:flex;align-items:center;justify-content:space-between;padding:9px 13px 6px;border-bottom:1px solid rgba(255,255,255,.05);}
 .crash-status{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;color:var(--neon);letter-spacing:1.5px;text-transform:uppercase;}
 .crash-cooldown-bar{height:3px;background:var(--bg4);border-radius:2px;overflow:hidden;margin:0 13px 6px;}
 .crash-cooldown-fill{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold));border-radius:2px;transition:width .25s linear;}
 .crash-status.crashed{color:var(--red);}
 .crash-rnd{font-size:10px;color:var(--t3);font-family:'Barlow Condensed',sans-serif;}
-.crash-mult-wrap{text-align:center;padding:16px 14px 6px;}
-.crash-mult{font-family:'Barlow Condensed',sans-serif;font-size:56px;font-weight:800;color:var(--neon);line-height:1;text-shadow:0 0 28px rgba(57,255,20,.3);transition:color .25s;}
-.crash-mult.crashed{color:var(--red);text-shadow:0 0 28px rgba(255,51,85,.3);}
-.crash-mult.cashing{color:var(--gold);text-shadow:0 0 28px rgba(212,175,55,.35);}
-.crash-mult-x{font-size:28px;vertical-align:super;opacity:.7;}
+.crash-mult-wrap{text-align:center;padding:16px 14px 6px;position:relative;}
+.crash-mult{font-family:'Barlow Condensed',sans-serif;font-size:68px;font-weight:800;color:var(--neon);line-height:1;text-shadow:0 0 32px rgba(57,255,20,.35);transition:color .2s,text-shadow .2s;}
+.crash-mult.crashed{color:var(--red);text-shadow:0 0 40px rgba(255,51,85,.5);}
+.crash-mult-x{font-size:32px;vertical-align:super;opacity:.7;}
 .crash-sub{font-size:11px;color:var(--t3);margin-top:4px;min-height:15px;}
-.crash-graph{padding:0 13px 4px;height:80px;}
+.crash-graph{padding:0 13px 4px;height:100px;position:relative;}
 #crash-svg{width:100%;height:100%;display:block;}
 .crash-controls{display:flex;align-items:center;gap:10px;padding:10px 13px 12px;border-top:1px solid rgba(255,255,255,.05);}
 .crash-stake-wrap{flex:1;}
@@ -798,7 +853,7 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .crash-result-banner{display:none;align-items:center;justify-content:center;gap:7px;padding:9px 13px;border-top:1px solid rgba(255,255,255,.05);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;}
 .crash-result-banner.show{display:flex;}
 .crash-result-banner.win{background:rgba(212,175,55,.06);color:var(--gold);}
-.crash-result-banner.loss{background:rgba(255,51,85,.05);color:var(--red);}
+.crash-result-banner.loss{background:rgba(255,51,85,.08);color:var(--red);}
 .crash-history{display:flex;align-items:center;gap:6px;padding:8px 13px;border-top:1px solid rgba(255,255,255,.05);flex-wrap:wrap;}
 .crash-history-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;flex-shrink:0;margin-right:2px;}
 .crash-pill{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;padding:3px 8px;border-radius:8px;letter-spacing:.3px;}
@@ -2659,6 +2714,10 @@ const AuthUI = (() => {
           <div class="casino-sub">Juegos exclusivos · Gana XP real</div>
         </div>
         <div class="crash-card">
+          <div id="crash-overlay">
+            <div id="crash-overlay-txt">💥 CRASHED</div>
+            <div id="crash-overlay-mult"></div>
+          </div>
           <div class="crash-topbar">
             <div class="crash-status" id="crash-status"><span class="live-dot neon"></span>EN ESPERA</div>
             <span class="crash-rnd">Ronda <span id="crash-rnd">1</span></span>
@@ -5278,11 +5337,15 @@ const CasinoModule = (() => {
 
     // Resetear colores del gráfico y número
     var me = document.getElementById('crash-mult');
-    if (me) me.style.color = '#39FF14';
+    if (me) { me.style.color = '#39FF14'; me.style.textShadow = ''; me.classList.remove('crashed','pulsing'); }
     var line = document.getElementById('crash-line');
     var dot  = document.getElementById('crash-dot');
-    if (line) line.setAttribute('stroke', '#39FF14');
-    if (dot)  dot.setAttribute('fill', '#39FF14');
+    if (line) { line.setAttribute('stroke', '#39FF14'); line.removeAttribute('filter'); }
+    if (dot)  { dot.setAttribute('fill', '#39FF14'); dot.setAttribute('r', '4'); }
+    var card = document.querySelector('.crash-card');
+    if (card) card.className = 'crash-card';
+    var overlay = document.getElementById('crash-overlay');
+    if (overlay) overlay.classList.remove('show');
 
     // Si había apuesta pendiente, ejecutarla ahora que arrancó la ronda
     if (hadPending) {
@@ -5306,22 +5369,34 @@ const CasinoModule = (() => {
     state = 'crashed';
     _addToHistory(finalMult, 'crash');
 
-    // Gráfico se pone rojo
+    var card = document.querySelector('.crash-card');
+    var me   = document.getElementById('crash-mult');
     var line = document.getElementById('crash-line');
     var dot  = document.getElementById('crash-dot');
-    var area = document.getElementById('crash-area');
-    if (line) line.setAttribute('stroke', '#FF3355');
-    if (dot)  dot.setAttribute('fill', '#FF3355');
+    var overlay = document.getElementById('crash-overlay');
+    var overlayMult = document.getElementById('crash-overlay-mult');
 
-    // Shake del card
-    var card = document.querySelector('.crash-card');
+    // Número rojo grande
+    if (me) {
+      me.style.color = '#FF3355';
+      me.style.textShadow = '0 0 50px rgba(255,51,85,.7)';
+      me.classList.remove('pulsing');
+      me.classList.add('crashed');
+    }
+
+    // Gráfico rojo
+    if (line) { line.setAttribute('stroke', '#FF3355'); line.removeAttribute('filter'); }
+    if (dot)  { dot.setAttribute('fill', '#FF3355'); dot.setAttribute('r', '4'); }
+
+    // Card rojo + shake
     if (card) {
-      card.style.transition = 'none';
-      card.style.border = '1px solid rgba(255,51,85,.6)';
-      card.style.boxShadow = '0 0 24px rgba(255,51,85,.25)';
-      card.classList.add('crash-shake');
+      card.className = 'crash-card crashed-state crash-shake';
       setTimeout(function() { card.classList.remove('crash-shake'); }, 500);
     }
+
+    // Overlay de crash
+    if (overlay) overlay.classList.add('show');
+    if (overlayMult) overlayMult.textContent = 'Crasheó a ' + finalMult.toFixed(2) + 'x';
 
     // Marcar perdedores en el feed
     _players.forEach(function(p){ if (!p.cashout_at) p.lost = true; });
@@ -5330,22 +5405,19 @@ const CasinoModule = (() => {
     if (betPlaced && !cashed) {
       Store.simulateLoss();
       _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
-    } else if (!betPlaced) {
+    } else {
       _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x');
     }
 
-    _setUI({ status:'<span class="live-dot red"></span> 💥 CRASHED', multCls:'crashed', sub:'Crasheó a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
+    _setUI({ status:'<span class="live-dot red"></span> CRASHED', multCls:'crashed', sub:'Crasheó a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
     betPlaced = false;
 
-    // Resetear colores del gráfico después de un momento
+    // Resetear después de 2.5s
     setTimeout(function() {
-      if (line) line.setAttribute('stroke', '#39FF14');
-      if (dot)  dot.setAttribute('fill', '#39FF14');
-      if (card) {
-        card.style.border = '';
-        card.style.boxShadow = '';
-      }
-    }, 2000);
+      if (overlay) overlay.classList.remove('show');
+      if (me) { me.classList.remove('crashed'); me.style.color = ''; me.style.textShadow = ''; }
+      if (card) { card.className = 'crash-card'; }
+    }, 2500);
 
     _startCooldown(8);
   }
@@ -5355,27 +5427,45 @@ const CasinoModule = (() => {
     var el  = (performance.now() - _startT) / 1000;
     mult    = Math.round(Math.pow(Math.E, 0.08 * el) * 100) / 100;
     var me  = document.getElementById('crash-mult');
+    var card = document.querySelector('.crash-card');
 
-    // Color dinámico según el multiplicador
-    var color;
-    if (mult < 1.5)      color = '#39FF14'; // verde
-    else if (mult < 2.5) color = '#F0D060'; // amarillo
-    else if (mult < 5)   color = '#FF6B35'; // naranja
-    else                 color = '#FF3355'; // rojo — zona de riesgo
+    // Color y estado dinámico según el multiplicador
+    var color, shadow, cardClass;
+    if (mult < 1.5) {
+      color = '#39FF14'; shadow = 'rgba(57,255,20,.4)';
+      cardClass = '';
+    } else if (mult < 2.5) {
+      color = '#F0D060'; shadow = 'rgba(240,208,96,.4)';
+      cardClass = '';
+    } else if (mult < 5) {
+      color = '#FF6B35'; shadow = 'rgba(255,107,53,.4)';
+      cardClass = 'risk';
+    } else {
+      color = '#FF3355'; shadow = 'rgba(255,51,85,.5)';
+      cardClass = 'danger';
+    }
 
-    if(me) {
+    if (me) {
       me.innerHTML = mult.toFixed(2) + '<span class="crash-mult-x">x</span>';
       me.style.color = color;
+      me.style.textShadow = '0 0 40px ' + shadow;
+      // Pulso cuando está en zona de peligro
+      if (mult >= 5) me.classList.add('pulsing');
+      else me.classList.remove('pulsing');
+    }
+
+    if (card) {
+      card.className = 'crash-card' + (cardClass ? ' ' + cardClass : '');
     }
 
     // Actualizar color del gráfico
     var line = document.getElementById('crash-line');
     var dot  = document.getElementById('crash-dot');
-    if (line) line.setAttribute('stroke', color);
-    if (dot)  dot.setAttribute('fill', color);
+    if (line) { line.setAttribute('stroke', color); line.setAttribute('filter', 'drop-shadow(0 0 3px ' + color + ')'); }
+    if (dot)  { dot.setAttribute('fill', color); dot.setAttribute('r', mult >= 3 ? '5' : '4'); }
 
     var pct = Math.min(el / 15, 1);
-    _pts.push({ x: pct * 290, y: Math.min(pct * mult * 5.5, 72) });
+    _pts.push({ x: pct * 290, y: Math.min(pct * mult * 5.5, 90) });
     _drawGraph();
     _raf = requestAnimationFrame(_frame);
   }
