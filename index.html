@@ -2830,7 +2830,7 @@ const AuthUI = (() => {
         <div class="bets-leagues" id="bets-leagues">
           <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">⭐ Destacados</button>
           <button class="bets-league-btn" data-league="ucl" onclick="BetsModule.setLeague('ucl',this)">🏆 Champions</button>
-          <button class="bets-league-btn" data-league="uel" onclick="BetsModule.setLeague('uel',this)">🏅 Europa</button>
+          <button class="bets-league-btn" data-league="uel" onclick="BetsModule.setLeague('uel',this)">🏅 Conference</button>
           <button class="bets-league-btn" data-league="epl" onclick="BetsModule.setLeague('epl',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
           <button class="bets-league-btn" data-league="laliga" onclick="BetsModule.setLeague('laliga',this)">🇪🇸 La Liga</button>
           <button class="bets-league-btn" data-league="seriea" onclick="BetsModule.setLeague('seriea',this)">🇮🇹 Serie A</button>
@@ -5330,7 +5330,7 @@ const BetsModule = (() => {
   // Competiciones football-data.org para fixtures futuros (5 grandes + Champions + Europa)
   const FD_COMPETITIONS = [
     { code:'CL',  key:'ucl',        name:'⭐ Champions League',    priority:1 },
-    { code:'EL',  key:'uel',        name:'🏅 Europa League',       priority:2 },
+    { code:'UECL',key:'uel',        name:'🏅 Conference League',   priority:2 },
     { code:'PL',  key:'epl',        name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', priority:3 },
     { code:'PD',  key:'laliga',     name:'🇪🇸 La Liga',            priority:4 },
     { code:'SA',  key:'seriea',     name:'🇮🇹 Serie A',             priority:5 },
