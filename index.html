@@ -6845,6 +6845,15 @@ const EntryModule = (() => {
 
   function init() {
     _op = OPERATORS[Math.floor(Math.random()*OPERATORS.length)];
+    var hdrOp = document.getElementById('hdr-op-name');
+    if(hdrOp) hdrOp.textContent = _op.name.split(' ')[0];
+
+    // Si hay sesión activa, entrar directo sin animación
+    if (Auth.isLoggedIn()) {
+      enter();
+      return;
+    }
+
     setTimeout(function() {
       var card   = document.getElementById('entry-op-card');
       var conn   = document.getElementById('entry-connecting');
@@ -6853,21 +6862,7 @@ const EntryModule = (() => {
       if(card)   card.style.display = 'block';
       if(conn)   conn.style.display = 'none';
       if(nameEl) nameEl.textContent = _op.name;
-      var hdrOp = document.getElementById('hdr-op-name');
-      if(hdrOp)  hdrOp.textContent = _op.name.split(' ')[0];
-
-      if (Auth.isLoggedIn()) {
-        // Sesion activa — mostrar card con opciones, NO entrar automático
-        var user = Auth.getUser();
-        var username = user.email.split('@')[0];
-        var sessionCard = document.getElementById('entry-session-card');
-        var sessionUsername = document.getElementById('entry-session-username');
-        if(btn) btn.style.display = 'none'; // ocultar botón de login
-        if(sessionCard) sessionCard.style.display = 'block';
-        if(sessionUsername) sessionUsername.textContent = username;
-      } else {
-        if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
-      }
+      if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
     }, 1800);
   }
 
