@@ -3739,8 +3739,9 @@ const HeaderModule = (() => {
 
 /* ── LIVE PROVIDER ──────────────────────────────────────────── */
 const LiveProvider = (() => {
-  const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268';
-  const API_BASE = 'https://v3.football.api-sports.io';
+  const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268'; // solo como fallback
+  const FIXTURES_PROXY_LP = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/fixtures-proxy';
+  const SUPA_KEY_LP = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
 
   // IDs de las ligas que queremos cubrir
   var LEAGUE_IDS = {
@@ -3776,8 +3777,9 @@ const LiveProvider = (() => {
   // ── API FETCH ─────────────────────────────────────────────────
   async function _apiFetch(endpoint) {
     try {
-      const res = await fetch(API_BASE + endpoint, {
-        headers: { 'x-apisports-key': API_KEY }
+      const path = endpoint.replace(/^\//, '');
+      const res = await fetch(FIXTURES_PROXY_LP + '?path=' + encodeURIComponent(path), {
+        headers: { 'Authorization': 'Bearer ' + SUPA_KEY_LP }
       });
       if (!res.ok) return null;
       const json = await res.json();
@@ -5394,11 +5396,18 @@ const BetsModule = (() => {
     40:  { key:'championship', name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Championship',     flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', priority:13 },
   };
 
-  const API_KEY  = 'c7d7da22a499bfd42a7cd5ae35845268';
-  const API_BASE = 'https://v3.football.api-sports.io';
+  const API_BASE = 'https://v3.football.api-sports.io'; // mantenido como referencia
   const FD_KEY   = 'd8248f5724094cfaa8d7bad6c653bb1f';
   const FD_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/football-proxy';
+  const FIXTURES_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/fixtures-proxy';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
+
+  async function _apiFetch(path) {
+    const r = await fetch(FIXTURES_PROXY + '?path=' + encodeURIComponent(path), {
+      headers: { 'Authorization': 'Bearer ' + SUPA_KEY }
+    });
+    return r.json();
+  }
 
   async function _fdFetch(path) {
     const target = 'https://api.football-data.org/v4' + path;
@@ -5494,10 +5503,7 @@ const BetsModule = (() => {
         d.setDate(d.getDate() + i);
         const fecha = d.toISOString().slice(0, 10);
         try {
-          const r = await fetch(API_BASE + '/fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires', {
-            headers: { 'x-apisports-key': API_KEY }
-          });
-          const j = await r.json();
+          const j = await _apiFetch('fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires');
           (j.response || []).forEach(function(f) {
             if (!CONMEBOL_IDS[f.league.id]) return;
             const lname = (f.league.name || '').toLowerCase();
@@ -5532,8 +5538,7 @@ const BetsModule = (() => {
 
       // ── 3. En vivo (todas las ligas configuradas) ─────────────────
       try {
-        const lr = await fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } });
-        const lj = await lr.json();
+        const lj = await _apiFetch('fixtures?live=all');
         (lj.response || []).forEach(function(f) {
           const cfg2 = LEAGUE_CONFIG[f.league.id];
           if (!cfg2) return;
