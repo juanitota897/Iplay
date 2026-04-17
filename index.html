@@ -5199,10 +5199,17 @@ const CasinoModule = (() => {
 
   async function _doCashout() {
     if (!Auth.isLoggedIn() || !_roundId || !betPlaced || cashed) return;
+    if (state !== 'running') return;
+    cashed = true; // marcar inmediatamente para evitar doble tap
+    var ab = document.getElementById('crash-action-btn');
+    if (ab) { ab.disabled = true; ab.textContent = '⏳ Cobrando…'; }
     var user = Auth.getUser();
     var res  = await _hostCall({ action: 'cashout', round_id: _roundId, user_id: user.id, current_mult: mult });
-    if (res.error) return;
-    cashed = true;
+    if (res.error) {
+      // Si ya crasheó, tratar como pérdida
+      cashed = true;
+      return;
+    }
     var profit = res.profit;
     Store.addGCoins(profit);
     Store.addXP(20);
@@ -5219,13 +5226,26 @@ const CasinoModule = (() => {
     mult    = 1;
     _pts    = [];
     _startT = performance.now();
-    betPlaced = _pendingBet;
+    var hadPending = _pendingBet;
     _pendingBet = false;
     cashed  = false;
     clearTimeout(_cooldownTimer);
     clearInterval(_cooldownInterval);
     _hideBanner();
-    _setUI({ status:'<span class="live-dot neon"></span> En curso', multCls:'', sub:'Cobrá antes del crash', btnTxt:'💰 COBRAR', btnDis:!betPlaced, btnCls:'cobrar' });
+
+    // Si había apuesta pendiente, ejecutarla ahora que arrancó la ronda
+    if (hadPending) {
+      betPlaced = false; // se va a setear en true dentro de _placeBet
+      _placeBet().then(function() {
+        // actualizar botón una vez que la apuesta se registró
+        var ab = document.getElementById('crash-action-btn');
+        if (ab) { ab.textContent = '💰 COBRAR'; ab.disabled = false; ab.className = 'crash-action-btn cobrar'; }
+      });
+    } else {
+      betPlaced = false;
+    }
+
+    _setUI({ status:'<span class="live-dot neon"></span> En curso', multCls:'', sub:'Cobrá antes del crash', btnTxt: hadPending ? '⏳ Apostando…' : 'Apostar', btnDis: hadPending, btnCls: hadPending ? '' : '' });
     _raf = requestAnimationFrame(_frame);
   }
 
