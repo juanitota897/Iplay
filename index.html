@@ -5568,8 +5568,9 @@ const CasinoModule = (() => {
     if (state === 'idle') {
       const S = Store.get();
       if ((S.gcoins || 0) < stake) { Store.showVaultToast('Sin G-Coins suficientes'); return; }
+      // Solo reservar — el descuento y el insert en Supabase
+      // se hacen en _startMultiplayer cuando arranca la ronda
       _pendingBet = true;
-      _placeBet();
       _trackWager(stake);
       _setSub('✓ Apuesta registrada — esperando inicio…');
       var btn = document.getElementById('crash-action-btn');
