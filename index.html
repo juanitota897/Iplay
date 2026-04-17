@@ -5956,10 +5956,11 @@ const BetsModule = (() => {
   function refresh() {
     refreshWallet();
     _renderMatches();
-    _renderHistory();
     _renderSlip();
     // Cargar datos reales solo una vez por sesión
     if (!_apiLoaded) _loadRealFixtures();
+    // Cargar historial desde Supabase
+    _loadHistory().then(function() { _startPoller(); });
   }
 
   function refreshWallet() {
@@ -6125,8 +6126,55 @@ const BetsModule = (() => {
     _renderSlip();
   }
 
+  // ── Historial desde Supabase ───────────────────────────────────
+  var _sbHistory = []; // cache local del historial de Supabase
+  var _historyLoaded = false;
+  var _pollerTimer = null;
+
+  async function _loadHistory() {
+    try {
+      var sess = await _sb.auth.getSession();
+      if (!sess.data.session) return;
+      var { data } = await _sb.from('bets')
+        .select('*')
+        .eq('user_id', sess.data.session.user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      if (data) {
+        _sbHistory = data;
+        _historyLoaded = true;
+        _renderHistory();
+        // Notificar si alguna apuesta se resolvió desde la última carga
+        data.forEach(function(b) {
+          if ((b.status === 'won' || b.status === 'lost') && !b._notified) {
+            b._notified = true;
+            if (b.status === 'won') {
+              var winAmt = Math.round(b.stake * b.odd);
+              Store.showGCoinToast('🏆 ¡Apuesta resuelta! +' + winAmt.toLocaleString('es-AR') + ' G-Coins');
+              Store.addXP(b.xp_gain || 0);
+              HeaderModule.refresh();
+            } else {
+              Store.showVaultToast('❌ Apuesta perdida — ¡Seguí intentando!');
+            }
+          }
+        });
+      }
+    } catch(e) {
+      console.warn('[BetsModule] Error cargando historial:', e.message);
+    }
+  }
+
+  function _startPoller() {
+    if (_pollerTimer) return;
+    // Chequear cada 2 min si hay apuestas pendientes
+    _pollerTimer = setInterval(async function() {
+      var hasPending = _sbHistory.some(function(b){ return b.status === 'pending'; });
+      if (hasPending) await _loadHistory();
+    }, 2 * 60 * 1000);
+  }
+
   // ── Confirmar apuesta ──────────────────────────────────────────
-  function confirm() {
+  async function confirm() {
     if (_picks.length === 0) return;
     const S = Store.get();
     const gc = S.gcoins || 0;
@@ -6139,161 +6187,71 @@ const BetsModule = (() => {
     const xpGain    = _calcXP(effectiveStake, n);
     const label     = isParlay ? 'Combinada ' + n + ' picks' : _picks[0].label;
     const matchName = isParlay ? n + ' partidos' : _picks[0].matchName;
+    const fixtureIds = _picks.map(function(p){ return p.matchId; });
 
+    // Descontar G-Coins inmediatamente (UX optimista)
     Store.addGCoins(-effectiveStake);
 
-    const pendingEntry = {
-      id:        Date.now(),
-      matchName: matchName,
+    // XP mínimo de participación al colocar
+    const XP_PARTICIPATION = 10;
+    Store.addXP(XP_PARTICIPATION);
+    HeaderModule.refresh();
+
+    // Guardar en Supabase
+    try {
+      var sess = await _sb.auth.getSession();
+      if (sess.data.session) {
+        var username = (S.username || sess.data.session.user.email || 'anon');
+        var { data: inserted, error } = await _sb.from('bets').insert({
+          user_id:     sess.data.session.user.id,
+          username:    username,
+          fixture_ids: fixtureIds,
+          picks:       _picks.slice(),
+          stake:       effectiveStake,
+          odd:         parseFloat(totalOdd.toFixed(2)),
+          status:      'pending',
+          xp_gain:     xpGain - XP_PARTICIPATION, // el resto se da al resolver
+          is_parlay:   isParlay,
+          match_name:  matchName,
+          label:       label,
+        }).select().single();
+
+        if (!error && inserted) {
+          // Agregar al historial local para mostrar inmediatamente
+          _sbHistory.unshift(inserted);
+          _startPoller();
+        }
+      }
+    } catch(e) {
+      console.warn('[BetsModule] Error guardando apuesta en Supabase:', e.message);
+    }
+
+    // Feedback local inmediato
+    var localEntry = {
+      id:        'local_' + Date.now(),
+      match_name: matchName,
       label:     label,
       odd:       totalOdd,
       stake:     effectiveStake,
       status:    'pending',
-      xpGain:    xpGain,
-      isParlay:  isParlay,
-      picks:     _picks.slice(), // guardar picks para near-miss
-      numPicks:  n,
+      xp_gain:   xpGain,
+      is_parlay: isParlay,
+      picks:     _picks.slice(),
     };
-
-    if (!S.bets.history) S.bets.history = [];
-    S.bets.history.unshift(pendingEntry);
-    if (S.bets.history.length > 10) S.bets.history = S.bets.history.slice(0, 10);
-    Store.save();
+    // Solo agregar al historial local si no se guardó en Supabase
+    if (!_sbHistory.length || _sbHistory[0].match_name !== matchName) {
+      _sbHistory.unshift(localEntry);
+    }
 
     _picks = [];
     _renderMatches();
     _renderSlip();
     _renderHistory();
-    Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada');
+    Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada — resultado al terminar el partido');
 
-    // Trigger misiones de apuesta
+    // Trigger misiones
     MissionsModule.checkTrigger('bet', { isCombo: isParlay, odd: totalOdd, won: false });
     if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('bet_placed');
-
-    const delay = 4000 + Math.random() * 6000;
-    setTimeout(function(){ _resolve(pendingEntry.id, effectiveStake, xpGain, n); }, delay);
-  }
-
-  // ── Resolver apuesta (con near-miss para combinadas) ───────────
-  function _resolve(betId, stake, xpGain, numPicks) {
-    const S = Store.get();
-    if (!S.bets.history) return;
-    const bet = S.bets.history.find(function(b){ return b.id === betId; });
-    if (!bet || bet.status !== 'pending') return;
-
-    var win = false;
-    var nearMiss = false;
-    var pickResults = []; // true/false por pata
-
-    if (bet.isParlay && numPicks >= 2) {
-      var hitCount = 0;
-      for (var i = 0; i < numPicks; i++) {
-        var pWin = Math.random() < WIN_RATE_PARLAY;
-        pickResults.push(pWin);
-        if (pWin) hitCount++;
-      }
-      win = hitCount === numPicks;
-      nearMiss = !win && hitCount === numPicks - 1;
-    } else {
-      win = Math.random() < WIN_RATE_SINGLE;
-      pickResults = [win];
-    }
-
-    // Guardar resultados por pata para el reveal
-    bet.pickResults = pickResults;
-    bet.status = 'revealing'; // estado intermedio durante el reveal
-    Store.save();
-
-    if (bet.isParlay && numPicks >= 2) {
-      // ── REVEAL SECUENCIAL ──────────────────────────────────────
-      // Mostrar cada pata una por una con 1.2s de delay entre ellas
-      _renderHistory(); // muestra el cupón en estado "revealing"
-      var delay = 1200;
-      pickResults.forEach(function(pResult, idx) {
-        setTimeout(function() {
-          _revealPick(betId, idx, pResult, pickResults, win, nearMiss, stake, xpGain);
-        }, delay * (idx + 1));
-      });
-      // Resolver todo después del último reveal
-      setTimeout(function() {
-        _finalize(betId, win, nearMiss, stake, xpGain);
-      }, delay * (numPicks + 1));
-    } else {
-      // Apuesta simple — resolver directo
-      _finalize(betId, win, nearMiss, stake, xpGain);
-    }
-  }
-
-  function _revealPick(betId, idx, pResult, allResults, allWin, nearMiss, stake, xpGain) {
-    // Actualizar el historial para mostrar el resultado de esta pata
-    var S = Store.get();
-    var bet = S.bets && S.bets.history && S.bets.history.find(function(b){ return b.id === betId; });
-    if (!bet) return;
-    if (!bet.revealedCount) bet.revealedCount = 0;
-    bet.revealedCount = idx + 1;
-    Store.save();
-    _renderHistory();
-    // Sonido/feedback visual por pata
-    if (pResult) {
-      Store.showXPToast('✅ Pata ' + (idx+1) + ' — ¡Acertaste!', '✅');
-    } else {
-      // Si ya falló y no es near-miss en la última → spoilear el resultado
-      var remainingCanWin = allResults.slice(idx+1).every(function(r){ return r; });
-      if (!remainingCanWin && !nearMiss) {
-        Store.showVaultToast('❌ Pata ' + (idx+1) + ' — Perdiste la combinada');
-      } else {
-        Store.showXPToast('❌ Pata ' + (idx+1) + ' — Fallaste', '❌');
-      }
-    }
-  }
-
-  function _finalize(betId, win, nearMiss, stake, xpGain) {
-    var S = Store.get();
-    var bet = S.bets && S.bets.history && S.bets.history.find(function(b){ return b.id === betId; });
-    if (!bet) return;
-
-    bet.status   = win ? 'win' : (nearMiss ? 'nearmiss' : 'loss');
-    bet.nearMiss = nearMiss;
-    S.energy = Math.max(0, (S.energy || 200) - 8);
-
-    if (win) {
-      var winAmount = Math.round(stake * bet.odd);
-      bet.amount = winAmount;
-      Store.save();
-      Store.addGCoins(winAmount);
-      Store.addXP(xpGain);
-      HeaderModule.refresh();
-      var msg = bet.isParlay
-        ? '🏆 ¡COMBINADA COMPLETA! +' + winAmount.toLocaleString('es-AR') + ' G'
-        : '🏆 +' + winAmount.toLocaleString('es-AR') + ' G-Coins';
-      Store.showGCoinToast(msg);
-      // Trigger misión de cuota alta
-      if (bet.odd > 3.0) MissionsModule.checkTrigger('bet', { isCombo: bet.isParlay, odd: bet.odd, won: true });
-    } else if (nearMiss) {
-      bet.amount = -stake;
-      var consolXP = Math.round(xpGain * 0.25);
-      S.vault.fuel += 20;
-      S.vault.lossCount++;
-      S.energy = Math.min(200, S.energy + 4);
-      Store.addXP(consolXP);
-      Store.save();
-      VaultModule.refresh();
-      HeaderModule.refresh();
-      Store.showGCoinToast('💔 ¡Casi! 1 pata falló — +' + consolXP + ' XP consolación');
-    } else {
-      bet.amount = -stake;
-      S.vault.fuel += bet.isParlay ? 25 : 20;
-      S.vault.lossCount++;
-      Store.addXP(bet.isParlay ? 8 : 5);
-      Store.save();
-      Store.showVaultToast('+' + (bet.isParlay ? 25 : 20) + ' pts combustible 🔥');
-      VaultModule.refresh();
-      HeaderModule.refresh();
-    }
-
-    Store.save();
-    _renderHistory();
-    HeaderModule.refresh();
   }
 
   // ── Render matches con multi-pick highlight ────────────────────
@@ -6770,39 +6728,51 @@ const BetsModule = (() => {
   function _renderHistory() {
     const list = document.getElementById('bets-history-list');
     if (!list) return;
-    const S = Store.get();
-    const history = (S.bets && S.bets.history) || [];
+    const history = _sbHistory;
     if (!history.length) {
       list.innerHTML = '<div class="bets-history-empty">Todavía no apostaste. ¡Empezá ahora!</div>';
       return;
     }
     list.innerHTML = history.map(function(b) {
-      const isPending   = b.status === 'pending';
-      const isRevealing = b.status === 'revealing';
-      const isWin       = b.status === 'win';
-      const isNearMiss  = b.status === 'nearmiss';
-      const ico = isPending ? '⏳' : isRevealing ? '🎲' : isWin ? '✓' : isNearMiss ? '💔' : '✗';
-      const cls = isPending || isRevealing ? 'pending' : isWin ? 'win' : isNearMiss ? 'pending' : 'loss';
-      const amtTxt = isPending || isRevealing || isNearMiss
-        ? b.stake.toLocaleString('es-AR') + ' G'
-        : isWin
-          ? '+' + b.amount.toLocaleString('es-AR') + ' G'
-          : b.stake.toLocaleString('es-AR') + ' G';
-      // For revealing state, show partial pick results
-      var revealInfo = '';
-      if (isRevealing && b.pickResults && b.revealedCount) {
-        var revealed = b.pickResults.slice(0, b.revealedCount);
-        revealInfo = ' (' + revealed.filter(function(r){return r;}).length + '/' + b.revealedCount + ' ✓)';
-      }
-      const xpTxt = isPending || isRevealing ? ('pendiente' + (isRevealing ? revealInfo : ''))
-        : isWin ? '+' + b.xpGain + ' XP'
-        : isNearMiss ? '+' + Math.round(b.xpGain*.25) + ' XP (consolación)'
-        : '+' + (b.isParlay ? 8 : 5) + ' XP';
+      // Supabase usa snake_case, fallback a camelCase para entradas locales temporales
+      var status    = b.status || 'pending';
+      var matchName = b.match_name || b.matchName || '—';
+      var label     = b.label || '—';
+      var odd       = parseFloat(b.odd) || 1;
+      var stake     = b.stake || 0;
+      var xpGain    = b.xp_gain || b.xpGain || 0;
+      var isParlay  = b.is_parlay || b.isParlay || false;
+
+      const isPending = status === 'pending';
+      const isWon     = status === 'won' || status === 'win';
+      const isLost    = status === 'lost' || status === 'loss';
+      const ico = isPending ? '⏳' : isWon ? '✓' : '✗';
+      const cls = isPending ? 'pending' : isWon ? 'win' : 'loss';
+      const winAmount = Math.round(stake * odd);
+      const amtTxt = isPending
+        ? stake.toLocaleString('es-AR') + ' G en juego'
+        : isWon
+          ? '+' + winAmount.toLocaleString('es-AR') + ' G'
+          : '-' + stake.toLocaleString('es-AR') + ' G';
+      const xpTxt = isPending
+        ? '+10 XP participación'
+        : isWon
+          ? '+' + xpGain + ' XP'
+          : '+' + Math.round(xpGain * 0.25) + ' XP consolación';
+      const resultDetail = !isPending && b.result_data
+        ? '<div style="font-size:9px;color:var(--t3);margin-top:2px;">' +
+            (Array.isArray(b.result_data) ? b.result_data.map(function(r){
+              return (r.won ? '✅' : '❌') + ' ' + (r.score || '');
+            }).join(' · ') : '') +
+          '</div>'
+        : isPending ? '<div style="font-size:9px;color:var(--t3);margin-top:2px;">⏳ Esperando resultado del partido</div>' : '';
+
       return '<div class="bets-hist-item">' +
         '<div class="bets-hist-result ' + cls + '">' + ico + '</div>' +
         '<div class="bets-hist-info">' +
-          '<div class="bets-hist-match">' + b.matchName + '</div>' +
-          '<div class="bets-hist-pick">' + b.label + ' &middot; ' + b.odd.toFixed(2) + 'x' + (isNearMiss ? ' 💔 casi' : '') + '</div>' +
+          '<div class="bets-hist-match">' + matchName + '</div>' +
+          '<div class="bets-hist-pick">' + label + ' &middot; ' + odd.toFixed(2) + 'x</div>' +
+          resultDetail +
         '</div>' +
         '<div class="bets-hist-right">' +
           '<div class="bets-hist-amount ' + cls + '">' + amtTxt + '</div>' +
@@ -7135,12 +7105,10 @@ const Tutorial = (() => {
       view: 'home', selector: null,
       badge: '👋 Bienvenida',
       title: '¡Bienvenido a G-Layer! 🎮',
-      text: 'Recibís 5.050 G-Coins de regalo para arrancar. En los próximos minutos te vamos a mostrar todo y hacer que pruebes lo que más importa.',
+      text: 'En los próximos minutos te vamos a mostrar todo lo que podés hacer: apostar en partidos reales, jugar al crash en vivo, subir de nivel y competir en el ranking.',
       action: 'next', nextLabel: '¡Empecemos!',
       onEnter: () => {
-        const S = Store.get();
-        if (S.gcoins < 5050) { S.gcoins = 5050; Store.save(); HeaderModule.refresh(); BetsModule.refreshWallet(); }
-        Store.showGCoinToast('🎁 +50 G-Coins de regalo de bienvenida');
+        // sin tocar economía persistente
       },
     },
     {
@@ -8841,29 +8809,6 @@ function devReset() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-
-  // ── RESET FORZADO v1 ─────────────────────────────────────────
-  // Si el usuario no tiene el flag 'glayer_reset_v1', limpiamos su localStorage
-  // y reseteamos su perfil en Supabase. Esto corre UNA SOLA VEZ por dispositivo.
-  var RESET_FLAG = 'glayer_reset_v2';
-  if (!localStorage.getItem(RESET_FLAG)) {
-    try { localStorage.removeItem('glayer_v5'); } catch(e) {}
-    localStorage.setItem(RESET_FLAG, '1');
-    // También resetear perfil en Supabase si está logueado
-    try {
-      var sess = await _sb.auth.getSession();
-      if (sess.data.session) {
-        await _sb.from('profiles').update({
-          xp: 0, g_coins: 5000, energy: 200, streak: 0,
-          vault_fuel: 0, rescue_used: 0, rescue_last_ts: null,
-          updated_at: new Date().toISOString()
-        }).eq('id', sess.data.session.user.id);
-      }
-    } catch(e) {}
-    location.reload();
-    return; // detener el resto del init — el reload lo va a correr de nuevo
-  }
-  // ── FIN RESET FORZADO ────────────────────────────────────────
 
   Store.load();
   ThemeModule.init();
