@@ -5234,23 +5234,31 @@ const CasinoModule = (() => {
     if (!Auth.isLoggedIn() || !_roundId || !betPlaced || cashed) return;
     if (state !== 'running') return;
     cashed = true; // marcar inmediatamente para evitar doble tap
+    var cashoutMult = mult; // capturar el multiplicador en este momento exacto
     var ab = document.getElementById('crash-action-btn');
     if (ab) { ab.disabled = true; ab.textContent = '⏳ Cobrando…'; }
-    var user = Auth.getUser();
-    var res  = await _hostCall({ action: 'cashout', round_id: _roundId, user_id: user.id, current_mult: mult });
-    if (res.error) {
-      // Si ya crasheó, tratar como pérdida
-      cashed = true;
-      return;
+
+    try {
+      var user = Auth.getUser();
+      // Escribir cashout_at directo en Supabase — el servidor valida al final
+      await _sb.from('crash_bets')
+        .update({ cashout_at: cashoutMult })
+        .eq('round_id', _roundId)
+        .eq('user_id', user.id)
+        .is('cashout_at', null);
+
+      // Calcular profit localmente para mostrarlo inmediatamente
+      var profit = Math.round(stake * cashoutMult);
+      Store.addGCoins(profit);
+      Store.addXP(20);
+      HeaderModule.refresh();
+      _addToHistory(cashoutMult, 'cashout');
+      _showBanner('win', '✓ Cobraste ' + profit.toLocaleString('es-AR') + ' G a ' + cashoutMult.toFixed(2) + 'x');
+      MissionsModule.checkTrigger('crash', { cashedBefore2x: cashoutMult < 2 });
+      _setUI({ status:'<span class="live-dot neon"></span> Cobrado', sub:'+ ' + profit.toLocaleString('es-AR') + ' G-Coins', btnTxt:'Cobrado ✓', btnDis:true, btnCls:'' });
+    } catch(e) {
+      console.warn('[Crash] Error en cashout:', e.message);
     }
-    var profit = res.profit;
-    Store.addGCoins(profit);
-    Store.addXP(20);
-    HeaderModule.refresh();
-    _addToHistory(mult, 'cashout');
-    _showBanner('win', '✓ Cobraste ' + profit.toLocaleString('es-AR') + ' G a ' + mult.toFixed(2) + 'x');
-    MissionsModule.checkTrigger('crash', { cashedBefore2x: mult < 2 });
-    _setUI({ status:'<span class="live-dot neon"></span> Cobrado', sub:'+ ' + profit.toLocaleString('es-AR') + ' G-Coins', btnTxt:'Cobrado ✓', btnDis:true, btnCls:'' });
   }
 
   // ── CICLO MULTIPLAYER ─────────────────────────────────────────
