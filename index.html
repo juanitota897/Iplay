@@ -174,7 +174,52 @@ button{font-family:inherit;cursor:pointer;}
 .btn-ghost:hover{background:rgba(255,255,255,.08);}
 .btn:disabled{opacity:.35;cursor:not-allowed;transform:none !important;}
 
-/* ── MATCH DETAIL ACCORDION ── */
+/* ── PUBLIC PROFILE MODAL ── */
+#pub-profile-overlay{
+  display:none;position:absolute;inset:0;z-index:300;
+  background:rgba(4,4,12,.88);backdrop-filter:blur(6px);
+  align-items:flex-end;justify-content:center;
+}
+#pub-profile-overlay.open{display:flex;}
+#pub-profile-card{
+  width:100%;background:var(--bg1);
+  border:1px solid var(--border-b);
+  border-radius:var(--r-xl) var(--r-xl) 0 0;
+  padding:20px 18px 32px;
+  animation:slide-up .25s ease;
+  max-height:85%;overflow-y:auto;
+}
+.pup-handle{width:36px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin:0 auto 18px;}
+.pup-header{display:flex;align-items:center;gap:14px;margin-bottom:18px;}
+.pup-avatar{
+  width:56px;height:56px;border-radius:50%;
+  background:linear-gradient(135deg,var(--bg4),var(--bg3));
+  border:2px solid var(--gold);
+  display:flex;align-items:center;justify-content:center;
+  font-size:24px;flex-shrink:0;
+}
+.pup-info{flex:1;min-width:0;}
+.pup-username{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--t1);letter-spacing:.3px;line-height:1;margin-bottom:3px;}
+.pup-level{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--gold);}
+.pup-close{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:50%;width:30px;height:30px;color:var(--t2);font-size:14px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;transition:background .15s;}
+.pup-close:hover{background:rgba(255,255,255,.12);}
+.pup-xp-wrap{margin-bottom:16px;}
+.pup-xp-row{display:flex;justify-content:space-between;margin-bottom:4px;}
+.pup-xp-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.pup-xp-val{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--gold);}
+.pup-xp-track{height:6px;background:var(--bg5);border-radius:3px;overflow:hidden;}
+.pup-xp-fill{height:100%;background:linear-gradient(90deg,var(--gold-d),var(--gold),var(--gold-l));border-radius:3px;transition:width .8s ease;}
+.pup-stats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px;}
+.pup-stat{background:var(--bg2);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:10px 8px;text-align:center;}
+.pup-stat-val{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--t1);line-height:1;margin-bottom:3px;}
+.pup-stat-lbl{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.4px;font-weight:700;}
+.pup-club{display:flex;align-items:center;gap:10px;padding:10px 12px;background:rgba(0,212,255,.04);border:1px solid rgba(0,212,255,.16);border-radius:var(--r-md);margin-bottom:14px;}
+.pup-club-ava{font-size:22px;flex-shrink:0;}
+.pup-club-info{flex:1;}
+.pup-club-name{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--cyan);}
+.pup-club-role{font-size:10px;color:var(--t3);}
+.pup-loading{text-align:center;padding:32px;font-size:12px;color:var(--t3);}
+
 .bmc-expand-btn{width:100%;padding:7px;border:none;background:rgba(255,255,255,.03);color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border-top:1px solid rgba(255,255,255,.04);transition:background .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
 .bmc-expand-btn:hover{background:rgba(255,255,255,.06);color:var(--t2);}
 .bmc-detail{display:none;border-top:1px solid rgba(255,255,255,.04);}
@@ -3094,6 +3139,16 @@ const AuthUI = (() => {
     </div>
   </div>
   <!-- ═══ FLOATING UI (all inside #app, position:absolute) ═══ -->
+
+  <!-- PUBLIC PROFILE MODAL -->
+  <div id="pub-profile-overlay" onclick="PublicProfile.close()">
+    <div id="pub-profile-card" onclick="event.stopPropagation()">
+      <div class="pup-handle"></div>
+      <div id="pub-profile-body">
+        <div class="pup-loading">Cargando perfil…</div>
+      </div>
+    </div>
+  </div>
 
   <!-- MICRO POPUP -->
   <div id="micro-popup" aria-hidden="true">
@@ -7484,8 +7539,7 @@ const RankingModule = (() => {
         valLabel = 'NV' + row.level + ' · ' + row.xp.toLocaleString('es-AR') + ' XP';
         barW = Math.min(100, (row.xp / 3800) * 100).toFixed(0);
       }
-      return '<div class="lb-row' + (isMe ? ' me' : '') + '">' +
-        '<span class="lb-rank ' + rankCls + '">' + (i+1) + '</span>' +
+      return '<div class="lb-row' + (isMe ? ' me' : '') + '" style="cursor:pointer;" onclick="PublicProfile.open(\'' + (row.username||'').replace(/'/g,"\\'") + '\')">' +
         '<span class="lb-ava">' + (medal || '🎮') + '</span>' +
         '<div class="lb-info">' +
           '<div class="lb-name"' + nameStyle + '>' + displayName + '</div>' +
@@ -8227,7 +8281,127 @@ const ClubsModule = (() => {
   };
 })();
 
-function devReset() {
+/* ── PUBLIC PROFILE MODULE ──────────────────────────────────── */
+const PublicProfile = (() => {
+
+  function open(username) {
+    var overlay = document.getElementById('pub-profile-overlay');
+    var body    = document.getElementById('pub-profile-body');
+    if (!overlay || !body) return;
+    body.innerHTML = '<div class="pup-loading">Cargando perfil…</div>';
+    overlay.classList.add('open');
+    _load(username);
+  }
+
+  function close() {
+    var overlay = document.getElementById('pub-profile-overlay');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  async function _load(username) {
+    var body = document.getElementById('pub-profile-body');
+    if (!body) return;
+    try {
+      // Perfil base
+      var res = await _sb.from('profiles')
+        .select('username, xp, g_coins, streak, energy')
+        .eq('username', username)
+        .maybeSingle();
+
+      if (!res.data) {
+        body.innerHTML = '<div class="pup-loading">Perfil no encontrado.</div>';
+        return;
+      }
+
+      var p = res.data;
+      var li = _pupCalcLevel(p.xp || 0);
+
+      // Club (si tiene)
+      var clubHtml = '';
+      var clubRes = await _sb.from('club_members')
+        .select('role, clubs(name, avatar_emoji)')
+        .eq('user_id', (await _sb.from('profiles').select('id').eq('username', username).maybeSingle()).data?.id || '')
+        .maybeSingle();
+
+      if (clubRes.data && clubRes.data.clubs) {
+        var club = clubRes.data.clubs;
+        var role = clubRes.data.role === 'owner' ? '👑 Fundador' : '⚔️ Miembro';
+        clubHtml =
+          '<div class="pup-club">' +
+            '<span class="pup-club-ava">' + (club.avatar_emoji || '⚔️') + '</span>' +
+            '<div class="pup-club-info">' +
+              '<div class="pup-club-name">' + club.name + '</div>' +
+              '<div class="pup-club-role">' + role + '</div>' +
+            '</div>' +
+          '</div>';
+      }
+
+      var avatarEmojis = ['🎮','⚡','🏆','🎯','🔥','💎','🌟','🦁','🐺','🦅'];
+      var ava = avatarEmojis[(p.username || '').charCodeAt(0) % avatarEmojis.length] || '🎮';
+
+      body.innerHTML =
+        '<div class="pup-header">' +
+          '<div class="pup-avatar">' + ava + '</div>' +
+          '<div class="pup-info">' +
+            '<div class="pup-username">' + (p.username || username) + '</div>' +
+            '<div class="pup-level">NIVEL ' + li.level + ' — ' + li.title + '</div>' +
+          '</div>' +
+          '<button class="pup-close" onclick="PublicProfile.close()">✕</button>' +
+        '</div>' +
+        '<div class="pup-xp-wrap">' +
+          '<div class="pup-xp-row">' +
+            '<span class="pup-xp-lbl">Progreso XP</span>' +
+            '<span class="pup-xp-val">' + (p.xp || 0).toLocaleString('es-AR') + ' / ' + li.next + ' XP</span>' +
+          '</div>' +
+          '<div class="pup-xp-track"><div class="pup-xp-fill" style="width:' + li.pct + '%"></div></div>' +
+        '</div>' +
+        '<div class="pup-stats">' +
+          '<div class="pup-stat"><div class="pup-stat-val" style="color:var(--gold)">' + (p.xp || 0).toLocaleString('es-AR') + '</div><div class="pup-stat-lbl">XP Total</div></div>' +
+          '<div class="pup-stat"><div class="pup-stat-val" style="color:var(--neon)">' + (p.streak || 0) + ' 🔥</div><div class="pup-stat-lbl">Racha</div></div>' +
+          '<div class="pup-stat"><div class="pup-stat-val" style="color:var(--gold)">' + (p.g_coins || 0).toLocaleString('es-AR') + '</div><div class="pup-stat-lbl">G-Coins</div></div>' +
+        '</div>' +
+        clubHtml;
+
+    } catch(e) {
+      body.innerHTML = '<div class="pup-loading">Error al cargar el perfil.</div>';
+    }
+  }
+
+  function _pupCalcLevel(xp) {
+    // Misma curva que Store.getLevelInfo()
+    var LEVELS = [
+      { level:1,  title:'Rooky',          min:0,    max:300  },
+      { level:2,  title:'Aspirante',       min:300,  max:700  },
+      { level:3,  title:'Jugador',         min:700,  max:1300 },
+      { level:4,  title:'Apostador',       min:1300, max:2100 },
+      { level:5,  title:'Estratega',       min:2100, max:3200 },
+      { level:6,  title:'Experto',         min:3200, max:4600 },
+      { level:7,  title:'Veterano',        min:4600, max:6400 },
+      { level:8,  title:'Elite',           min:6400, max:8500 },
+      { level:9,  title:'Leyenda',         min:8500, max:11000},
+      { level:10, title:'G-Layer Master',  min:11000,max:99999},
+    ];
+    var li = LEVELS[0];
+    for (var i = 0; i < LEVELS.length; i++) {
+      if (xp >= LEVELS[i].min) li = LEVELS[i];
+      else break;
+    }
+    var range = li.max - li.min;
+    var prog  = xp - li.min;
+    return {
+      level: li.level,
+      title: li.title,
+      xp:    xp,
+      next:  li.max,
+      pct:   Math.min(100, Math.round((prog / range) * 100)),
+    };
+  }
+
+  return { open, close };
+})();
+window.PublicProfile = PublicProfile;
+
+
   try {
     localStorage.removeItem('glayer_tutorialSeen');
     localStorage.removeItem('glayer_onboardingSeen');
