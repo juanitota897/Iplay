@@ -5380,20 +5380,22 @@ const BetsModule = (() => {
             const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
             const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
             const isToday = kickoff.toISOString().slice(0,10) === today;
+            const homeName = (m.homeTeam && (m.homeTeam.name || m.homeTeam.shortName)) || 'TBD';
+            const awayName = (m.awayTeam && (m.awayTeam.name || m.awayTeam.shortName)) || 'TBD';
             allMatches.push({
               id:         'fd_' + m.id,
               fixtureId:  null,
               league:     comp.key,
               leagueName: comp.name,
               priority:   comp.priority,
-              home:       (m.homeTeam && (m.homeTeam.name || m.homeTeam.shortName)) || 'TBD',
-              away:       (m.awayTeam && (m.awayTeam.name || m.awayTeam.shortName)) || 'TBD',
+              home:       homeName,
+              away:       awayName,
               time:       isToday ? timeStr : dateStr + ' · ' + timeStr,
               live:       false,
               homeG:      0,
               awayG:      0,
               minute:     0,
-              odds:       { h: 2.00, d: 3.20, a: 3.50 },
+              odds:       _calcOddsFromElo(homeName, awayName, comp.key),
             });
           });
         } catch(e) {
@@ -5438,7 +5440,7 @@ const BetsModule = (() => {
               homeG:      f.goals.home || 0,
               awayG:      f.goals.away || 0,
               minute:     f.fixture.status.elapsed || 0,
-              odds:       { h: 2.00, d: 3.20, a: 3.50 },
+              odds:       _calcOddsFromElo(f.teams.home.name, f.teams.away.name, cfg.key),
             });
           });
         } catch(e) {}
@@ -5923,8 +5925,187 @@ const BetsModule = (() => {
     '</button>';
   }
 
-  // ── CUOTAS DERIVADAS ──────────────────────────────────────────
-  function _deriveOdds(odds) {
+  // ── ELO RATINGS (aproximados, actualizados a 2026) ───────────
+  const ELO = {
+    // Champions / Top Europa
+    'Manchester City': 2050, 'Manchester City FC': 2050,
+    'Real Madrid': 2080, 'Real Madrid CF': 2080,
+    'Bayern Munich': 2040, 'FC Bayern München': 2040,
+    'Liverpool': 2020, 'Liverpool FC': 2020,
+    'Barcelona': 2000, 'FC Barcelona': 2000,
+    'Arsenal': 1990, 'Arsenal FC': 1990,
+    'Chelsea': 1960, 'Chelsea FC': 1960,
+    'Atletico Madrid': 1970, 'Atlético de Madrid': 1970,
+    'Inter Milan': 1980, 'Inter': 1980, 'FC Internazionale Milano': 1980,
+    'AC Milan': 1960,
+    'Juventus': 1950, 'Juventus FC': 1950,
+    'Napoli': 1950, 'SSC Napoli': 1950,
+    'PSG': 1990, 'Paris Saint-Germain FC': 1990,
+    'Borussia Dortmund': 1960,
+    'Bayer Leverkusen': 1970, 'Bayer 04 Leverkusen': 1970,
+    'RB Leipzig': 1940,
+    'Tottenham': 1930, 'Tottenham Hotspur FC': 1930,
+    'Newcastle United': 1940, 'Newcastle United FC': 1940,
+    'Aston Villa': 1930, 'Aston Villa FC': 1930,
+    'Manchester United': 1920, 'Manchester United FC': 1920,
+    'West Ham': 1900, 'West Ham United FC': 1900,
+    'Brighton': 1910, 'Brighton & Hove Albion FC': 1910,
+    'Wolves': 1880, 'Wolverhampton Wanderers FC': 1880,
+    'Fulham': 1890, 'Fulham FC': 1890,
+    'Brentford': 1890, 'Brentford FC': 1890,
+    'Crystal Palace': 1880, 'Crystal Palace FC': 1880,
+    'Everton': 1870, 'Everton FC': 1870,
+    'Nottingham Forest': 1900,
+    'Bournemouth': 1880, 'AFC Bournemouth': 1880,
+    'Leeds United': 1880, 'Leeds United FC': 1880,
+    'Ipswich Town': 1860, 'Ipswich Town FC': 1860,
+    'Leicester City': 1870, 'Leicester City FC': 1870,
+    'Southampton': 1850, 'Southampton FC': 1850,
+    // La Liga
+    'Sevilla': 1920, 'Sevilla FC': 1920,
+    'Real Betis': 1900, 'Real Betis Balompié': 1900,
+    'Valencia': 1890, 'Valencia CF': 1890,
+    'Villarreal': 1910, 'Villarreal CF': 1910,
+    'Athletic Club': 1910,
+    'Real Sociedad': 1900,
+    'Osasuna': 1860, 'CA Osasuna': 1860,
+    'Girona': 1890, 'Girona FC': 1890,
+    'Mallorca': 1850, 'RCD Mallorca': 1850,
+    'Celta Vigo': 1860, 'RC Celta de Vigo': 1860,
+    'Getafe': 1850, 'Getafe CF': 1850,
+    'Rayo Vallecano': 1850, 'Rayo Vallecano de Madrid': 1850,
+    'Espanyol': 1840, 'RCD Espanyol de Barcelona': 1840,
+    'Alaves': 1830, 'Deportivo Alavés': 1830,
+    'Las Palmas': 1830, 'UD Las Palmas': 1830,
+    'Leganes': 1820, 'CD Leganés': 1820,
+    // Serie A
+    'Roma': 1940, 'AS Roma': 1940,
+    'Lazio': 1930, 'SS Lazio': 1930,
+    'Atalanta': 1960, 'Atalanta BC': 1960,
+    'Fiorentina': 1910, 'ACF Fiorentina': 1910,
+    'Torino': 1880, 'Torino FC': 1880,
+    'Bologna': 1900, 'Bologna FC 1909': 1900,
+    'Udinese': 1860, 'Udinese Calcio': 1860,
+    'Cagliari': 1840, 'Cagliari Calcio': 1840,
+    'Como': 1840, 'Como 1907': 1840,
+    'Lecce': 1830, 'US Lecce': 1830,
+    'Genoa': 1840, 'Genoa CFC': 1840,
+    'Parma': 1840, 'Parma Calcio 1913': 1840,
+    'Venezia': 1830, 'Venezia FC': 1830,
+    'Monza': 1850, 'AC Monza': 1850,
+    'Verona': 1840, 'Hellas Verona FC': 1840,
+    'Empoli': 1840, 'Empoli FC': 1840,
+    'Sassuolo': 1840, 'US Sassuolo': 1840,
+    // Bundesliga
+    'Stuttgart': 1920, 'VfB Stuttgart': 1920,
+    'Eintracht Frankfurt': 1920,
+    'Freiburg': 1900, 'Sport-Club Freiburg': 1900,
+    'Wolfsburg': 1890, 'VfL Wolfsburg': 1890,
+    'Borussia Mönchengladbach': 1880,
+    'Augsburg': 1860, 'FC Augsburg': 1860,
+    'Mainz': 1870, '1. FSV Mainz 05': 1870,
+    'Hoffenheim': 1870, 'TSG 1899 Hoffenheim': 1870,
+    'Werder Bremen': 1880, 'SV Werder Bremen': 1880,
+    'Union Berlin': 1870, '1. FC Union Berlin': 1870,
+    'Heidenheim': 1850, '1. FC Heidenheim 1846': 1850,
+    'Holstein Kiel': 1840,
+    'St. Pauli': 1850, 'FC St. Pauli': 1850,
+    'Bochum': 1840, 'VfL Bochum 1848': 1840,
+    // Ligue 1
+    'Marseille': 1940, 'Olympique de Marseille': 1940,
+    'Monaco': 1950, 'AS Monaco FC': 1950,
+    'Lyon': 1930, 'Olympique Lyonnais': 1930,
+    'Lille': 1930, 'LOSC Lille': 1930,
+    'Nice': 1910, 'OGC Nice': 1910,
+    'Lens': 1900, 'RC Lens': 1900,
+    'Rennes': 1900, 'Stade Rennais FC 1901': 1900,
+    'Strasbourg': 1880, 'RC Strasbourg Alsace': 1880,
+    'Reims': 1870, 'Stade de Reims': 1870,
+    'Nantes': 1860, 'FC Nantes': 1860,
+    'Toulouse': 1870, 'Toulouse FC': 1870,
+    'Brest': 1880, 'Stade Brestois 29': 1880,
+    'Le Havre': 1850, 'Le Havre AC': 1850,
+    'Montpellier': 1850, 'Montpellier HSC': 1850,
+    'Auxerre': 1850, 'AJ Auxerre': 1850,
+    'Angers': 1840, 'Angers SCO': 1840,
+    'Saint-Etienne': 1840, 'AS Saint-Étienne': 1840,
+    // Argentina
+    'River Plate': 1950, 'Club Atletico River Plate': 1950,
+    'Boca Juniors': 1940, 'Club Atletico Boca Juniors': 1940,
+    'Racing Club': 1900,
+    'Independiente': 1880, 'Club Atletico Independiente': 1880,
+    'San Lorenzo': 1880, 'San Lorenzo de Almagro': 1880,
+    'Estudiantes': 1880, 'Estudiantes de La Plata': 1880,
+    'Velez Sarsfield': 1870, 'Vélez Sársfield': 1870,
+    'Huracan': 1860, 'Club Atletico Huracan': 1860,
+    'Lanus': 1860, 'Club Atletico Lanus': 1860,
+    "Newells Old Boys": 1860, "Newell's Old Boys": 1860,
+    'Rosario Central': 1860, 'Club Atletico Rosario Central': 1860,
+    'Talleres': 1870, 'Talleres de Córdoba': 1870,
+    'Defensa y Justicia': 1850,
+    'Atletico Tucuman': 1840,
+    'Union Santa Fe': 1840,
+    'Gimnasia La Plata': 1830, 'Gimnasia y Esgrima La Plata': 1830,
+    'Argentinos Juniors': 1850,
+    'Godoy Cruz': 1840, 'Godoy Cruz Antonio Tomba': 1840,
+    'Tigre': 1830, 'Club Atletico Tigre': 1830,
+    'Platense': 1820, 'Club Atletico Platense': 1820,
+    'Banfield': 1830, 'Club Atletico Banfield': 1830,
+    'San Martin': 1810, 'San Martín de San Juan': 1810,
+    // Libertadores / Sudamericana
+    'Flamengo': 1960, 'Clube de Regatas do Flamengo': 1960,
+    'Palmeiras': 1950, 'Sociedade Esportiva Palmeiras': 1950,
+    'Fluminense': 1920, 'Fluminense Football Club': 1920,
+    'Atletico Mineiro': 1940, 'Clube Atletico Mineiro': 1940,
+    'Botafogo': 1930, 'Botafogo de Futebol e Regatas': 1930,
+    'Internacional': 1910, 'Sport Club Internacional': 1910,
+    'Gremio': 1910, 'Grêmio Foot-Ball Porto Alegrense': 1910,
+    'Corinthians': 1900, 'Sport Club Corinthians Paulista': 1900,
+    'Sao Paulo': 1900, 'São Paulo Futebol Clube': 1900,
+    'Santos': 1880, 'Santos Futebol Clube': 1880,
+    'RB Bragantino': 1880, 'Red Bull Bragantino': 1880,
+    'Penarol': 1920, 'Club Atletico Penarol': 1920,
+    'Nacional': 1900, 'Club Nacional de Football': 1900,
+    'LDU Quito': 1890,
+    'Independiente Medellin': 1870, 'Deportivo Independiente Medellin': 1870,
+    'America de Cali': 1860,
+    'Olimpia': 1860, 'Club Olimpia': 1860,
+    'Blooming': 1820, 'Club Blooming': 1820,
+    'Cienciano': 1820, 'Club Cienciano': 1820,
+    'Puerto Cabello': 1800, 'Caracas FC': 1800,
+  };
+
+  const HOME_ADVANTAGE = 50; // ventaja de local en puntos ELO
+  const BOOKMAKER_MARGIN = 1.08; // margen del bookmaker 8%
+
+  function _calcOddsFromElo(homeName, awayName, leagueKey) {
+    var eloH = ELO[homeName] || 1870;
+    var eloA = ELO[awayName] || 1870;
+
+    // Ajuste por liga (ligas más competitivas tienen menos ventaja de local)
+    var homeAdv = leagueKey === 'arg' || leagueKey === 'libertadores' ? 60 : HOME_ADVANTAGE;
+
+    // Probabilidades ELO
+    var probH = 1 / (1 + Math.pow(10, (eloA - eloH - homeAdv) / 400));
+    var probA = 1 / (1 + Math.pow(10, (eloH - eloA + homeAdv) / 400));
+    var probD = 1 - probH - probA;
+
+    // Asegurar mínimo de probabilidad de empate (10%)
+    if (probD < 0.10) {
+      var excess = 0.10 - probD;
+      probH -= excess * (probH / (probH + probA));
+      probA -= excess * (probA / (probH + probA));
+      probD = 0.10;
+    }
+
+    // Convertir a cuotas con margen
+    var clamp = function(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); };
+    return {
+      h: clamp(1 / (probH * BOOKMAKER_MARGIN), 1.10, 15.00),
+      d: clamp(1 / (probD * BOOKMAKER_MARGIN), 2.40, 8.00),
+      a: clamp(1 / (probA * BOOKMAKER_MARGIN), 1.10, 15.00),
+    };
+  }
     var h = odds.h, d = odds.d, a = odds.a;
     var clamp = function(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); };
     return {
