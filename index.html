@@ -2830,12 +2830,13 @@ const AuthUI = (() => {
         <div class="bets-leagues" id="bets-leagues">
           <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">⭐ Destacados</button>
           <button class="bets-league-btn" data-league="ucl" onclick="BetsModule.setLeague('ucl',this)">🏆 Champions</button>
-          <button class="bets-league-btn" data-league="uel" onclick="BetsModule.setLeague('uel',this)">🏅 Conference</button>
           <button class="bets-league-btn" data-league="epl" onclick="BetsModule.setLeague('epl',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
           <button class="bets-league-btn" data-league="laliga" onclick="BetsModule.setLeague('laliga',this)">🇪🇸 La Liga</button>
           <button class="bets-league-btn" data-league="seriea" onclick="BetsModule.setLeague('seriea',this)">🇮🇹 Serie A</button>
           <button class="bets-league-btn" data-league="bundesliga" onclick="BetsModule.setLeague('bundesliga',this)">🇩🇪 Bundesliga</button>
           <button class="bets-league-btn" data-league="ligue1" onclick="BetsModule.setLeague('ligue1',this)">🇫🇷 Ligue 1</button>
+          <button class="bets-league-btn" data-league="eredivisie" onclick="BetsModule.setLeague('eredivisie',this)">🇳🇱 Eredivisie</button>
+          <button class="bets-league-btn" data-league="primeiraliga" onclick="BetsModule.setLeague('primeiraliga',this)">🇵🇹 Primeira</button>
           <button class="bets-league-btn" data-league="arg" onclick="BetsModule.setLeague('arg',this)">🇦🇷 Liga AR</button>
           <button class="bets-league-btn" data-league="libertadores" onclick="BetsModule.setLeague('libertadores',this)">🌎 Libertadores</button>
           <button class="bets-league-btn" data-league="sudamericana" onclick="BetsModule.setLeague('sudamericana',this)">🌎 Sudamericana</button>
@@ -5330,12 +5331,14 @@ const BetsModule = (() => {
   // Competiciones football-data.org para fixtures futuros (5 grandes + Champions + Europa)
   const FD_COMPETITIONS = [
     { code:'CL',  key:'ucl',        name:'⭐ Champions League',    priority:1 },
-    { code:'UECL',key:'uel',        name:'🏅 Conference League',   priority:2 },
+    { code:'CLI', key:'libertadores',name:'🌎 Copa Libertadores',   priority:2 },
     { code:'PL',  key:'epl',        name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', priority:3 },
     { code:'PD',  key:'laliga',     name:'🇪🇸 La Liga',            priority:4 },
     { code:'SA',  key:'seriea',     name:'🇮🇹 Serie A',             priority:5 },
     { code:'BL1', key:'bundesliga', name:'🇩🇪 Bundesliga',          priority:6 },
     { code:'FL1', key:'ligue1',     name:'🇫🇷 Ligue 1',             priority:7 },
+    { code:'DED', key:'eredivisie', name:'🇳🇱 Eredivisie',          priority:8 },
+    { code:'PPL', key:'primeiraliga',name:'🇵🇹 Primeira Liga',      priority:9 },
   ];
 
   // Fallback estático si la API falla
@@ -6029,8 +6032,22 @@ const BetsModule = (() => {
     'Auxerre': 1850, 'AJ Auxerre': 1850,
     'Angers': 1840, 'Angers SCO': 1840,
     'Saint-Etienne': 1840, 'AS Saint-Étienne': 1840,
-    // Argentina
-    'River Plate': 1950, 'Club Atletico River Plate': 1950,
+    // Eredivisie
+    'Ajax': 1930, 'AFC Ajax': 1930,
+    'PSV': 1940, 'PSV Eindhoven': 1940,
+    'Feyenoord': 1920, 'Feyenoord Rotterdam': 1920,
+    'AZ': 1890, 'AZ Alkmaar': 1890,
+    'Utrecht': 1870, 'FC Utrecht': 1870,
+    'Twente': 1880, 'FC Twente': 1880,
+    'Vitesse': 1850, 'SBV Vitesse': 1850,
+    'Groningen': 1840, 'FC Groningen': 1840,
+    // Primeira Liga
+    'Benfica': 1960, 'SL Benfica': 1960,
+    'Porto': 1950, 'FC Porto': 1950,
+    'Sporting CP': 1940, 'Sporting Clube de Portugal': 1940,
+    'Braga': 1900, 'SC Braga': 1900,
+    'Vitoria Guimaraes': 1860, 'Vitória SC': 1860,
+    'Famalicao': 1840, 'FC Famalicão': 1840, 'Club Atletico River Plate': 1950,
     'Boca Juniors': 1940, 'Club Atletico Boca Juniors': 1940,
     'Racing Club': 1900,
     'Independiente': 1880, 'Club Atletico Independiente': 1880,
