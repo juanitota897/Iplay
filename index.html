@@ -2842,7 +2842,7 @@ const AuthUI = (() => {
         <div id="bets-matches-list"></div>
 
         <!-- BET SLIP -->
-        <div class="bets-slip">
+        <div class="bets-slip" id="bets-slip-section">
           <div class="bets-slip-title">📋 Cupón</div>
           <div id="bets-slip-body">
             <div class="bets-slip-empty" id="bets-slip-empty">Seleccioná una apuesta para armar tu cupón</div>
@@ -2876,14 +2876,14 @@ const AuthUI = (() => {
   </div><!-- /views-container -->
 
   <!-- ── STICKY SLIP BAR (bets view) ── -->
-  <div id="bets-sticky-slip">
+  <div id="bets-sticky-slip" onclick="BetsModule.scrollToSlip()" style="cursor:pointer;">
     <div id="bets-sticky-inner">
       <div style="flex:1;min-width:0;">
         <div class="bss-picks" id="bss-picks">0 picks</div>
         <div class="bss-odd" id="bss-odd">1.00x</div>
         <div class="bss-win"><strong id="bss-win">0 G</strong><span style="color:var(--t3);font-size:10px;"> ganancia potencial</span></div>
       </div>
-      <button class="bss-confirm" onclick="BetsModule.confirm()">⚡ APOSTAR</button>
+      <button class="bss-confirm" onclick="event.stopPropagation();BetsModule.confirm()">⚡ APOSTAR</button>
     </div>
   </div>
 
@@ -5367,37 +5367,11 @@ const BetsModule = (() => {
       _apiLoaded = true;
       _renderMatches();
       _renderSlip();
-      BetsModule.refreshLiveList(); // actualizar lista en En Vivo también
-
-      // Cargar cuotas reales en background para cada partido
-      _loadOddsForAll();
-
+      BetsModule.refreshLiveList();
+      // Nota: cuotas de mercados secundarios se calculan localmente (evita 429 + CORS)
     } catch(e) {
       console.warn('[BetsModule] Error cargando fixtures:', e.message);
-      // Mantener fallback
     }
-  }
-
-  // Cargar cuotas reales de todos los partidos en background
-  async function _loadOddsForAll() {
-    for (const m of _matches) {
-      if (!m.fixtureId) continue;
-      try {
-        const res = await fetch(API_BASE + '/odds?fixture=' + m.fixtureId + '&bookmaker=8', {
-          headers: { 'x-apisports-key': API_KEY }
-        });
-        const json = await res.json();
-        const bets = json.response?.[0]?.bookmakers?.[0]?.bets;
-        const mw = bets?.find(b => b.name === 'Match Winner');
-        if (mw) {
-          m.odds.h = parseFloat(mw.values.find(v => v.value === 'Home')?.odd || m.odds.h);
-          m.odds.d = parseFloat(mw.values.find(v => v.value === 'Draw')?.odd || m.odds.d);
-          m.odds.a = parseFloat(mw.values.find(v => v.value === 'Away')?.odd || m.odds.a);
-        }
-        await new Promise(r => setTimeout(r, 300)); // 300ms entre requests para no saturar
-      } catch(e) {}
-    }
-    _renderMatches(); // re-render con cuotas reales
   }
 
   function refresh() {
@@ -6014,12 +5988,13 @@ const BetsModule = (() => {
 
     content.innerHTML = '<div class="bmc-market-section">' + html + '</div>';
 
-    // Rebind click en content
+    // Bind click en content — usa addMarketPick para mercados secundarios
     content.onclick = function(e) {
       var btn = e.target.closest('.bmc-market-btn');
       if (!btn || btn.classList.contains('disabled')) return;
-      pickOdd(btn.dataset.mid, btn.dataset.side, parseFloat(btn.dataset.odd), btn.dataset.label);
-      _renderDetailTab(matchId); // re-render para actualizar selección
+      e.stopPropagation(); // evitar que cierre el accordion
+      addMarketPick(matchId, btn.dataset.side, parseFloat(btn.dataset.odd), btn.dataset.label);
+      _renderDetailTab(matchId);
     };
   }
 
@@ -6114,7 +6089,45 @@ const BetsModule = (() => {
     }).join('');
   }
 
-  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, removePick, confirm, toggleDetail, switchDetailTab };
+  // ── AGREGAR PICK DE MERCADO SECUNDARIO ────────────────────────
+  function addMarketPick(matchId, side, odd, label) {
+    var m = _matches.find(function(x){ return x.id === matchId; });
+    if (!m) return;
+    if (odd < MIN_ODD) { Store.showVaultToast('Cuota mínima: ' + MIN_ODD.toFixed(2) + 'x'); return; }
+
+    // Buscar si ya hay un pick de este partido + mercado
+    // El "mercado" está en el label antes de ":"
+    var marketName = label.split(':')[0] || side;
+    var existingIdx = _picks.findIndex(function(p){
+      return p.matchId === matchId && p.marketName === marketName;
+    });
+
+    if (existingIdx >= 0) {
+      // Mismo mercado, mismo pick → toggle off
+      if (_picks[existingIdx].pick === side) {
+        _picks.splice(existingIdx, 1);
+      } else {
+        // Mismo mercado, pick diferente → reemplazar
+        _picks[existingIdx] = { matchId: matchId, pick: side, odd: odd, label: label, matchName: m.home + ' vs ' + m.away, live: m.live, marketName: marketName };
+      }
+    } else {
+      if (_picks.length >= MAX_PICKS) { Store.showVaultToast('Máximo ' + MAX_PICKS + ' selecciones'); return; }
+      _picks.push({ matchId: matchId, pick: side, odd: odd, label: label, matchName: m.home + ' vs ' + m.away, live: m.live, marketName: marketName });
+    }
+    _renderSlip();
+    _updateStickySlip();
+  }
+
+  // ── SCROLL AL SLIP ────────────────────────────────────────────
+  function scrollToSlip() {
+    if (Router.current() !== 'bets') { Router.go('bets'); setTimeout(scrollToSlip, 300); return; }
+    var slip = document.getElementById('bets-slip-section');
+    if (!slip) return;
+    var view = document.getElementById('view-bets');
+    if (view) view.scrollTo({ top: slip.offsetTop - 80, behavior: 'smooth' });
+  }
+
+  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
