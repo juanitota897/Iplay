@@ -135,6 +135,11 @@ button{font-family:inherit;cursor:pointer;}
 .bnav-item--casino::after{background:var(--rare);}
 .bnav-item--casino.active .bnav-lbl{color:var(--rare);}
 .bnav-item--casino.active .bnav-ico{filter:drop-shadow(0 0 6px var(--rare));}
+/* Clubes accent */
+.bnav-item--clubs .bnav-lbl{color:var(--cyan);}
+.bnav-item--clubs::after{background:var(--cyan);}
+.bnav-item--clubs.active .bnav-lbl{color:var(--cyan);}
+.bnav-item--clubs.active .bnav-ico{filter:drop-shadow(0 0 6px var(--cyan));}
 
 /* ═══════════════════════════════════════
    SHARED COMPONENTS
@@ -1479,6 +1484,97 @@ button{font-family:inherit;cursor:pointer;}
   transition:background .15s;
 }
 #dev-reset-btn:hover{background:var(--red);}
+
+/* ═══════════════════════════════════════
+   CLUBES
+   ═══════════════════════════════════════ */
+.club-view-hdr{padding:12px 0 4px;}
+.club-view-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;}
+.club-view-sub{font-size:11px;color:var(--t3);margin-top:3px;}
+
+/* Sin club */
+.club-empty{display:flex;flex-direction:column;align-items:center;text-align:center;padding:32px 16px;gap:14px;}
+.club-empty-ico{font-size:52px;line-height:1;}
+.club-empty-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--t1);letter-spacing:.5px;}
+.club-empty-sub{font-size:12px;color:var(--t3);line-height:1.6;max-width:260px;}
+.club-empty-btns{display:flex;flex-direction:column;gap:8px;width:100%;}
+.club-btn-create{width:100%;padding:13px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.5px;cursor:pointer;}
+.club-btn-join{width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-md);background:rgba(255,255,255,.04);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
+.club-locked-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
+
+/* Header del club */
+.club-hdr-card{background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02));border:1px solid rgba(212,175,55,.25);border-radius:var(--r-lg);padding:14px;}
+.club-hdr-top{display:flex;align-items:center;gap:12px;margin-bottom:10px;}
+.club-avatar{width:52px;height:52px;border-radius:var(--r-md);background:var(--bg3);border:2px solid rgba(212,175,55,.3);display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+.club-hdr-info{flex:1;min-width:0;}
+.club-hdr-name{font-family:'Barlow Condensed',sans-serif;font-size:19px;font-weight:800;color:var(--gold);letter-spacing:.5px;line-height:1;}
+.club-hdr-role{font-size:10px;color:var(--t3);margin-top:2px;}
+.club-invite-row{display:flex;align-items:center;gap:6px;margin-top:8px;}
+.club-invite-lbl{font-size:10px;color:var(--t3);}
+.club-invite-code{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:var(--gold);letter-spacing:2px;background:rgba(212,175,55,.08);border:1px solid rgba(212,175,55,.2);border-radius:8px;padding:3px 10px;cursor:pointer;}
+.club-invite-copy{font-size:10px;color:var(--t3);cursor:pointer;padding:3px 6px;border-radius:6px;border:1px solid rgba(255,255,255,.06);background:rgba(255,255,255,.03);}
+
+/* Score semanal */
+.club-score-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
+.club-score-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.club-score-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;}
+.club-score-rank{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--gold);}
+.club-score-val{font-family:'Barlow Condensed',sans-serif;font-size:28px;font-weight:800;color:var(--t1);line-height:1;}
+.club-score-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
+
+/* Bóveda del club */
+.club-vault-card{background:linear-gradient(135deg,rgba(255,107,53,.08),rgba(255,107,53,.02));border:1px solid rgba(255,107,53,.3);border-radius:var(--r-lg);padding:14px;}
+.club-vault-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--plasma);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.club-vault-progress-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;}
+.club-vault-pts{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--plasma);}
+.club-vault-goal{font-size:11px;color:var(--t3);}
+.club-vault-rewards{display:flex;gap:8px;margin-top:10px;}
+.club-vault-reward{flex:1;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:8px;text-align:center;}
+.club-vault-reward-val{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--gold);}
+.club-vault-reward-lbl{font-size:9px;color:var(--t3);margin-top:1px;}
+.club-vault-btn{width:100%;margin-top:10px;padding:11px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,rgba(255,107,53,.2),rgba(255,107,53,.08));border:1px solid rgba(255,107,53,.45);color:var(--plasma);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;letter-spacing:.5px;cursor:pointer;}
+.club-vault-btn:disabled{opacity:.4;cursor:not-allowed;}
+.club-vault-locked{font-size:10px;color:var(--t3);text-align:center;margin-top:6px;}
+
+/* Feed de actividad */
+.club-feed-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
+.club-feed-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.club-feed-empty{font-size:11px;color:var(--t3);text-align:center;padding:12px 0;}
+.club-feed-item{display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.club-feed-item:last-child{border-bottom:none;padding-bottom:0;}
+.club-feed-ico{font-size:14px;flex-shrink:0;margin-top:1px;}
+.club-feed-txt{flex:1;font-size:11px;color:var(--t2);line-height:1.4;}
+.club-feed-txt strong{color:var(--t1);}
+.club-feed-pts{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--plasma);flex-shrink:0;}
+.club-feed-time{font-size:9px;color:var(--t3);flex-shrink:0;margin-top:2px;}
+
+/* Miembros */
+.club-members-card{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
+.club-members-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;}
+.club-member-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);}
+.club-member-row:last-child{border-bottom:none;padding-bottom:0;}
+.club-member-rank{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:var(--t3);width:20px;text-align:center;flex-shrink:0;}
+.club-member-name{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t1);}
+.club-member-name.me{color:var(--neon);}
+.club-member-xp{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--gold);}
+.club-member-crown{font-size:11px;}
+
+/* Actions del líder */
+.club-leader-actions{display:flex;gap:8px;margin-top:6px;}
+.club-leave-btn{flex:1;padding:9px;border-radius:var(--r-md);background:rgba(255,51,85,.06);border:1px solid rgba(255,51,85,.2);color:var(--red);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;cursor:pointer;}
+
+/* Modal de crear/unirse */
+.club-modal-overlay{position:absolute;inset:0;z-index:400;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(4,4,12,.88);backdrop-filter:blur(8px);}
+.club-modal{background:var(--bg2);border:1px solid var(--border-b);border-radius:20px;padding:24px 20px;max-width:320px;width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);}
+.club-modal-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--gold);letter-spacing:.5px;margin-bottom:4px;}
+.club-modal-sub{font-size:11px;color:var(--t3);margin-bottom:16px;}
+.club-modal-input{width:100%;background:var(--bg3);border:1px solid rgba(212,175,55,.2);border-radius:10px;padding:11px 14px;color:var(--t1);font-size:15px;margin-bottom:10px;outline:none;box-sizing:border-box;font-family:'Inter',sans-serif;}
+.club-modal-input::placeholder{color:var(--t3);}
+.club-emoji-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:14px;}
+.club-emoji-opt{font-size:22px;padding:8px;border-radius:8px;border:2px solid transparent;background:var(--bg3);cursor:pointer;text-align:center;transition:border-color .15s;}
+.club-emoji-opt.selected{border-color:var(--gold);}
+.club-modal-btn{width:100%;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;cursor:pointer;margin-bottom:8px;}
+.club-modal-cancel{width:100%;padding:10px;background:none;border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;cursor:pointer;}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -2690,21 +2786,12 @@ const AuthUI = (() => {
     <!-- VIEW: SOCIAL -->
     <div class="view" id="view-social" data-view="social">
       <div class="view-scroll">
-        <div class="simple-view-hdr"><div class="simple-view-title">⚔️ Social</div><div class="simple-view-sub">Gremios, duelos y competencia entre jugadores.</div></div>
-        <div class="social-card">
-          <div class="clan-hdr"><div class="clan-logo">🦅</div><div><div class="clan-name">LOS CÓNDORES AR</div><div class="clan-tag">Gremio Platino · 8 miembros activos</div></div></div>
-          <div class="clan-meta"><span>Meta semanal</span><span class="clan-meta-val">6,200 / 10,000 XP</span></div>
-          <div class="progress-track" style="margin-bottom:8px;"><div class="progress-fill shield" style="width:62%"></div></div>
-          <div style="padding:7px;background:rgba(255,51,85,.06);border:1px solid rgba(255,51,85,.16);border-radius:var(--r-sm);font-size:10px;color:var(--red);font-weight:600;">⚠️ 3 miembros sin apostar hoy. El gremio puede perder el rango Platino.</div>
+        <div class="club-view-hdr">
+          <div class="club-view-title">⚔️ Clubes</div>
+          <div class="club-view-sub">Jugá en equipo. Acumulen puntos. Abran la bóveda juntos.</div>
         </div>
-        <div class="duel-card">
-          <div class="duel-hdr">⚔️ Duelo activo — Vence en 18:32:05</div>
-          <div class="duel-players">
-            <div class="duel-player"><div class="duel-avatar">😎</div><div class="duel-player-name" style="color:var(--neon)">TÚ</div><div class="duel-score" style="color:var(--neon)" id="duel-my-score">840</div></div>
-            <span class="duel-vs">VS</span>
-            <div class="duel-player"><div class="duel-avatar">😤</div><div class="duel-player-name">CrackTotalAR</div><div class="duel-score" style="color:var(--plasma)">1,240</div></div>
-          </div>
-          <p style="font-size:10px;color:var(--t3);text-align:center;margin-top:6px;">Perdés por 400 XP. Completá una misión para cerrar la brecha.</p>
+        <div id="club-content">
+          <div style="text-align:center;padding:40px 0;color:var(--t3);font-size:12px;">Cargando…</div>
         </div>
       </div>
     </div>
@@ -2898,7 +2985,7 @@ const AuthUI = (() => {
 
   <!-- ═══ BOTTOM NAV ═══ -->
   <div id="bottom-nav">
-    <div class="bnav-item bnav-item--vault" data-nav="vault" onclick="Router.go('vault')"><span class="bnav-ico">🛡️</span><span class="bnav-lbl">Bóveda</span></div>
+    <div class="bnav-item bnav-item--clubs" data-nav="social" onclick="Router.go('social')"><span class="bnav-ico">⚔️</span><span class="bnav-lbl">Clubes</span></div>
     <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎲</span><span class="bnav-lbl">Apuestas</span></div>
     <div class="bnav-item bnav-item--home" data-nav="home" onclick="Router.go('home')"><span class="bnav-ico">🏠</span><span class="bnav-lbl">Inicio</span></div>
     <div class="bnav-item bnav-item--primary" data-nav="live" onclick="Router.go('live')"><span class="bnav-ico">⚡</span><span class="bnav-lbl">En Vivo</span></div>
@@ -2972,6 +3059,7 @@ const AuthUI = (() => {
       <div class="smenu-item" data-nav="home"><span class="smenu-ico">🏠</span><span class="smenu-lbl">Inicio</span></div>
       <div class="smenu-sep"></div>
       <div class="smenu-item" data-nav="missions"><span class="smenu-ico">🎯</span><span class="smenu-lbl">Misiones</span><span class="smenu-badge" id="smenu-missions-badge">3</span></div>
+      <div class="smenu-item" data-nav="vault"><span class="smenu-ico">🛡️</span><span class="smenu-lbl">Bóveda</span></div>
       <div class="smenu-item" data-nav="loot"><span class="smenu-ico">🎁</span><span class="smenu-lbl">Botín</span></div>
       <div class="smenu-item" data-nav="ranking"><span class="smenu-ico">📊</span><span class="smenu-lbl">Ranking</span></div>
       <div class="smenu-item" data-nav="social"><span class="smenu-ico">⚔️</span><span class="smenu-lbl">Social</span></div>
@@ -3460,6 +3548,7 @@ const Router = (() => {
     }
     if (viewId === 'missions') MissionsModule.refresh();
     if (viewId === 'ranking')  { HeaderModule.refresh(); RankingModule.refresh(); }
+    if (viewId === 'social')   ClubsModule.refresh();
   }
 
   function current() { return _current; }
@@ -3789,6 +3878,7 @@ const MicroBet = (() => {
         _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP');
         LootModule.refresh();
         MissionsModule.checkTrigger('microbet', { won: true });
+        if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('microbet_win');
       } else {
         Store.save();
         Store.simulateLoss();
@@ -4714,6 +4804,7 @@ const CasinoModule = (() => {
     // Trigger misión crash: cobró antes de 2x
     var cashedBefore2x = mult < 2.0;
     MissionsModule.checkTrigger('crash', { cashedBefore2x: cashedBefore2x });
+    if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('crash_played');
     _setUI({status:'COBRADO',multCls:'cashing',sub:'¡Ganaste '+won.toLocaleString('es-AR')+' G-Coins!',btnTxt:'Nueva ronda',btnCls:'',btnDis:false});
     _showBanner('win','✅ Cobraste '+won.toLocaleString('es-AR')+' G a '+mult.toFixed(2)+'x');
     setTimeout(_reset,2000); // resultado visible 2s, luego cooldown 5s
@@ -5203,6 +5294,7 @@ const BetsModule = (() => {
 
     // Trigger misiones de apuesta
     MissionsModule.checkTrigger('bet', { isCombo: isParlay, odd: totalOdd, won: false });
+    if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('bet_placed');
 
     const delay = 4000 + Math.random() * 6000;
     setTimeout(function(){ _resolve(pendingEntry.id, effectiveStake, xpGain, n); }, delay);
@@ -6543,6 +6635,532 @@ const SettingsModal = (() => {
   return { open: open, close: close, saveUsername: saveUsername, signOut: signOut };
 })();
 
+/* ── CLUBS MODULE ────────────────────────────────────────────── */
+const ClubsModule = (() => {
+
+  const CLUB_EMOJIS = ['⚔️','🦅','🐺','🔥','💎','🏆','⚡','🎯','🛡️','🦁','🐉','🌟','💀','🎲','🚀','🦊','🐻','🎪','🏴','🌊'];
+  const VAULT_GOAL = 300;
+  const POINTS = { microbet_win: 10, bet_placed: 8, crash_played: 6 };
+
+  var _myClub = null;      // datos del club actual
+  var _myMembership = null; // row de club_members
+  var _realtimeSub = null;  // suscripción realtime
+  var _selectedEmoji = '⚔️';
+  var _vaultData = null;
+  var _myWeekActions = 0;
+
+  // ── INIT ──────────────────────────────────────────────────────
+  async function init() {
+    if (!Auth.isLoggedIn()) return;
+    await _loadMyClub();
+  }
+
+  async function _loadMyClub() {
+    var user = Auth.getUser();
+    if (!user) return;
+
+    // Ver si el usuario tiene club
+    var res = await _sb.from('club_members')
+      .select('*, clubs(*)')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (res.error || !res.data) {
+      _myClub = null;
+      _myMembership = null;
+      return;
+    }
+
+    _myMembership = res.data;
+    _myClub = res.data.clubs;
+
+    // Suscribir al feed en tiempo real
+    _subscribeToFeed();
+  }
+
+  function _subscribeToFeed() {
+    if (_realtimeSub) _realtimeSub.unsubscribe();
+    if (!_myClub) return;
+    _realtimeSub = _sb
+      .channel('club-feed-' + _myClub.id)
+      .on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'club_activity',
+        filter: 'club_id=eq.' + _myClub.id
+      }, function() { _renderFeed(); })
+      .subscribe();
+  }
+
+  // ── REFRESH PRINCIPAL ──────────────────────────────────────────
+  async function refresh() {
+    if (!Auth.isLoggedIn()) {
+      _renderNoAuth();
+      return;
+    }
+    await _loadMyClub();
+    if (_myClub) {
+      await _renderWithClub();
+    } else {
+      _renderNoClub();
+    }
+  }
+
+  // ── RENDER: sin auth ──────────────────────────────────────────
+  function _renderNoAuth() {
+    var c = document.getElementById('club-content');
+    if (!c) return;
+    c.innerHTML = '<div class="club-empty"><div class="club-empty-ico">⚔️</div>' +
+      '<div class="club-empty-title">Iniciá sesión para unirte</div>' +
+      '<div class="club-empty-sub">Necesitás una cuenta para crear o unirte a un Club.</div></div>';
+  }
+
+  // ── RENDER: sin club ──────────────────────────────────────────
+  function _renderNoClub() {
+    var c = document.getElementById('club-content');
+    if (!c) return;
+    var li = Store.getLevelInfo();
+    var canCreate = li.level >= 2;
+    c.innerHTML =
+      '<div class="club-empty">' +
+        '<div class="club-empty-ico">⚔️</div>' +
+        '<div class="club-empty-title">Sin Club todavía</div>' +
+        '<div class="club-empty-sub">Uníte a un Club para acumular puntos en equipo y abrir la Bóveda grupal.</div>' +
+        '<div class="club-empty-btns">' +
+          '<button class="club-btn-create" onclick="ClubsModule.showCreateModal()" ' + (canCreate ? '' : 'style="opacity:.5;cursor:not-allowed"') + '>' +
+            (canCreate ? '+ Crear Club' : '🔒 Crear Club (Nivel 2+)') +
+          '</button>' +
+          (canCreate ? '' : '<div class="club-locked-lbl">Llegá al Nivel 2 para crear un club. Podés unirte desde ya.</div>') +
+          '<button class="club-btn-join" onclick="ClubsModule.showJoinModal()">Unirse con código</button>' +
+        '</div>' +
+      '</div>';
+  }
+
+  // ── RENDER: con club ──────────────────────────────────────────
+  async function _renderWithClub() {
+    var c = document.getElementById('club-content');
+    if (!c) return;
+    c.innerHTML = '<div style="text-align:center;padding:20px;color:var(--t3);font-size:12px;">Cargando club…</div>';
+
+    var user = Auth.getUser();
+    var isOwner = _myMembership.role === 'owner';
+
+    // Cargar miembros
+    var membersRes = await _sb.from('club_members')
+      .select('*, profiles(username, xp)')
+      .eq('club_id', _myClub.id)
+      .order('joined_at', { ascending: true });
+    var members = (membersRes.data || []).sort(function(a, b) {
+      return (b.profiles?.xp || 0) - (a.profiles?.xp || 0);
+    });
+
+    // Cargar vault de esta semana
+    var weekStart = _getWeekStart();
+    var vaultRes = await _sb.from('club_vault')
+      .select('*')
+      .eq('club_id', _myClub.id)
+      .eq('week_start', weekStart)
+      .maybeSingle();
+    _vaultData = vaultRes.data;
+
+    // Si no existe vault esta semana, crearlo
+    if (!_vaultData) {
+      var weekEnd = new Date(new Date(weekStart).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+      var ins = await _sb.from('club_vault').insert({
+        club_id: _myClub.id,
+        week_start: weekStart,
+        week_end: weekEnd,
+        points_accumulated: 0,
+        reward_xp: 150,
+        reward_gcoins: 500
+      }).select().maybeSingle();
+      _vaultData = ins.data;
+    }
+
+    // Mis acciones esta semana (para saber si puedo abrir bóveda)
+    var myActRes = await _sb.from('club_activity')
+      .select('id', { count: 'exact' })
+      .eq('club_id', _myClub.id)
+      .eq('user_id', user.id)
+      .gte('created_at', weekStart);
+    _myWeekActions = myActRes.count || 0;
+
+    var pts = _vaultData ? _vaultData.points_accumulated : 0;
+    var pct = Math.min(100, Math.round((pts / VAULT_GOAL) * 100));
+    var unlocked = _vaultData && _vaultData.unlocked;
+    var claimed = _vaultData && _vaultData.claimed_at;
+    var canClaim = unlocked && !claimed && _myWeekActions > 0;
+
+    // Calcular club score
+    var score = _calcScore(members);
+
+    // HTML
+    var membersHtml = members.map(function(m, i) {
+      var isMe = m.user_id === user.id;
+      var xp = m.profiles?.xp || 0;
+      return '<div class="club-member-row">' +
+        '<span class="club-member-rank">' + (i + 1) + '</span>' +
+        '<span class="club-member-name' + (isMe ? ' me' : '') + '">' +
+          (m.role === 'owner' ? '👑 ' : '') +
+          (isMe ? 'TÚ' : (m.profiles?.username || 'Usuario')) +
+        '</span>' +
+        '<span class="club-member-xp">' + xp.toLocaleString('es-AR') + ' XP</span>' +
+      '</div>';
+    }).join('');
+
+    c.innerHTML =
+      // Header
+      '<div class="club-hdr-card">' +
+        '<div class="club-hdr-top">' +
+          '<div class="club-avatar">' + (_myClub.avatar_emoji || '⚔️') + '</div>' +
+          '<div class="club-hdr-info">' +
+            '<div class="club-hdr-name">' + _myClub.name + '</div>' +
+            '<div class="club-hdr-role">' + (isOwner ? '👑 Líder' : 'Miembro') + ' · ' + members.length + '/20</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="club-invite-row">' +
+          '<span class="club-invite-lbl">Código:</span>' +
+          '<span class="club-invite-code" onclick="ClubsModule.copyCode(\'' + _myClub.invite_code + '\')">' + _myClub.invite_code + '</span>' +
+          '<span class="club-invite-copy" onclick="ClubsModule.copyCode(\'' + _myClub.invite_code + '\')">📋 Copiar</span>' +
+        '</div>' +
+      '</div>' +
+
+      // Score semanal
+      '<div class="club-score-card">' +
+        '<div class="club-score-row">' +
+          '<span class="club-score-title">⚡ Score Semanal</span>' +
+          '<span class="club-score-rank">Top — pts</span>' +
+        '</div>' +
+        '<div class="club-score-val">' + score.toLocaleString('es-AR') + '</div>' +
+        '<div class="club-score-lbl">Puntos ponderados esta semana</div>' +
+      '</div>' +
+
+      // Bóveda del club
+      '<div class="club-vault-card">' +
+        '<div class="club-vault-title">🔥 Bóveda del Club</div>' +
+        '<div class="club-vault-progress-row">' +
+          '<span class="club-vault-pts">' + pts + ' / ' + VAULT_GOAL + ' pts</span>' +
+          '<span class="club-vault-goal">' + pct + '%</span>' +
+        '</div>' +
+        '<div class="progress-track"><div class="progress-fill plasma" id="club-vault-bar" style="width:' + pct + '%"></div></div>' +
+        '<div class="club-vault-rewards">' +
+          '<div class="club-vault-reward"><div class="club-vault-reward-val">+150 XP</div><div class="club-vault-reward-lbl">Para activos</div></div>' +
+          '<div class="club-vault-reward"><div class="club-vault-reward-val">+500 G</div><div class="club-vault-reward-lbl">Para activos</div></div>' +
+        '</div>' +
+        (claimed
+          ? '<button class="club-vault-btn" disabled>✓ Recompensa reclamada esta semana</button>'
+          : unlocked
+            ? (canClaim
+                ? '<button class="club-vault-btn" onclick="ClubsModule.claimVault()">🔓 Abrir Bóveda — Reclamar recompensa</button>'
+                : '<button class="club-vault-btn" disabled>🔒 Sin actividad esta semana</button><div class="club-vault-locked">Necesitás al menos 1 acción esta semana para reclamar</div>')
+            : '<button class="club-vault-btn" disabled>Acumulando… ' + pts + '/' + VAULT_GOAL + ' pts</button>'
+        ) +
+      '</div>' +
+
+      // Feed
+      '<div class="club-feed-card" id="club-feed-card">' +
+        '<div class="club-feed-title"><span class="live-dot neon"></span>Actividad del Club</div>' +
+        '<div id="club-feed-list"><div class="club-feed-empty">Cargando feed…</div></div>' +
+      '</div>' +
+
+      // Miembros
+      '<div class="club-members-card">' +
+        '<div class="club-members-title">👥 Miembros (' + members.length + '/20)</div>' +
+        membersHtml +
+        '<div class="club-leader-actions">' +
+          '<button class="club-leave-btn" onclick="ClubsModule.confirmLeave()">' + (isOwner ? '🗑️ Disolver Club' : '🚪 Salir del Club') + '</button>' +
+        '</div>' +
+      '</div>';
+
+    // Cargar feed
+    await _renderFeed();
+  }
+
+  async function _renderFeed() {
+    var el = document.getElementById('club-feed-list');
+    if (!el || !_myClub) return;
+    var res = await _sb.from('club_activity')
+      .select('*, profiles(username)')
+      .eq('club_id', _myClub.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+    var items = res.data || [];
+    if (!items.length) {
+      el.innerHTML = '<div class="club-feed-empty">Sin actividad todavía. ¡Jugá para aparecer acá!</div>';
+      return;
+    }
+    var icoMap = { microbet_win: '🎯', bet_placed: '🎲', crash_played: '🎰' };
+    var txtMap = {
+      microbet_win: 'ganó una microbet',
+      bet_placed:   'confirmó una apuesta',
+      crash_played: 'jugó una ronda de Crash'
+    };
+    el.innerHTML = items.map(function(item) {
+      var ago = _timeAgo(item.created_at);
+      var ico = icoMap[item.event_type] || '⚡';
+      var txt = txtMap[item.event_type] || item.event_type;
+      var name = item.profiles?.username || 'Jugador';
+      return '<div class="club-feed-item">' +
+        '<span class="club-feed-ico">' + ico + '</span>' +
+        '<div style="flex:1">' +
+          '<div class="club-feed-txt"><strong>' + name + '</strong> ' + txt + '</div>' +
+          '<div class="club-feed-time">' + ago + '</div>' +
+        '</div>' +
+        '<span class="club-feed-pts">+' + item.points_contributed + ' pts</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  // ── CREAR CLUB ────────────────────────────────────────────────
+  function showCreateModal() {
+    var li = Store.getLevelInfo();
+    if (li.level < 2) { Store.showXPToast('⛔ Necesitás Nivel 2 para crear un Club', '⛔'); return; }
+    _selectedEmoji = '⚔️';
+    var modal = _buildModal(
+      'Crear Club',
+      'Elegí un nombre y un avatar para tu club.',
+      '<input class="club-modal-input" id="club-name-input" placeholder="Nombre del club (máx. 24 chars)" maxlength="24">' +
+      '<div style="font-size:10px;color:var(--t3);margin-bottom:8px;">Elegí un avatar:</div>' +
+      '<div class="club-emoji-grid" id="club-emoji-grid">' +
+        CLUB_EMOJIS.map(function(e) {
+          return '<div class="club-emoji-opt' + (e === '⚔️' ? ' selected' : '') + '" onclick="ClubsModule._pickEmoji(this,\'' + e + '\')">' + e + '</div>';
+        }).join('') +
+      '</div>',
+      'Crear Club',
+      'ClubsModule._doCreate()'
+    );
+    document.getElementById('app').appendChild(modal);
+  }
+
+  function _pickEmoji(el, emoji) {
+    _selectedEmoji = emoji;
+    document.querySelectorAll('.club-emoji-opt').forEach(function(e){ e.classList.remove('selected'); });
+    el.classList.add('selected');
+  }
+
+  async function _doCreate() {
+    var nameEl = document.getElementById('club-name-input');
+    var name = nameEl ? nameEl.value.trim() : '';
+    if (!name || name.length < 3) { Store.showXPToast('⛔ Nombre muy corto (mín. 3 caracteres)', '⛔'); return; }
+    var user = Auth.getUser();
+    if (!user) return;
+
+    // Generar código único de 6 chars
+    var code = _genCode();
+
+    var res = await _sb.from('clubs').insert({
+      name: name,
+      owner_id: user.id,
+      invite_code: code,
+      avatar_emoji: _selectedEmoji,
+      member_count: 1
+    }).select().single();
+
+    if (res.error) { Store.showXPToast('Error al crear el club: ' + res.error.message, '⛔'); return; }
+
+    // Unirse como owner
+    await _sb.from('club_members').insert({
+      club_id: res.data.id,
+      user_id: user.id,
+      role: 'owner'
+    });
+
+    _closeModal();
+    Store.showXPToast('⚔️ ¡Club creado! Código: ' + code, '⚔️');
+    await refresh();
+  }
+
+  // ── UNIRSE ────────────────────────────────────────────────────
+  function showJoinModal() {
+    var modal = _buildModal(
+      'Unirse a un Club',
+      'Pedile el código de 6 letras al líder de tu club.',
+      '<input class="club-modal-input" id="club-code-input" placeholder="Código del club" maxlength="6" style="text-transform:uppercase;letter-spacing:3px;font-size:18px;text-align:center;">',
+      'Unirse',
+      'ClubsModule._doJoin()'
+    );
+    document.getElementById('app').appendChild(modal);
+  }
+
+  async function _doJoin() {
+    var codeEl = document.getElementById('club-code-input');
+    var code = codeEl ? codeEl.value.trim().toUpperCase() : '';
+    if (!code || code.length !== 6) { Store.showXPToast('⛔ Código inválido', '⛔'); return; }
+    var user = Auth.getUser();
+    if (!user) return;
+
+    // Buscar club
+    var clubRes = await _sb.from('clubs').select('*').eq('invite_code', code).maybeSingle();
+    if (clubRes.error || !clubRes.data) { Store.showXPToast('⛔ Club no encontrado', '⛔'); return; }
+    var club = clubRes.data;
+
+    // Verificar capacidad
+    if (club.member_count >= 20) { Store.showXPToast('⛔ El club está lleno (20/20)', '⛔'); return; }
+
+    // Unirse
+    var joinRes = await _sb.from('club_members').insert({
+      club_id: club.id,
+      user_id: user.id,
+      role: 'member'
+    });
+    if (joinRes.error) {
+      if (joinRes.error.code === '23505') { Store.showXPToast('⛔ Ya estás en un club', '⛔'); }
+      else { Store.showXPToast('Error: ' + joinRes.error.message, '⛔'); }
+      return;
+    }
+
+    // Actualizar member_count
+    await _sb.from('clubs').update({ member_count: club.member_count + 1 }).eq('id', club.id);
+
+    _closeModal();
+    Store.showXPToast('⚔️ ¡Te uniste a ' + club.name + '!', '⚔️');
+    await refresh();
+  }
+
+  // ── SALIR / DISOLVER ──────────────────────────────────────────
+  function confirmLeave() {
+    var isOwner = _myMembership && _myMembership.role === 'owner';
+    var msg = isOwner
+      ? '¿Disolver el club? Todos los miembros quedarán sin club.'
+      : '¿Salir del club?';
+    if (!confirm(msg)) return;
+    isOwner ? _dissolve() : _leave();
+  }
+
+  async function _leave() {
+    var user = Auth.getUser();
+    await _sb.from('club_members').delete().eq('user_id', user.id);
+    if (_myClub) {
+      await _sb.from('clubs').update({ member_count: Math.max(0, (_myClub.member_count || 1) - 1) }).eq('id', _myClub.id);
+    }
+    if (_realtimeSub) _realtimeSub.unsubscribe();
+    _myClub = null; _myMembership = null;
+    Store.showXPToast('Saliste del club', '🚪');
+    await refresh();
+  }
+
+  async function _dissolve() {
+    if (!_myClub) return;
+    await _sb.from('clubs').delete().eq('id', _myClub.id);
+    if (_realtimeSub) _realtimeSub.unsubscribe();
+    _myClub = null; _myMembership = null;
+    Store.showXPToast('Club disuelto', '🗑️');
+    await refresh();
+  }
+
+  // ── RECLAMAR BÓVEDA ───────────────────────────────────────────
+  async function claimVault() {
+    if (!_vaultData || !_myClub) return;
+    var user = Auth.getUser();
+
+    // Marcar como reclamado
+    await _sb.from('club_vault').update({ claimed_at: new Date().toISOString() }).eq('id', _vaultData.id);
+
+    // Dar recompensa
+    Store.addXP(_vaultData.reward_xp || 150);
+    Store.addGCoins(_vaultData.reward_gcoins || 500);
+    Store.showXPToast('🔓 +' + (_vaultData.reward_xp || 150) + ' XP + ' + (_vaultData.reward_gcoins || 500) + ' G de la Bóveda!', '🔓');
+    await refresh();
+  }
+
+  // ── REGISTRAR ACCIÓN DEL CLUB ─────────────────────────────────
+  async function logAction(eventType) {
+    if (!_myClub || !Auth.isLoggedIn()) return;
+    var user = Auth.getUser();
+    var pts = POINTS[eventType] || 0;
+    if (!pts) return;
+
+    // Insertar en club_activity
+    await _sb.from('club_activity').insert({
+      club_id: _myClub.id,
+      user_id: user.id,
+      event_type: eventType,
+      xp_contributed: 0,
+      points_contributed: pts
+    });
+
+    // Actualizar puntos en club_vault de esta semana
+    var weekStart = _getWeekStart();
+    var vaultRes = await _sb.from('club_vault').select('*').eq('club_id', _myClub.id).eq('week_start', weekStart).maybeSingle();
+    if (vaultRes.data) {
+      var newPts = (vaultRes.data.points_accumulated || 0) + pts;
+      var nowUnlocked = newPts >= VAULT_GOAL;
+      await _sb.from('club_vault').update({
+        points_accumulated: newPts,
+        unlocked: nowUnlocked
+      }).eq('id', vaultRes.data.id);
+    }
+  }
+
+  // ── COPIAR CÓDIGO ─────────────────────────────────────────────
+  function copyCode(code) {
+    try {
+      navigator.clipboard.writeText(code);
+      Store.showXPToast('📋 Código copiado: ' + code, '📋');
+    } catch(e) {
+      Store.showXPToast('Código: ' + code, '📋');
+    }
+  }
+
+  // ── HELPERS ───────────────────────────────────────────────────
+  function _getWeekStart() {
+    var now = new Date();
+    var day = now.getUTCDay();
+    var diff = (day === 0 ? -6 : 1 - day);
+    var monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + diff));
+    return monday.toISOString();
+  }
+
+  function _genCode() {
+    var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    var code = '';
+    for (var i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    return code;
+  }
+
+  function _calcScore(members) {
+    var sorted = members.slice().sort(function(a, b){ return (b.profiles?.xp||0) - (a.profiles?.xp||0); });
+    return Math.round(sorted.reduce(function(acc, m, i) {
+      var xp = m.profiles?.xp || 0;
+      var w = i < 5 ? 0.5 : i < 10 ? 0.25 : 0.1;
+      return acc + xp * w;
+    }, 0));
+  }
+
+  function _timeAgo(ts) {
+    var diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (diff < 60) return 'hace ' + diff + 's';
+    if (diff < 3600) return 'hace ' + Math.floor(diff/60) + 'min';
+    if (diff < 86400) return 'hace ' + Math.floor(diff/3600) + 'h';
+    return 'hace ' + Math.floor(diff/86400) + 'd';
+  }
+
+  function _buildModal(title, sub, bodyHtml, btnTxt, btnAction) {
+    var overlay = document.createElement('div');
+    overlay.className = 'club-modal-overlay';
+    overlay.id = 'club-modal-overlay';
+    overlay.onclick = function(e){ if(e.target===overlay) _closeModal(); };
+    overlay.innerHTML =
+      '<div class="club-modal">' +
+        '<div class="club-modal-title">' + title + '</div>' +
+        '<div class="club-modal-sub">' + sub + '</div>' +
+        bodyHtml +
+        '<button class="club-modal-btn" onclick="' + btnAction + '">' + btnTxt + '</button>' +
+        '<button class="club-modal-cancel" onclick="ClubsModule._closeModal()">Cancelar</button>' +
+      '</div>';
+    return overlay;
+  }
+
+  function _closeModal() {
+    var m = document.getElementById('club-modal-overlay');
+    if (m) m.remove();
+  }
+
+  return {
+    init, refresh, logAction, copyCode,
+    showCreateModal, showJoinModal, confirmLeave, claimVault,
+    _doCreate, _doJoin, _pickEmoji, _closeModal
+  };
+})();
+
 function devReset() {
   try {
     localStorage.removeItem('glayer_tutorialSeen');
@@ -6608,6 +7226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   MicroBet.initPopup();
   EntryModule.init();
   CasinoModule.init();
+  ClubsModule.init();
   Store.checkRescue(); // revisar si ya tiene balance bajo al arrancar
 
   // Hamburguesa — binding directo, máxima prioridad, sobrescribe cualquier cosa
