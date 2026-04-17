@@ -1826,8 +1826,7 @@ const SupaStore = (() => {
     // FIX: leer directo de profiles con ORDER BY xp para evitar el ORDER BY fijo de la view
     const { data, error } = await _sb
       .from('profiles')
-      .select('username, xp, g_coins, energy, streak')
-      .order('xp', { ascending: false })
+      .select('id, username, xp, g_coins, energy, streak')
       .limit(20);
     if (error) return null;
     // Agregar nivel calculado (igual que la view)
@@ -6723,8 +6722,15 @@ const HomeModule = (() => {
       if(g('home-rank-num')) g('home-rank-num').textContent = '…';
       SupaStore.getLeaderboard().then(function(rows) {
         if (!rows || !rows.length) { if(g('home-rank-num')) g('home-rank-num').textContent = '#1'; return; }
-        var myUsername = Auth.getUser().email.split('@')[0];
-        var pos = rows.findIndex(function(r){ return r.username === myUsername; });
+        var user = Auth.getUser();
+        var myId = user ? user.id : null;
+        // Intentar match por id primero, sino por email prefix case-insensitive
+        var emailPrefix = user ? (user.email || '').split('@')[0].toLowerCase() : '';
+        var pos = rows.findIndex(function(r){
+          return (r.id && r.id === myId) ||
+                 (r.username || '').toLowerCase() === emailPrefix ||
+                 (r.email && (r.email || '').split('@')[0].toLowerCase() === emailPrefix);
+        });
         if (pos >= 0 && g('home-rank-num')) g('home-rank-num').textContent = '#' + (pos + 1);
         else if(g('home-rank-num')) g('home-rank-num').textContent = '#?';
       }).catch(function(){
