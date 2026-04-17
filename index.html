@@ -3709,36 +3709,32 @@ const LiveProvider = (() => {
   // ── CONECTAR: buscar el mejor partido en vivo ─────────────────
   async function connect() {
     _updateBadge(false);
+
+    // Optimización: un solo request para todos los partidos en vivo
     const data = await _apiFetch('/fixtures?live=all');
 
     if (!data || !data.length) {
-      console.log('[LiveProvider] No hay partidos en vivo, usando fallback');
-      _connectFallback();
+      _showNoGames();
       return;
     }
 
     // Filtrar por nuestras ligas preferidas
     const relevant = data.filter(f => LEAGUE_IDS[f.league.id]);
 
-    let best = null;
-    if (relevant.length) {
-      // Hay partidos de nuestras ligas — elegir el más importante
-      const leaguePriority = [2, 39, 140, 135, 78, 61, 128, 3];
-      for (const lid of leaguePriority) {
-        best = relevant.find(f => f.league.id === lid);
-        if (best) break;
-      }
-      if (!best) best = relevant[0];
-    } else {
-      // No hay de nuestras ligas — usar cualquier partido en vivo
-      // Agregar la liga al mapa dinámicamente
-      best = data[0];
-      const leagueName = best.league.country
-        ? '🌍 ' + best.league.name
-        : '⚽ ' + best.league.name;
-      LEAGUE_IDS[best.league.id] = leagueName;
-      console.log('[LiveProvider] Sin ligas preferidas, usando:', best.league.name);
+    if (!relevant.length) {
+      // No hay de nuestras ligas — mostrar mensaje
+      _showNoGames();
+      return;
     }
+
+    // Elegir el partido más importante por prioridad de liga
+    const leaguePriority = [2, 39, 140, 135, 78, 61, 128, 3];
+    let best = null;
+    for (const lid of leaguePriority) {
+      best = relevant.find(f => f.league.id === lid);
+      if (best) break;
+    }
+    if (!best) best = relevant[0];
 
     _fixtureId = best.fixture.id;
     _match = {
@@ -3754,68 +3750,72 @@ const LiveProvider = (() => {
     _connected = true;
     _updateBadge(true);
     _render();
-    _fetchOdds();
     _startPoll();
   }
 
-  // ── FALLBACK: simulado si no hay partidos en vivo ─────────────
-  function _connectFallback() {
-    const FALLBACK = [
-      { home:'Real Madrid', away:'Man City',  league:'⚽ UCL', homeG:0, awayG:0, minute:34 },
-      { home:'Boca Jrs',    away:'River Pl.', league:'🇦🇷 Liga Argentina', homeG:1, awayG:1, minute:67 },
-      { home:'Barcelona',   away:'PSG',       league:'⚽ UCL', homeG:0, awayG:1, minute:52 },
-    ];
-    _match = FALLBACK[Math.floor(Math.random() * FALLBACK.length)];
-    _match.odds = { h: 2.10, d: 3.40, a: 3.20 };
-    _fixtureId = null;
-    setTimeout(() => {
-      _connected = true;
-      _updateBadge(true);
-      _render();
-      // Tick simulado para el fallback
-      setInterval(() => {
-        _momentum += (Math.random() - .48) * .07;
-        _momentum = Math.max(.22, Math.min(.78, _momentum));
-        _match.minute = Math.min(_match.minute + (Math.random() > .8 ? 1 : 0), 90);
-        if (Math.random() > .7) _relatoIdx = (_relatoIdx + 1) % RELATOS.length;
-        _render();
-      }, 5000);
-    }, 1100);
+  // ── SIN PARTIDOS EN VIVO ──────────────────────────────────────
+  function _showNoGames() {
+    _connected = false;
+    _updateBadge(false);
+    // Actualizar UI con mensaje claro
+    const g = id => document.getElementById(id);
+    const noGameMsg = 'Sin partidos en vivo';
+    if(g('gs-home'))  g('gs-home').textContent  = 'G-LAYER';
+    if(g('gs-away'))  g('gs-away').textContent  = 'LIVE';
+    if(g('gs-score-home')) g('gs-score-home').textContent = '—';
+    if(g('gs-score-away')) g('gs-score-away').textContent = '—';
+    if(g('gs-minute'))     g('gs-minute').textContent     = '';
+    if(g('gs-relato'))     g('gs-relato').textContent     = '⏳ Sin partidos en vivo ahora. Próximos partidos en Apuestas.';
+    if(g('live-league'))   g('live-league').textContent   = '— Esperando partidos —';
+    if(g('lp-odds'))       g('lp-odds').textContent       = '';
+    // Lbl badge
+    const lbl = document.getElementById('lp-lbl');
+    if(lbl) { lbl.className='live-data-lbl'; lbl.textContent='Sin partidos en vivo ahora'; }
+    // Intentar reconectar en 10 minutos (ahorra requests)
+    setTimeout(connect, 10 * 60 * 1000);
   }
 
-  // ── POLL: actualizar datos cada 3 minutos ─────────────────────
+  // ── POLL: actualizar datos cada 5 minutos (optimizado) ───────
   function _startPoll() {
     clearInterval(_pollTimer);
-    _pollTimer = setInterval(_poll, 3 * 60 * 1000); // 3 minutos
-    // También poll inmediato para eventos
-    setTimeout(_poll, 15000); // primer poll a los 15s
+    // Poll cada 5 minutos en lugar de 3 — ahorra ~33% de requests
+    _pollTimer = setInterval(_poll, 5 * 60 * 1000);
+    setTimeout(_poll, 20000); // primer poll a los 20s
   }
 
   async function _poll() {
     if (!_fixtureId) return;
 
-    // Actualizar marcador y minuto
+    // Un solo request con fixture + events combinados
     const fixtures = await _apiFetch('/fixtures?id=' + _fixtureId);
-    if (fixtures && fixtures[0]) {
-      const f = fixtures[0];
-      _match.homeG  = f.goals.home  || 0;
-      _match.awayG  = f.goals.away  || 0;
-      _match.minute = f.fixture.status.elapsed || _match.minute;
+    if (!fixtures || !fixtures[0]) return;
 
-      // Actualizar momentum con estadísticas reales si están disponibles
-      const stats = f.statistics;
-      if (stats && stats.length >= 2) {
-        const homePoss = parseInt((stats[0].statistics.find(s => s.type === 'Ball Possession') || {}).value || '50%');
-        _momentum = homePoss / 100;
+    const f = fixtures[0];
+
+    // Verificar si el partido terminó
+    if (f.fixture.status.short === 'FT' || f.fixture.status.short === 'AET') {
+      _fixtureId = null;
+      _match = null;
+      _showNoGames();
+      return;
+    }
+
+    _match.homeG  = f.goals.home  || 0;
+    _match.awayG  = f.goals.away  || 0;
+    _match.minute = f.fixture.status.elapsed || _match.minute;
+
+    // Momentum con posesión real si disponible
+    if (f.statistics && f.statistics.length >= 2) {
+      const poss = (f.statistics[0].statistics || []).find(s => s.type === 'Ball Possession');
+      if (poss && poss.value) {
+        _momentum = parseInt(poss.value) / 100;
       }
-      _render();
     }
+    _render();
 
-    // Detectar eventos nuevos
+    // Eventos — request separado solo si hay minutos nuevos
     const events = await _apiFetch('/fixtures/events?fixture=' + _fixtureId);
-    if (events && events.length) {
-      _processEvents(events);
-    }
+    if (events && events.length) _processEvents(events);
   }
 
   // ── PROCESAR EVENTOS REALES ───────────────────────────────────
@@ -6120,11 +6120,17 @@ const BetsModule = (() => {
 
   // ── SCROLL AL SLIP ────────────────────────────────────────────
   function scrollToSlip() {
-    if (Router.current() !== 'bets') { Router.go('bets'); setTimeout(scrollToSlip, 300); return; }
+    if (Router.current() !== 'bets') { Router.go('bets'); setTimeout(scrollToSlip, 350); return; }
     var slip = document.getElementById('bets-slip-section');
     if (!slip) return;
-    var view = document.getElementById('view-bets');
-    if (view) view.scrollTo({ top: slip.offsetTop - 80, behavior: 'smooth' });
+    // En desktop el scroll container es #views-container; en mobile es .view.active
+    var isDesktop = window.innerWidth >= 860;
+    var scroller = isDesktop
+      ? document.getElementById('views-container')
+      : document.querySelector('.view.active');
+    if (!scroller) return;
+    var top = slip.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop - 20;
+    scroller.scrollTo({ top: top, behavior: 'smooth' });
   }
 
   return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip };
