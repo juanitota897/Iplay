@@ -3540,7 +3540,7 @@ const Store = (() => {
 /* ── ROUTER ─────────────────────────────────────────────────── */
 const Router = (() => {
   const VIEWS = ['entry','home','live','vault','loot','missions','casino','profile','ranking','social','altar','bets'];
-  var _current = 'home';
+  let _current = 'home';
 
   function go(viewId) {
     if (!VIEWS.includes(viewId)) return;
@@ -3685,13 +3685,13 @@ const LiveProvider = (() => {
     'Goal':      { type:'Gol',       q:'¿Cómo reacciona el partido?',  optA:'Domina quien anota', optB:'Se nivela',dur:40 },
   };
 
-  var _match = null;         // partido activo
-  var _fixtureId = null;     // ID del fixture en API
-  var _connected = false;
-  var _pollTimer = null;
-  var _lastEventIds = new Set(); // IDs de eventos ya procesados
-  var _relatoIdx = 0;
-  var _momentum = 0.5;
+  let _match = null;         // partido activo
+  let _fixtureId = null;     // ID del fixture en API
+  let _connected = false;
+  let _pollTimer = null;
+  let _lastEventIds = new Set(); // IDs de eventos ya procesados
+  let _relatoIdx = 0;
+  let _momentum = 0.5;
 
   const RELATOS = ['⚡ Contraataque veloz','🔥 Presión alta del local','🎯 Jugada peligrosa','🛡️ Defensa sólida','💥 Disparo al arco','⚡ Transición rápida','🔥 Dominio en el centro','🎯 Centro peligroso','💨 Velocidad por el costado'];
 
@@ -3961,7 +3961,7 @@ const MicroBet = (() => {
   const MICRO_ENERGY = 4;     // energy cost — trackeada, no bloqueante en piloto
 
   var ev=null; // {phase, endsAt, eventDef, pick, dismissed, focusShown}
-  var _timer=null;
+  let _timer=null;
 
   function init() {
     _scheduleWait(2000);
@@ -4425,7 +4425,7 @@ const LootModule = (() => {
     {ico:'⚔️',txt:'+250 XP — MAESTRO',         sub:'Solo para élites',       xp:250},
     {ico:'🏅',txt:'+190 XP + 400 Fuel',        sub:'Medalla de honor',       xp:190, fuel:400},
   ];
-  var _pendingCrate=null, _inv=[];
+  let _pendingCrate=null, _inv=[];
 
   function refresh() {
     const S = Store.get();
@@ -4593,7 +4593,7 @@ const MissionsModule = (() => {
     9: { name:'Leyenda Viviente',    desc:'Acumulá 3,000 XP en total.',                         xpBonus:400 },
   };
 
-  var _todayMissions = []; // las 3 misiones del día
+  let _todayMissions = []; // las 3 misiones del día
 
   // ── XP escalado por nivel ──────────────────────────────────────
   function _scaledXP(base) {
@@ -4604,8 +4604,8 @@ const MissionsModule = (() => {
   }
 
   // ── Hora del servidor (cache de 5min para no spamear) ─────────
-  var _serverTimeCache = null;
-  var _serverTimeFetchedAt = 0;
+  let _serverTimeCache = null;
+  let _serverTimeFetchedAt = 0;
   async function _getServerNow() {
     var now = Date.now();
     // Usar cache si fue hace menos de 5 minutos
@@ -4965,10 +4965,10 @@ const MissionsModule = (() => {
 /* ── CASINO MODULE ──────────────────────────────────────────── */
 const CasinoModule = (() => {
   var state='idle', mult=1, crashAt=1, stake=50, betPlaced=false, cashed=false, round=1;
-  var _cooldownTimer=null, _cooldownInterval=null;
-  var _pendingBet=false; // apuesta registrada durante cooldown
-  var _raf=null, _startT=0, _pts=[];
-  var _history=[]; // últimos 10 resultados: {val, type:'crash'|'cashout'}
+  let _cooldownTimer=null, _cooldownInterval=null;
+  let _pendingBet=false; // apuesta registrada durante cooldown
+  let _raf=null, _startT=0, _pts=[];
+  let _history=[]; // últimos 10 resultados: {val, type:'crash'|'cashout'}
 
   function _addToHistory(val, type) {
     _history.unshift({val, type});
@@ -5349,8 +5349,8 @@ const BetsModule = (() => {
     { id:'m11',league:'arg',        leagueName:'🇦🇷 Liga Argentina',   home:'Boca Jrs',     away:'River Plate', time:'21:30', live:false, homeG:0, awayG:0, odds:{h:2.50, d:3.00, a:2.90} },
   ];
 
-  var _matches = MATCHES_FALLBACK.slice(); // empieza con fallback, se reemplaza con API
-  var _apiLoaded = false;
+  let _matches = MATCHES_FALLBACK.slice(); // empieza con fallback, se reemplaza con API
+  let _apiLoaded = false;
 
   // ── CONSTANTES COMBINADAS ──────────────────────────────────────
   const MAX_PICKS    = 6;
@@ -5359,9 +5359,9 @@ const BetsModule = (() => {
   const WIN_RATE_SINGLE = 0.48;
   const WIN_RATE_PARLAY = 0.42;
 
-  var _currentLeague = 'all';
-  var _picks = [];
-  var _stake = 100;
+  let _currentLeague = 'all';
+  let _picks = [];
+  let _stake = 100;
 
   Object.defineProperty(window, '_slip', { get: () => _picks[0] || null });
 
@@ -6106,33 +6106,10 @@ const BetsModule = (() => {
       a: clamp(1 / (probA * BOOKMAKER_MARGIN), 1.10, 15.00),
     };
   }
-    var h = odds.h, d = odds.d, a = odds.a;
-    var clamp = function(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); };
-    return {
-      // Doble oportunidad
-      dc1x: clamp(h * 0.52, 1.10, 2.50),
-      dcx2: clamp(a * 0.52, 1.10, 2.50),
-      dc12: clamp(Math.min(h, a) * 0.70, 1.10, 2.50),
-      // BTTS
-      bttsY: clamp((h + a) / 3.3, 1.55, 2.20),
-      bttsN: clamp(d * 1.05, 1.45, 2.10),
-      // Goles
-      over15: clamp(1.20 + (1 / h) * 0.25, 1.20, 1.80),
-      under15: clamp(3.80 - (1 / h) * 0.5, 2.80, 5.50),
-      over25: clamp(h * a / 4.2, 1.55, 3.20),
-      under25: clamp(d * 1.25, 1.30, 2.40),
-      over35: clamp(h * a / 2.8, 2.20, 5.00),
-      under35: clamp(1.25 + (1 / d) * 0.3, 1.20, 1.70),
-      // Resultado descanso
-      ht1: clamp(h * 1.45, 1.80, 5.00),
-      htx: clamp(d * 0.85, 1.50, 2.80),
-      ht2: clamp(a * 1.45, 1.80, 6.00),
-    };
-  }
 
   // ── DETALLE DEL PARTIDO ───────────────────────────────────────
-  var _openMatchId = null;
-  var _activeTab   = {};
+  let _openMatchId = null;
+  let _activeTab   = {};
 
   function toggleDetail(matchId) {
     var detail = document.getElementById('bmc-detail-' + matchId);
@@ -6170,7 +6147,26 @@ const BetsModule = (() => {
     var content = document.getElementById('bmc-detail-content-' + matchId);
     if (!content) return;
     var tab = _activeTab[matchId] || 'resultado';
-    var d = _deriveOdds(m.odds);
+    var baseOdds = _calcOddsFromElo(m.home, m.away, m.league);
+    var h = baseOdds.h, d = baseOdds.d, a = baseOdds.a;
+    var clamp = function(v, mn, mx) { return Math.max(mn, Math.min(mx, Math.round(v * 100) / 100)); };
+    var derived = {
+      dc1x: clamp(h * 0.52, 1.10, 2.50),
+      dcx2: clamp(a * 0.52, 1.10, 2.50),
+      dc12: clamp(Math.min(h, a) * 0.70, 1.10, 2.50),
+      bttsY: clamp((h + a) / 3.3, 1.55, 2.20),
+      bttsN: clamp(d * 1.05, 1.45, 2.10),
+      over15: clamp(1.20 + (1 / h) * 0.25, 1.20, 1.80),
+      under15: clamp(3.80 - (1 / h) * 0.5, 2.80, 5.50),
+      over25: clamp(h * a / 4.2, 1.55, 3.20),
+      under25: clamp(d * 1.25, 1.30, 2.40),
+      over35: clamp(h * a / 2.8, 2.20, 5.00),
+      under35: clamp(1.25 + (1 / d) * 0.3, 1.20, 1.70),
+      ht1: clamp(h * 1.45, 1.80, 5.00),
+      htx: clamp(d * 0.85, 1.50, 2.80),
+      ht2: clamp(a * 1.45, 1.80, 6.00),
+    };
+    var dd = derived;
 
     function mBtn(side, odd, lbl, marketName) {
       var fullLabel = marketName + ': ' + lbl;
@@ -6197,35 +6193,35 @@ const BetsModule = (() => {
         '</div>' +
         '<div class="bmc-market-title">Doble Oportunidad</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('dc_1x', d.dc1x, m.home.split(' ')[0] + ' o Empate', 'Doble Op.') +
-          mBtn('dc_x2', d.dcx2, 'Empate o ' + m.away.split(' ')[0], 'Doble Op.') +
-          mBtn('dc_12', d.dc12, m.home.split(' ')[0] + ' o ' + m.away.split(' ')[0], 'Doble Op.') +
+          mBtn('dc_1x', dd.dc1x, m.home.split(' ')[0] + ' o Empate', 'Doble Op.') +
+          mBtn('dc_x2', dd.dcx2, 'Empate o ' + m.away.split(' ')[0], 'Doble Op.') +
+          mBtn('dc_12', dd.dc12, m.home.split(' ')[0] + ' o ' + m.away.split(' ')[0], 'Doble Op.') +
         '</div>' +
         '<div class="bmc-market-title">Resultado al Descanso</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('ht_1', d.ht1, m.home.split(' ')[0] + ' gana', 'Descanso') +
-          mBtn('ht_x', d.htx, 'Empate HT', 'Descanso') +
-          mBtn('ht_2', d.ht2, m.away.split(' ')[0] + ' gana', 'Descanso') +
+          mBtn('ht_1', dd.ht1, m.home.split(' ')[0] + ' gana', 'Descanso') +
+          mBtn('ht_x', dd.htx, 'Empate HT', 'Descanso') +
+          mBtn('ht_2', dd.ht2, m.away.split(' ')[0] + ' gana', 'Descanso') +
         '</div>';
     } else if (tab === 'goles') {
       html +=
         '<div class="bmc-market-title">Ambos Equipos Anotan</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('btts_y', d.bttsY, 'Sí — BTTS', 'BTTS') +
-          mBtn('btts_n', d.bttsN, 'No — BTTS', 'BTTS') +
+          mBtn('btts_y', dd.bttsY, 'Sí — BTTS', 'BTTS') +
+          mBtn('btts_n', dd.bttsN, 'No — BTTS', 'BTTS') +
         '</div>' +
         '<div class="bmc-market-title">Total Goles</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('ov15', d.over15, 'Más de 1.5', 'Total goles') +
-          mBtn('un15', d.under15, 'Menos de 1.5', 'Total goles') +
+          mBtn('ov15', dd.over15, 'Más de 1.5', 'Total goles') +
+          mBtn('un15', dd.under15, 'Menos de 1.5', 'Total goles') +
         '</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('ov25', d.over25, 'Más de 2.5', 'Total goles') +
-          mBtn('un25', d.under25, 'Menos de 2.5', 'Total goles') +
+          mBtn('ov25', dd.over25, 'Más de 2.5', 'Total goles') +
+          mBtn('un25', dd.under25, 'Menos de 2.5', 'Total goles') +
         '</div>' +
         '<div class="bmc-market-row">' +
-          mBtn('ov35', d.over35, 'Más de 3.5', 'Total goles') +
-          mBtn('un35', d.under35, 'Menos de 3.5', 'Total goles') +
+          mBtn('ov35', dd.over35, 'Más de 3.5', 'Total goles') +
+          mBtn('un35', dd.under35, 'Menos de 3.5', 'Total goles') +
         '</div>';
     } else if (tab === 'envivo') {
       if (!m.live) {
@@ -6528,7 +6524,7 @@ const EntryModule = (() => {
     { name:'SportBet MX', ico:'🎰', region:'MX' },
     { name:'WinZone BR',  ico:'⚽', region:'BR' },
   ];
-  var _op = null;
+  let _op = null;
 
   function init() {
     _op = OPERATORS[Math.floor(Math.random()*OPERATORS.length)];
@@ -6718,10 +6714,10 @@ const Tutorial = (() => {
     },
   ];
 
-  var _step = 0;
-  var _active = false;
-  var _actionDone = false;
-  var _resizeTimer = null;
+  let _step = 0;
+  let _active = false;
+  let _actionDone = false;
+  let _resizeTimer = null;
 
   // ── PUBLIC API ──────────────────────────────────────────────────────────────
 
@@ -7051,9 +7047,9 @@ const Onboarding = (() => {
     { selector: '#bottom-nav',         title: 'Navegación',       text: 'Apuestas, En Vivo, Casino, Bóveda — todo desde acá.', finalBtn: '¡Listo!' },
   ];
 
-  var _step = 0;
-  var _active = false;
-  var _resizeTimer = null;
+  let _step = 0;
+  let _active = false;
+  let _resizeTimer = null;
   const STORAGE_KEY = 'glayer_onboardingSeen';
 
   function isActive() { return _active; }
@@ -7276,9 +7272,9 @@ const MBConfig = (() => {
 /* ── DEV RESET ── */
 /* ── RANKING MODULE ─────────────────────────────────────────── */
 const RankingModule = (() => {
-  var _lastData     = null;
-  var _lastDataGC   = null;
-  var _activeTab    = 'xp';
+  let _lastData     = null;
+  let _lastDataGC   = null;
+  let _activeTab    = 'xp';
 
   function setTab(tab) {
     _activeTab = tab;
@@ -7575,12 +7571,12 @@ const ClubsModule = (() => {
   const VAULT_GOAL = 300;
   const POINTS = { microbet_win: 10, bet_placed: 8, crash_played: 6 };
 
-  var _myClub = null;      // datos del club actual
-  var _myMembership = null; // row de club_members
-  var _realtimeSub = null;  // suscripción realtime
-  var _selectedEmoji = '⚔️';
-  var _vaultData = null;
-  var _myWeekActions = 0;
+  let _myClub = null;      // datos del club actual
+  let _myMembership = null; // row de club_members
+  let _realtimeSub = null;  // suscripción realtime
+  let _selectedEmoji = '⚔️';
+  let _vaultData = null;
+  let _myWeekActions = 0;
 
   // ── INIT ──────────────────────────────────────────────────────
   async function init() {
