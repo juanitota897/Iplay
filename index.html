@@ -130,6 +130,11 @@ button{font-family:inherit;cursor:pointer;}
 .bnav-item--vault .bnav-lbl{background:linear-gradient(90deg,var(--plasma),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
 .bnav-item--vault::after{background:linear-gradient(90deg,var(--plasma),var(--gold));}
 .bnav-item--vault.active .bnav-ico{filter:drop-shadow(0 0 6px var(--plasma));}
+/* Casino accent */
+.bnav-item--casino .bnav-lbl{color:var(--rare);}
+.bnav-item--casino::after{background:var(--rare);}
+.bnav-item--casino.active .bnav-lbl{color:var(--rare);}
+.bnav-item--casino.active .bnav-ico{filter:drop-shadow(0 0 6px var(--rare));}
 
 /* ═══════════════════════════════════════
    SHARED COMPONENTS
@@ -215,12 +220,14 @@ button{font-family:inherit;cursor:pointer;}
 .bets-slip{background:var(--bg2);border:1px solid rgba(212,175,55,.2);border-radius:var(--r-lg);padding:14px;}
 /* Sticky slip bar */
 #bets-sticky-slip{
-  position:absolute;bottom:64px;left:0;right:0;z-index:60;
+  position:absolute;bottom:64px;left:0;right:0;z-index:25;
   background:linear-gradient(180deg,transparent 0%,rgba(8,8,16,.98) 18px);
   padding:12px 12px 10px;
   transform:translateY(120%);
   transition:transform .35s cubic-bezier(.34,1.36,.64,1);
   pointer-events:none;
+  /* FIX: safe area para iPhone con home indicator */
+  padding-bottom:calc(10px + env(safe-area-inset-bottom, 0px));
 }
 #bets-sticky-slip.visible{transform:translateY(0);pointer-events:all;}
 #bets-sticky-inner{
@@ -2892,10 +2899,10 @@ const AuthUI = (() => {
   <!-- ═══ BOTTOM NAV ═══ -->
   <div id="bottom-nav">
     <div class="bnav-item bnav-item--vault" data-nav="vault" onclick="Router.go('vault')"><span class="bnav-ico">🛡️</span><span class="bnav-lbl">Bóveda</span></div>
-    <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎯</span><span class="bnav-lbl">Apuestas</span></div>
+    <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎲</span><span class="bnav-lbl">Apuestas</span></div>
     <div class="bnav-item bnav-item--home" data-nav="home" onclick="Router.go('home')"><span class="bnav-ico">🏠</span><span class="bnav-lbl">Inicio</span></div>
     <div class="bnav-item bnav-item--primary" data-nav="live" onclick="Router.go('live')"><span class="bnav-ico">⚡</span><span class="bnav-lbl">En Vivo</span></div>
-    <div class="bnav-item" onclick="SettingsModal.open()"><span class="bnav-ico">⚙️</span><span class="bnav-lbl">Config</span></div>
+    <div class="bnav-item bnav-item--casino" data-nav="casino" onclick="Router.go('casino')"><span class="bnav-ico">🎰</span><span class="bnav-lbl">Casino</span></div>
   </div>
 
   <!-- ── SETTINGS MODAL ── -->
@@ -2975,6 +2982,7 @@ const AuthUI = (() => {
       <div class="smenu-item dim" data-nav="live"><span class="smenu-ico">⚡</span><span class="smenu-lbl">En Vivo</span></div>
       <div class="smenu-sep"></div>
       <div class="smenu-item dim" onclick="SideMenu.close();Tutorial.restart();"><span class="smenu-ico">🎓</span><span class="smenu-lbl">Ver tutorial</span></div>
+      <div class="smenu-item dim" onclick="SideMenu.close();SettingsModal.open();"><span class="smenu-ico">⚙️</span><span class="smenu-lbl">Configuración</span></div>
     </div>
   </div>
   <!-- ═══ FLOATING UI (all inside #app, position:absolute) ═══ -->
