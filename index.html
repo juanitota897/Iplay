@@ -2285,6 +2285,13 @@ const AuthUI = (() => {
               <span class="mb-event-pill" id="mb-event-type">Tiro libre</span>
               <span class="mb-countdown-val" id="mb-countdown">02:00</span>
             </div>
+            <!-- FIX: stake selector en En Vivo -->
+            <div style="display:flex;gap:5px;padding:6px 12px 2px;">
+              <button class="fo-stake-btn active" data-stake="50"  onclick="MicroBet.setStake(50,this)">50 G</button>
+              <button class="fo-stake-btn"        data-stake="100" onclick="MicroBet.setStake(100,this)">100 G</button>
+              <button class="fo-stake-btn"        data-stake="250" onclick="MicroBet.setStake(250,this)">250 G</button>
+              <button class="fo-stake-btn"        data-stake="500" onclick="MicroBet.setStake(500,this)">500 G</button>
+            </div>
             <div class="mb-actions">
               <button class="mb-btn" id="mb-btn-a" onclick="MicroBet.pick('A')">—</button>
               <button class="mb-btn" id="mb-btn-b" onclick="MicroBet.pick('B')">—</button>
@@ -2296,7 +2303,7 @@ const AuthUI = (() => {
           </div>
         </div>
         <div class="live-stats-bar">
-          <div class="live-stat-item"><span class="live-stat-lbl">Stake</span><span class="live-stat-val" id="live-stat-stake">$50</span></div>
+          <div class="live-stat-item"><span class="live-stat-lbl">Stake</span><span class="live-stat-val" id="live-stat-stake">50 G</span></div>
           <div class="live-stat-item"><span class="live-stat-lbl">Rondas</span><span class="live-stat-val" id="live-stat-rounds">0</span></div>
           <div class="live-stat-item"><span class="live-stat-lbl">Aciertos</span><span class="live-stat-val" id="live-stat-wins">0</span></div>
           <div class="live-stat-item"><span class="live-stat-lbl">XP</span><span class="live-stat-val" id="live-stat-xp">0</span></div>
@@ -4072,7 +4079,7 @@ const MicroBet = (() => {
   function _updateLiveStats() {
     const S = Store.get();
     const g = id => document.getElementById(id);
-    if(g('live-stat-stake')) g('live-stat-stake').textContent = '$'+S.microbet.stake;
+    if(g('live-stat-stake')) g('live-stat-stake').textContent = (S.microbet.stake||50)+' G';
     if(g('live-stat-rounds')) g('live-stat-rounds').textContent = S.microbet.rounds;
     if(g('live-stat-wins')) g('live-stat-wins').textContent = S.microbet.wins;
     if(g('live-stat-xp')) g('live-stat-xp').textContent = S.microbet.wins*MICRO_XP;
@@ -4132,9 +4139,15 @@ const MicroBet = (() => {
     const S = Store.get();
     S.microbet.stake = Math.max(50, Math.min(amount, S.gcoins || 50));
     Store.save();
-    document.querySelectorAll('.fo-stake-btn').forEach(function(b){ b.classList.toggle('active', b === btn); });
+    // Marcar activo en TODOS los grupos de botones de stake (live + focus overlay)
+    document.querySelectorAll('.fo-stake-btn').forEach(function(b){
+      b.classList.toggle('active', parseInt(b.dataset.stake) === S.microbet.stake);
+    });
+    // Actualizar displays
     const foStake = document.getElementById('fo-stake');
     if (foStake) foStake.textContent = S.microbet.stake + ' G';
+    const liveStake = document.getElementById('live-stat-stake');
+    if (liveStake) liveStake.textContent = S.microbet.stake + ' G';
   }
 
   function getPhase() { return ev ? ev.phase : 'waiting'; }
