@@ -5314,8 +5314,21 @@ const BetsModule = (() => {
     14:  { key:'sudamericana', name:'🌎 Copa Sudamericana',    flag:'🌎', priority:11 },
   };
 
-  const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268';
+  const API_KEY  = 'c7d7da22a499bfd42a7cd5ae35845268';
   const API_BASE = 'https://v3.football.api-sports.io';
+  const FD_KEY   = 'd8248f5724094cfaa8d7bad6c653bb1f';
+  const FD_BASE  = 'https://api.football-data.org/v4';
+
+  // Competiciones football-data.org para fixtures futuros (5 grandes + Champions + Europa)
+  const FD_COMPETITIONS = [
+    { code:'CL',  key:'ucl',        name:'⭐ Champions League',    priority:1 },
+    { code:'EL',  key:'uel',        name:'🏅 Europa League',       priority:2 },
+    { code:'PL',  key:'epl',        name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', priority:3 },
+    { code:'PD',  key:'laliga',     name:'🇪🇸 La Liga',            priority:4 },
+    { code:'SA',  key:'seriea',     name:'🇮🇹 Serie A',             priority:5 },
+    { code:'BL1', key:'bundesliga', name:'🇩🇪 Bundesliga',          priority:6 },
+    { code:'FL1', key:'ligue1',     name:'🇫🇷 Ligue 1',             priority:7 },
+  ];
 
   // Fallback estático si la API falla
   const MATCHES_FALLBACK = [
@@ -5347,90 +5360,121 @@ const BetsModule = (() => {
   // ── CARGAR PARTIDOS REALES ────────────────────────────────────
   async function _loadRealFixtures() {
     try {
-      // Free tier no soporta next= para fixtures futuros
-      // Usamos fechas específicas: hoy + próximos 3 días
-      const dates = [];
+      const today = new Date().toISOString().slice(0, 10);
+      const allMatches = [];
+
+      // ── 1. FOOTBALL-DATA.ORG: Champions, Europa, 5 grandes ───────
+      await Promise.all(FD_COMPETITIONS.map(async function(comp) {
+        try {
+          const r = await fetch(FD_BASE + '/competitions/' + comp.code + '/matches?status=SCHEDULED', {
+            headers: { 'X-Auth-Token': FD_KEY }
+          });
+          const j = await r.json();
+          (j.matches || []).slice(0, 3).forEach(function(m) {
+            const kickoff = new Date(m.utcDate);
+            const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
+            const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
+            const isToday = kickoff.toISOString().slice(0,10) === today;
+            allMatches.push({
+              id:         'fd_' + m.id,
+              fixtureId:  null,
+              league:     comp.key,
+              leagueName: comp.name,
+              priority:   comp.priority,
+              home:       (m.homeTeam && (m.homeTeam.name || m.homeTeam.shortName)) || 'TBD',
+              away:       (m.awayTeam && (m.awayTeam.name || m.awayTeam.shortName)) || 'TBD',
+              time:       isToday ? timeStr : dateStr + ' · ' + timeStr,
+              live:       false,
+              homeG:      0,
+              awayG:      0,
+              minute:     0,
+              odds:       { h: 2.00, d: 3.20, a: 3.50 },
+            });
+          });
+        } catch(e) {
+          console.warn('[BetsModule] FD error para', comp.code, e.message);
+        }
+      }));
+
+      // ── 2. API-FOOTBALL: Libertadores, Sudamericana, Liga AR ──────
+      const CONMEBOL_IDS = { 13: true, 11: true, 128: true, 529: true };
       for (var i = 0; i < 4; i++) {
         var d = new Date();
         d.setDate(d.getDate() + i);
-        dates.push(d.toISOString().slice(0, 10));
+        const fecha = d.toISOString().slice(0, 10);
+        try {
+          const r = await fetch(API_BASE + '/fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires', {
+            headers: { 'x-apisports-key': API_KEY }
+          });
+          const j = await r.json();
+          (j.response || []).forEach(function(f) {
+            if (!CONMEBOL_IDS[f.league.id]) return;
+            const lname = (f.league.name || '').toLowerCase();
+            if (lname.includes('u19') || lname.includes('u20') || lname.includes('reserva') || lname.includes('women')) return;
+            const s = f.fixture.status.short;
+            if (s === 'FT' || s === 'AET' || s === 'PEN') return;
+            const cfg = LEAGUE_CONFIG[f.league.id];
+            if (!cfg) return;
+            const kickoff = new Date(f.fixture.date);
+            const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
+            const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
+            const isToday2 = kickoff.toISOString().slice(0,10) === today;
+            const isLive = s === '1H' || s === '2H' || s === 'HT' || s === 'ET';
+            allMatches.push({
+              id:         'api_' + f.fixture.id,
+              fixtureId:  f.fixture.id,
+              league:     cfg.key,
+              leagueName: cfg.name,
+              priority:   cfg.priority,
+              home:       f.teams.home.name,
+              away:       f.teams.away.name,
+              time:       isToday2 ? timeStr : dateStr + ' · ' + timeStr,
+              live:       isLive,
+              homeG:      f.goals.home || 0,
+              awayG:      f.goals.away || 0,
+              minute:     f.fixture.status.elapsed || 0,
+              odds:       { h: 2.00, d: 3.20, a: 3.50 },
+            });
+          });
+        } catch(e) {}
       }
 
-      // Traer en vivo + partidos de los próximos 4 días (4 requests total)
-      const [liveRes, ...dateRess] = await Promise.all([
-        fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } }),
-        ...dates.map(date => fetch(API_BASE + '/fixtures?date=' + date + '&timezone=America%2FArgentina%2FBuenos_Aires', {
-          headers: { 'x-apisports-key': API_KEY }
-        }))
-      ]);
-
-      const liveData   = (await liveRes.json()).response || [];
-      const liveFixtures = liveData.filter(f => LEAGUE_CONFIG[f.league.id]);
-      const liveIds    = new Set(liveFixtures.map(f => f.fixture.id));
-
-      // Combinar todos los días, filtrar por nuestras ligas, excluir terminados y en vivo
-      var upcoming = [];
-      for (var r of dateRess) {
-        const data = (await r.json()).response || [];
-        data.forEach(function(f) {
-          if (!LEAGUE_CONFIG[f.league.id]) return;
-          if (liveIds.has(f.fixture.id)) return;
-          // Solo partidos no terminados
-          const s = f.fixture.status.short;
-          if (s === 'FT' || s === 'AET' || s === 'PEN' || s === 'AWD' || s === 'WO') return;
-          upcoming.push(f);
+      // ── 3. En vivo (todas las ligas configuradas) ─────────────────
+      try {
+        const lr = await fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } });
+        const lj = await lr.json();
+        (lj.response || []).forEach(function(f) {
+          const cfg2 = LEAGUE_CONFIG[f.league.id];
+          if (!cfg2) return;
+          const lname2 = (f.league.name || '').toLowerCase();
+          if (lname2.includes('u19') || lname2.includes('u20') || lname2.includes('reserva')) return;
+          var existing = allMatches.find(function(m){ return m.id === 'api_' + f.fixture.id; });
+          if (existing) {
+            existing.live = true;
+            existing.homeG = f.goals.home || 0;
+            existing.awayG = f.goals.away || 0;
+            existing.minute = f.fixture.status.elapsed || 0;
+          }
         });
-      }
+      } catch(e) {}
 
-      // Deduplicar
-      var seen = new Set();
-      upcoming = upcoming.filter(function(f) {
-        if (seen.has(f.fixture.id)) return false;
-        seen.add(f.fixture.id);
+      if (!allMatches.length) { console.log('[BetsModule] Sin partidos'); return; }
+
+      var seenIds = new Set();
+      _matches = allMatches.filter(function(m) {
+        if (seenIds.has(m.id)) return false;
+        seenIds.add(m.id);
         return true;
       });
 
-      const today = new Date().toISOString().slice(0, 10);
-      const toMatch = function(f) {
-        const cfg     = LEAGUE_CONFIG[f.league.id];
-        const isLive  = liveIds.has(f.fixture.id);
-        const kickoff = new Date(f.fixture.date);
-        const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
-        const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
-        const isToday = kickoff.toISOString().slice(0,10) === today;
-        return {
-          id:         'api_' + f.fixture.id,
-          fixtureId:  f.fixture.id,
-          league:     cfg.key,
-          leagueName: cfg.name,
-          priority:   cfg.priority,
-          home:       f.teams.home.name,
-          away:       f.teams.away.name,
-          time:       isToday ? timeStr : dateStr + ' · ' + timeStr,
-          live:       isLive,
-          homeG:      f.goals.home || 0,
-          awayG:      f.goals.away || 0,
-          minute:     f.fixture.status.elapsed || 0,
-          odds:       { h: 2.00, d: 3.20, a: 3.50 },
-        };
-      };
-
-      const allMatches = [...liveFixtures.map(toMatch), ...upcoming.map(toMatch)];
-
-      if (!allMatches.length) {
-        console.log('[BetsModule] Sin partidos encontrados en los próximos 4 días');
-        return;
-      }
-
-      _matches = allMatches;
       _apiLoaded = true;
       _renderMatches();
       _renderSlip();
       BetsModule.refreshLiveList();
-      console.log('[BetsModule] Partidos cargados:', allMatches.length);
+      console.log('[BetsModule] Partidos cargados:', _matches.length);
 
     } catch(e) {
-      console.warn('[BetsModule] Error cargando fixtures:', e.message);
+      console.warn('[BetsModule] Error general:', e.message);
     }
   }
 
