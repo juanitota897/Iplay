@@ -6722,11 +6722,17 @@ const HomeModule = (() => {
     if (Auth.isLoggedIn()) {
       if(g('home-rank-num')) g('home-rank-num').textContent = '…';
       SupaStore.getLeaderboard().then(function(rows) {
-        if (!rows || !rows.length) return;
+        if (!rows || !rows.length) { if(g('home-rank-num')) g('home-rank-num').textContent = '#1'; return; }
         var myUsername = Auth.getUser().email.split('@')[0];
         var pos = rows.findIndex(function(r){ return r.username === myUsername; });
         if (pos >= 0 && g('home-rank-num')) g('home-rank-num').textContent = '#' + (pos + 1);
-      }).catch(function(){});
+        else if(g('home-rank-num')) g('home-rank-num').textContent = '#?';
+      }).catch(function(){
+        // Sin conexión — mostrar estimado por nivel
+        var rankMap = [8,6,4,3,2];
+        var rank = rankMap[Math.min(li.level-1, rankMap.length-1)];
+        if(g('home-rank-num')) g('home-rank-num').textContent = '#'+rank;
+      });
     } else {
       // Sin sesión — mostrar posición estimada por nivel
       const rankMap = [8,6,4,3,2];
