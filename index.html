@@ -2828,14 +2828,17 @@ const AuthUI = (() => {
 
         <!-- LIGA FILTER -->
         <div class="bets-leagues" id="bets-leagues">
-          <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">Todos</button>
-          <button class="bets-league-btn" data-league="ucl" onclick="BetsModule.setLeague('ucl',this)">⭐ Champions</button>
+          <button class="bets-league-btn active" data-league="all" onclick="BetsModule.setLeague('all',this)">⭐ Destacados</button>
+          <button class="bets-league-btn" data-league="ucl" onclick="BetsModule.setLeague('ucl',this)">🏆 Champions</button>
+          <button class="bets-league-btn" data-league="uel" onclick="BetsModule.setLeague('uel',this)">🏅 Europa</button>
           <button class="bets-league-btn" data-league="epl" onclick="BetsModule.setLeague('epl',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier</button>
           <button class="bets-league-btn" data-league="laliga" onclick="BetsModule.setLeague('laliga',this)">🇪🇸 La Liga</button>
           <button class="bets-league-btn" data-league="seriea" onclick="BetsModule.setLeague('seriea',this)">🇮🇹 Serie A</button>
           <button class="bets-league-btn" data-league="bundesliga" onclick="BetsModule.setLeague('bundesliga',this)">🇩🇪 Bundesliga</button>
           <button class="bets-league-btn" data-league="ligue1" onclick="BetsModule.setLeague('ligue1',this)">🇫🇷 Ligue 1</button>
-          <button class="bets-league-btn" data-league="arg" onclick="BetsModule.setLeague('arg',this)">🇦🇷 Argentina</button>
+          <button class="bets-league-btn" data-league="arg" onclick="BetsModule.setLeague('arg',this)">🇦🇷 Liga AR</button>
+          <button class="bets-league-btn" data-league="libertadores" onclick="BetsModule.setLeague('libertadores',this)">🌎 Libertadores</button>
+          <button class="bets-league-btn" data-league="copaarg" onclick="BetsModule.setLeague('copaarg',this)">🏆 Copa AR</button>
         </div>
 
         <!-- MATCHES LIST -->
@@ -3751,27 +3754,28 @@ const LiveProvider = (() => {
     _updateBadge(true);
     _render();
     _startPoll();
+    // Reanudar microbets ahora que hay partido en vivo
+    if (typeof MicroBet !== 'undefined') MicroBet.resume();
   }
 
   // ── SIN PARTIDOS EN VIVO ──────────────────────────────────────
   function _showNoGames() {
     _connected = false;
     _updateBadge(false);
-    // Actualizar UI con mensaje claro
+    // Pausar microbets
+    if (typeof MicroBet !== 'undefined') MicroBet.pause();
     const g = id => document.getElementById(id);
-    const noGameMsg = 'Sin partidos en vivo';
     if(g('gs-home'))  g('gs-home').textContent  = 'G-LAYER';
     if(g('gs-away'))  g('gs-away').textContent  = 'LIVE';
     if(g('gs-score-home')) g('gs-score-home').textContent = '—';
     if(g('gs-score-away')) g('gs-score-away').textContent = '—';
     if(g('gs-minute'))     g('gs-minute').textContent     = '';
-    if(g('gs-relato'))     g('gs-relato').textContent     = '⏳ Sin partidos en vivo ahora. Próximos partidos en Apuestas.';
-    if(g('live-league'))   g('live-league').textContent   = '— Esperando partidos —';
+    if(g('gs-relato'))     g('gs-relato').textContent     = '⏳ Sin partidos en vivo ahora. Los próximos partidos están en Apuestas.';
+    if(g('live-league'))   g('live-league').textContent   = '— Sin partidos en vivo —';
     if(g('lp-odds'))       g('lp-odds').textContent       = '';
-    // Lbl badge
     const lbl = document.getElementById('lp-lbl');
     if(lbl) { lbl.className='live-data-lbl'; lbl.textContent='Sin partidos en vivo ahora'; }
-    // Intentar reconectar en 10 minutos (ahorra requests)
+    // Reconectar en 10 minutos
     setTimeout(connect, 10 * 60 * 1000);
   }
 
@@ -3960,6 +3964,37 @@ const MicroBet = (() => {
 
   function init() {
     _scheduleWait(2000);
+  }
+
+  // FIX: pausar microbets cuando no hay partido en vivo
+  function pause() {
+    clearTimeout(_timer);
+    ev = null;
+    // Mostrar mensaje en el stage
+    var ws = document.getElementById('mb-stage-waiting');
+    var as = document.getElementById('mb-stage-active');
+    if (ws) ws.style.display = '';
+    if (as) as.style.display = 'none';
+    var ico  = document.getElementById('mb-wait-ico');
+    var txt  = document.getElementById('mb-wait-txt');
+    var sub  = document.getElementById('mb-wait-sub');
+    if (ico) ico.textContent = '📺';
+    if (txt) txt.textContent = 'Sin partido en vivo';
+    if (sub) sub.textContent = 'Los micro-mercados se activan cuando hay un partido en vivo de tus ligas favoritas.';
+    // Ocultar popup y focus
+    _hidePopup();
+    _hideFocus();
+  }
+
+  function resume() {
+    // Restaurar mensaje original y arrancar
+    var ico = document.getElementById('mb-wait-ico');
+    var txt = document.getElementById('mb-wait-txt');
+    var sub = document.getElementById('mb-wait-sub');
+    if (ico) ico.textContent = '⏳';
+    if (txt) txt.textContent = 'Esperando oportunidad';
+    if (sub) sub.textContent = 'El próximo micro-mercado abre en breve';
+    _scheduleWait(3000);
   }
 
   function _getWaitRange() {
@@ -4320,7 +4355,7 @@ const MicroBet = (() => {
   function getPhase() { return ev ? ev.phase : 'waiting'; }
   function getEventDef() { return ev && ev.phase==='active' ? ev.eventDef : null; }
 
-  return { init, pick, setStake, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
+  return { init, pick, setStake, pause, resume, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
 })();
 
 /* ── VAULT MODULE ───────────────────────────────────────────── */
@@ -5264,15 +5299,17 @@ const BetsModule = (() => {
 
   // IDs de ligas → config de display
   const LEAGUE_CONFIG = {
-    2:   { key:'ucl',        name:'⭐ Champions League',   flag:'🏆' },
-    3:   { key:'ucl',        name:'🏆 Europa League',      flag:'🏆' },
-    39:  { key:'epl',        name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
-    140: { key:'laliga',     name:'🇪🇸 La Liga',            flag:'🇪🇸' },
-    135: { key:'seriea',     name:'🇮🇹 Serie A',             flag:'🇮🇹' },
-    78:  { key:'bundesliga', name:'🇩🇪 Bundesliga',          flag:'🇩🇪' },
-    61:  { key:'ligue1',     name:'🇫🇷 Ligue 1',             flag:'🇫🇷' },
-    128: { key:'arg',        name:'🇦🇷 Liga Argentina',      flag:'🇦🇷' },
-    529: { key:'arg',        name:'🇦🇷 Copa Argentina',      flag:'🇦🇷' },
+    2:   { key:'ucl',          name:'⭐ Champions League',    flag:'🏆', priority:1 },
+    3:   { key:'uel',          name:'🏅 Europa League',       flag:'🏅', priority:2 },
+    39:  { key:'epl',          name:'🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League', flag:'🏴󠁧󠁢󠁥󠁮󠁧󠁿', priority:3 },
+    140: { key:'laliga',       name:'🇪🇸 La Liga',            flag:'🇪🇸', priority:4 },
+    135: { key:'seriea',       name:'🇮🇹 Serie A',             flag:'🇮🇹', priority:5 },
+    78:  { key:'bundesliga',   name:'🇩🇪 Bundesliga',          flag:'🇩🇪', priority:6 },
+    61:  { key:'ligue1',       name:'🇫🇷 Ligue 1',             flag:'🇫🇷', priority:7 },
+    128: { key:'arg',          name:'🇦🇷 Liga Argentina',      flag:'🇦🇷', priority:8 },
+    529: { key:'copaarg',      name:'🏆 Copa Argentina',       flag:'🏆', priority:9 },
+    13:  { key:'libertadores', name:'🌎 Copa Libertadores',    flag:'🌎', priority:10 },
+    11:  { key:'libertadores', name:'🌎 Copa Libertadores',    flag:'🌎', priority:10 },
   };
 
   const API_KEY = 'c7d7da22a499bfd42a7cd5ae35845268';
@@ -5308,67 +5345,50 @@ const BetsModule = (() => {
   // ── CARGAR PARTIDOS REALES ────────────────────────────────────
   async function _loadRealFixtures() {
     try {
-      const leagueIds = Object.keys(LEAGUE_CONFIG).join('-');
-      // Traer partidos en vivo + próximos de hoy de nuestras ligas
       const today = new Date().toISOString().slice(0, 10);
+
+      // Solo 2 requests: en vivo + próximos 50
       const [liveRes, nextRes] = await Promise.all([
         fetch(API_BASE + '/fixtures?live=all', { headers: { 'x-apisports-key': API_KEY } }),
-        fetch(API_BASE + '/fixtures?date=' + today + '&timezone=America/Argentina/Buenos_Aires', { headers: { 'x-apisports-key': API_KEY } }),
+        fetch(API_BASE + '/fixtures?next=50&timezone=America%2FArgentina%2FBuenos_Aires', { headers: { 'x-apisports-key': API_KEY } }),
       ]);
 
-      const liveJson = await liveRes.json();
-      const nextJson = await nextRes.json();
+      const liveFixtures = ((await liveRes.json()).response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
+      const upcoming     = ((await nextRes.json()).response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
+      const liveIds      = new Set(liveFixtures.map(f => f.fixture.id));
 
-      const liveFixtures = (liveJson.response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
-      const todayFixtures = (nextJson.response || []).filter(f => LEAGUE_CONFIG[f.league.id]);
-
-      // Combinar: en vivo primero, después los de hoy que no están en vivo
-      const liveIds = new Set(liveFixtures.map(f => f.fixture.id));
-      const upcoming = todayFixtures.filter(f => !liveIds.has(f.fixture.id) && f.fixture.status.short === 'NS');
-
-      const combined = [...liveFixtures, ...upcoming];
-
-      if (!combined.length) return; // mantener fallback
-
-      // Convertir a formato interno
-      _matches = combined.map(function(f, i) {
-        const cfg = LEAGUE_CONFIG[f.league.id];
-        const isLive = f.fixture.status.short === '1H' || f.fixture.status.short === '2H' ||
-                       f.fixture.status.short === 'HT' || f.fixture.status.short === 'ET';
-
-        // Formatear hora local AR
+      const toMatch = function(f) {
+        const cfg     = LEAGUE_CONFIG[f.league.id];
+        const isLive  = liveIds.has(f.fixture.id);
         const kickoff = new Date(f.fixture.date);
         const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
-
-        // Cuotas: intentar parsear de la respuesta si vienen
-        const oddsData = f.odds?.bookmakers?.[0]?.bets?.find(b => b.name === 'Match Winner');
-        const odds = oddsData ? {
-          h: parseFloat(oddsData.values.find(v => v.value === 'Home')?.odd || 2.00),
-          d: parseFloat(oddsData.values.find(v => v.value === 'Draw')?.odd || 3.20),
-          a: parseFloat(oddsData.values.find(v => v.value === 'Away')?.odd || 3.50),
-        } : { h: 2.00, d: 3.20, a: 3.50 }; // cuotas genéricas si no vienen
-
+        const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
+        const isToday = kickoff.toISOString().slice(0,10) === today;
         return {
           id:         'api_' + f.fixture.id,
           fixtureId:  f.fixture.id,
           league:     cfg.key,
           leagueName: cfg.name,
+          priority:   cfg.priority,
           home:       f.teams.home.name,
           away:       f.teams.away.name,
-          time:       timeStr,
+          time:       isToday ? timeStr : dateStr + ' · ' + timeStr,
           live:       isLive,
           homeG:      f.goals.home || 0,
           awayG:      f.goals.away || 0,
           minute:     f.fixture.status.elapsed || 0,
-          odds:       odds,
+          odds:       { h: 2.00, d: 3.20, a: 3.50 },
         };
-      });
+      };
 
+      const allMatches = [...liveFixtures.map(toMatch), ...upcoming.map(toMatch)];
+      if (!allMatches.length) return;
+
+      _matches = allMatches;
       _apiLoaded = true;
       _renderMatches();
       _renderSlip();
       BetsModule.refreshLiveList();
-      // Nota: cuotas de mercados secundarios se calculan localmente (evita 429 + CORS)
     } catch(e) {
       console.warn('[BetsModule] Error cargando fixtures:', e.message);
     }
@@ -5404,56 +5424,6 @@ const BetsModule = (() => {
     _stake = amount === 0 ? Math.min(gc, 5000) : Math.max(50, Math.min(amount, Math.min(gc, 5000)));
     document.querySelectorAll('.bets-stake-btn').forEach(b => b.classList.toggle('active', b === btn));
     _renderSlip();
-  }
-
-  function _renderMatches() {
-    const list = document.getElementById('bets-matches-list');
-    if (!list) return;
-    const filtered = _currentLeague === 'all' ? _matches : _matches.filter(m => m.league === _currentLeague);
-
-    if (!filtered.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay partidos disponibles para esta liga hoy.</div>';
-      return;
-    }
-    list.innerHTML = filtered.map(m => {
-      const isLive = m.live;
-      const slipMatch = _slip && _slip.matchId === m.id;
-      return `
-      <div class="bets-match-card" style="margin-bottom:8px;">
-        <div class="bmc-header">
-          <span class="bmc-league">${m.leagueName}</span>
-          ${isLive
-            ? `<span class="bmc-live-badge"><span class="live-dot red"></span>EN VIVO · ${m.homeG}–${m.awayG}</span>`
-            : `<span class="bmc-time">${m.time}</span>`}
-        </div>
-        <div class="bmc-teams">
-          <div class="bmc-team">
-            <div class="bmc-team-name">${m.home}</div>
-          </div>
-          <div class="bmc-score">
-            <div class="bmc-score-val">${isLive ? m.homeG+'–'+m.awayG : 'VS'}</div>
-            <div class="bmc-score-lbl">${isLive ? 'EN VIVO' : m.time}</div>
-          </div>
-          <div class="bmc-team">
-            <div class="bmc-team-name">${m.away}</div>
-          </div>
-        </div>
-        <div class="bmc-odds-row">
-          <button class="bmc-odd-btn${slipMatch && _slip.pick==='h' ? ' selected':''}" onclick="BetsModule.pickOdd('${m.id}','h',${m.odds.h},'${m.home} gana')">
-            <span class="bmc-odd-lbl">1 · ${m.home.split(' ')[0]}</span>
-            <span class="bmc-odd-val">${m.odds.h.toFixed(2)}</span>
-          </button>
-          <button class="bmc-odd-btn${slipMatch && _slip.pick==='d' ? ' selected':''}" onclick="BetsModule.pickOdd('${m.id}','d',${m.odds.d},'Empate')">
-            <span class="bmc-odd-lbl">X · Empate</span>
-            <span class="bmc-odd-val">${m.odds.d.toFixed(2)}</span>
-          </button>
-          <button class="bmc-odd-btn${slipMatch && _slip.pick==='a' ? ' selected':''}" onclick="BetsModule.pickOdd('${m.id}','a',${m.odds.a},'${m.away} gana')">
-            <span class="bmc-odd-lbl">2 · ${m.away.split(' ')[0]}</span>
-            <span class="bmc-odd-val">${m.odds.a.toFixed(2)}</span>
-          </button>
-        </div>
-      </div>`;
-    }).join('');
   }
 
   // ── pickOdd: soporte multi-pick (combinadas) ──────────────────
@@ -5771,28 +5741,54 @@ const BetsModule = (() => {
   function _renderMatches() {
     const list = document.getElementById('bets-matches-list');
     if (!list) return;
-    const filtered = _currentLeague === 'all' ? _matches : _matches.filter(function(m){ return m.league === _currentLeague; });
+
+    var filtered;
+    if (_currentLeague === 'all') {
+      // DESTACADOS: 1 partido por liga, el más próximo o en vivo
+      var seen = {};
+      var leagueOrder = ['ucl','uel','epl','laliga','seriea','bundesliga','ligue1','arg','libertadores','copaarg'];
+      // Primero en vivo, después próximos
+      var sorted = _matches.slice().sort(function(a,b){
+        if (a.live && !b.live) return -1;
+        if (!a.live && b.live) return 1;
+        return (a.priority||99) - (b.priority||99);
+      });
+      filtered = sorted.filter(function(m) {
+        if (seen[m.league]) return false;
+        seen[m.league] = true;
+        return true;
+      });
+    } else {
+      // LIGA ESPECÍFICA: próximos 3 incluyendo en vivo
+      var byLeague = _matches.filter(function(m){ return m.league === _currentLeague; });
+      var live3 = byLeague.filter(function(m){ return m.live; });
+      var next3 = byLeague.filter(function(m){ return !m.live; }).slice(0, 3 - live3.length);
+      filtered = [...live3, ...next3].slice(0, 3);
+    }
+
     if (!filtered.length) {
-      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay partidos disponibles para esta liga hoy.</div>';
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay partidos disponibles. Cargando…</div>';
       return;
     }
+
     if (!list._delegated) {
       list._delegated = true;
       list.addEventListener('click', function(e) {
         var btn = e.target.closest('[data-mid][data-side]');
-        if (!btn) return;
-        if (btn.classList.contains('disabled')) return;
+        if (!btn || btn.classList.contains('disabled')) return;
         pickOdd(btn.dataset.mid, btn.dataset.side, parseFloat(btn.dataset.odd), btn.dataset.label);
       });
     }
+
     list.innerHTML = filtered.map(function(m) {
       var isLive = m.live;
-      var mPick  = _picks.find(function(p){ return p.matchId === m.id; });
+      var mPick  = _picks.find(function(p){ return p.matchId === m.id && (p.pick === 'h' || p.pick === 'd' || p.pick === 'a'); });
       var liveHtml = isLive
         ? '<span class="bmc-live-badge"><span class="live-dot red"></span>EN VIVO &middot; ' + m.homeG + '&ndash;' + m.awayG + '</span>'
         : '<span class="bmc-time">' + m.time + '</span>';
-      var selBorder = mPick ? 'border-color:rgba(57,255,20,.35);' : '';
+      var selBorder = _picks.some(function(p){ return p.matchId === m.id; }) ? 'border-color:rgba(57,255,20,.35);' : '';
       var tab = _activeTab[m.id] || 'resultado';
+
       return '<div class="bets-match-card" style="margin-bottom:8px;' + selBorder + '">' +
         '<div class="bmc-header">' +
           '<span class="bmc-league">' + m.leagueName + '</span>' + liveHtml +
@@ -5810,11 +5806,9 @@ const BetsModule = (() => {
           _oddBtn(m, 'd', m.odds.d, 'X &middot; Empate', 'Empate', mPick) +
           _oddBtn(m, 'a', m.odds.a, '2 &middot; ' + m.away.split(' ')[0], m.away + ' gana', mPick) +
         '</div>' +
-        // Botón expandir
         '<button class="bmc-expand-btn" id="bmc-exp-' + m.id + '" onclick="BetsModule.toggleDetail(\'' + m.id + '\')">' +
           '▼ Ver mercados' +
         '</button>' +
-        // Accordion detalle
         '<div class="bmc-detail" id="bmc-detail-' + m.id + '">' +
           '<div class="bmc-detail-tabs">' +
             '<button class="bmc-dtab' + (tab==='resultado'?' active':'') + '" data-tab="resultado" onclick="BetsModule.switchDetailTab(\'' + m.id + '\',\'resultado\')">Resultado</button>' +
@@ -5910,11 +5904,13 @@ const BetsModule = (() => {
 
     function mBtn(side, odd, lbl, marketName) {
       var fullLabel = marketName + ': ' + lbl;
-      var mPick = _picks.find(function(p){ return p.matchId === m.id && p.pick === side; });
-      var sel = mPick && mPick.marketName === marketName;
+      // FIX: verificar si este pick está activo en _picks
+      var isActive = _picks.some(function(p){
+        return p.matchId === m.id && p.pick === side && p.marketName === marketName;
+      });
       var blocked = odd < MIN_ODD;
-      var cls = 'bmc-market-btn' + (sel ? ' selected' : '') + (blocked ? ' disabled' : '');
-      return '<button class="' + cls + '" data-mid="' + m.id + '" data-side="' + side + '_' + marketName.replace(/\s/g,'_') + '" data-odd="' + odd.toFixed(2) + '" data-label="' + fullLabel.replace(/"/g,'') + '">' +
+      var cls = 'bmc-market-btn' + (isActive ? ' selected' : '') + (blocked ? ' disabled' : '');
+      return '<button class="' + cls + '" data-mid="' + m.id + '" data-side="' + side + '" data-odd="' + odd.toFixed(2) + '" data-label="' + fullLabel.replace(/"/g,'') + '">' +
         '<span class="bmc-market-lbl">' + lbl + '</span>' +
         '<span class="bmc-market-odd">' + odd.toFixed(2) + '</span>' +
       '</button>';
