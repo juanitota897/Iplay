@@ -1841,13 +1841,12 @@ const SupaStore = (() => {
   }
 
   async function getLeaderboard() {
-    // FIX: leer directo de profiles con ORDER BY xp para evitar el ORDER BY fijo de la view
     const { data, error } = await _sb
       .from('profiles')
       .select('id, username, xp, g_coins, energy, streak')
+      .order('xp', { ascending: false })
       .limit(20);
     if (error) return null;
-    // Agregar nivel calculado (igual que la view)
     return (data || []).map(function(r) {
       var xp = r.xp || 0;
       var level = xp < 120 ? 1 : xp < 280 ? 2 : xp < 500 ? 3 : xp < 800 ? 4 :
