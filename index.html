@@ -8179,7 +8179,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ── RESET FORZADO v1 ─────────────────────────────────────────
   // Si el usuario no tiene el flag 'glayer_reset_v1', limpiamos su localStorage
   // y reseteamos su perfil en Supabase. Esto corre UNA SOLA VEZ por dispositivo.
-  var RESET_FLAG = 'glayer_reset_v1';
+  var RESET_FLAG = 'glayer_reset_v2';
   if (!localStorage.getItem(RESET_FLAG)) {
     try { localStorage.removeItem('glayer_v5'); } catch(e) {}
     localStorage.setItem(RESET_FLAG, '1');
