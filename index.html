@@ -5990,6 +5990,27 @@ const BetsModule = (() => {
 
   const API_BASE = 'https://v3.football.api-sports.io'; // mantenido como referencia
   const FD_KEY   = 'd8248f5724094cfaa8d7bad6c653bb1f';
+  // ── Todo lee de api_cache — el poller mantiene el cache caliente ──
+  // Clientes nunca tocan las APIs externas directamente
+
+  async function _cacheRead(key) {
+    try {
+      var { data, error } = await _sb.from('api_cache')
+        .select('data, created_at')
+        .eq('key', key)
+        .maybeSingle();
+      if (error || !data) return null;
+      var d = data.data;
+      // Unwrap list si viene envuelto
+      if (d && d.list !== undefined) return d.list;
+      return d;
+    } catch(e) {
+      console.warn('[BetsModule] cache read error:', key, e.message);
+      return null;
+    }
+  }
+
+  // Fallback al proxy si el cache no tiene datos aún
   const FD_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/football-proxy';
   const FIXTURES_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/fixtures-proxy';
   const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0eHZ3emNvbHNiZHZpc2toeHBqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYyODE2OTksImV4cCI6MjA5MTg1NzY5OX0.4auf6tDbKy-vapQM2qyeAPvzKDQ4XMwYssHDTqxMVds';
@@ -6056,10 +6077,12 @@ const BetsModule = (() => {
       const today = new Date().toISOString().slice(0, 10);
       const allMatches = [];
 
-      // ── 1. FOOTBALL-DATA.ORG: Champions, Europa, 5 grandes ───────
+      // ── 1. FOOTBALL-DATA.ORG: leer de api_cache (poller lo actualiza cada 15min) ──
       await Promise.all(FD_COMPETITIONS.map(async function(comp) {
         try {
-          const j = await _fdFetch('/competitions/' + comp.code + '/matches?status=SCHEDULED');
+          // Leer del cache primero, fallback al proxy si no hay datos
+          var cached = await _cacheRead('fixtures_fd_' + comp.code);
+          const j = cached || await _fdFetch('/competitions/' + comp.code + '/matches?status=SCHEDULED');
           (j.matches || []).slice(0, 3).forEach(function(m) {
             const kickoff = new Date(m.utcDate);
             const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
@@ -6088,14 +6111,16 @@ const BetsModule = (() => {
         }
       }));
 
-      // ── 2. API-FOOTBALL: Libertadores, Sudamericana, Liga AR ──────
+      // ── 2. API-FOOTBALL CONMEBOL: leer de api_cache (poller lo actualiza cada 15min) ──
       const CONMEBOL_IDS = { 13: true, 11: true, 128: true, 529: true };
       for (var i = 0; i < 4; i++) {
         var d = new Date();
         d.setDate(d.getDate() + i);
         const fecha = d.toISOString().slice(0, 10);
         try {
-          const j = await _apiFetch('fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires');
+          // Cache primero, fallback al proxy
+          var cachedApi = await _cacheRead('fixtures_api_' + fecha);
+          const j = cachedApi ? { response: cachedApi } : await _apiFetch('fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires');
           (j.response || []).forEach(function(f) {
             if (!CONMEBOL_IDS[f.league.id]) return;
             const lname = (f.league.name || '').toLowerCase();
@@ -6128,9 +6153,10 @@ const BetsModule = (() => {
         } catch(e) {}
       }
 
-      // ── 3. En vivo (todas las ligas configuradas) ─────────────────
+      // ── 3. En vivo: leer de api_cache (live-poller lo actualiza cada minuto) ──
       try {
-        const lj = await _apiFetch('fixtures?live=all');
+        var cachedLive = await _cacheRead('live_fixtures');
+        const lj = cachedLive ? { response: cachedLive } : await _apiFetch('fixtures?live=all');
         (lj.response || []).forEach(function(f) {
           const cfg2 = LEAGUE_CONFIG[f.league.id];
           if (!cfg2) return;
