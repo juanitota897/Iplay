@@ -225,22 +225,132 @@ button{font-family:inherit;cursor:pointer;}
 
 /* ── LIGHT MODE ── */
 body.light-mode{
-  --gold:#B8860B; --gold-l:#DAA520; --gold-d:#8B6914;
-  --neon:#1A8A00; --neon-d:#0D5500;
-  --plasma:#E05520;
-  --shield:#2255CC; --rare:#7C3AED;
-  --red:#CC1133; --red-d:rgba(204,17,51,0.1);
-  --cyan:#0099CC;
-  --bg0:#F5F5F1; --bg1:#FFFFFF; --bg2:#EFEFEB; --bg3:#E8E8E4; --bg4:#E0E0DC; --bg5:#D8D8D4;
-  --t1:#1A1A2E; --t2:#555570; --t3:#888899;
-  --border:rgba(184,134,11,0.15); --border-b:rgba(184,134,11,0.4);
-  background:#EAEAE6;color:var(--t1);
+  /* Paleta clara deportiva — navy + blanco + gold vibrante */
+  --gold:#D4A200;        /* gold más saturado y brillante */
+  --gold-l:#F0BC00;      /* gold claro vibrante */
+  --gold-d:#A87C00;
+  --neon:#0DAF3C;        /* verde más vibrante */
+  --neon-d:#088A2E;
+  --plasma:#E85520;
+  --shield:#1E50D4;
+  --rare:#7C3AED;
+  --red:#D01030; --red-d:rgba(208,16,48,0.1);
+  --cyan:#0090CC;
+
+  /* Fondos: azul navy oscuro para sidebar/header, blanco para contenido */
+  --bg0:#F4F6FA;          /* fondo general — gris azulado suave */
+  --bg1:#FFFFFF;          /* cards — blanco puro */
+  --bg2:#EBEEf5;          /* elementos secundarios */
+  --bg3:#DDE1EC;          /* inputs */
+  --bg4:#CDD2E0;          /* hover */
+  --bg5:#B8BFD0;          /* bordes */
+
+  --t1:#0A0E1A;           /* navy muy oscuro */
+  --t2:#2E3650;           /* navy medio */
+  --t3:#5A6278;           /* gris azulado — más oscuro para legibilidad */
+
+  --border:rgba(14,28,80,0.12); --border-b:rgba(14,28,80,0.3);
+  background:var(--bg0); color:var(--t1);
 }
 body.light-mode #app{background:var(--bg0);}
-body.light-mode .card{background:var(--bg1);}
-body.light-mode #app-header{background:linear-gradient(180deg,rgba(245,245,241,.99),rgba(245,245,241,.96));}
-body.light-mode #bottom-nav{background:rgba(245,245,241,.98);}
-body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(--bg1);}
+body.light-mode .card{background:var(--bg1);border-color:rgba(14,28,80,0.08);}
+
+/* Header y nav con navy oscuro — identidad propia */
+body.light-mode #app-header{
+  background:linear-gradient(180deg,#0D1B3E,#162347);
+  border-bottom:1px solid rgba(212,162,0,0.3);
+  box-shadow:0 2px 12px rgba(0,0,0,0.2);
+}
+body.light-mode #app-header .hdr-gcoin-val,
+body.light-mode #app-header .hdr-gcoin-lbl{color:#FFFFFF;}
+body.light-mode #app-header .hdr-xp-lbl,
+body.light-mode #app-header .hdr-level-lbl{color:rgba(255,255,255,0.7);}
+body.light-mode #app-header .hdr-menu-btn{color:#FFFFFF;}
+body.light-mode #app-header .hdr-avatar-img{border-color:var(--gold);}
+body.light-mode #app-header .hdr-op-name{color:#FFFFFF;}
+
+body.light-mode #bottom-nav{
+  background:#0D1B3E;
+  border-top:1px solid rgba(212,162,0,0.25);
+  box-shadow:0 -2px 12px rgba(0,0,0,0.2);
+}
+body.light-mode .nav-btn{color:rgba(255,255,255,0.7);}
+body.light-mode .nav-btn.active{color:var(--gold);}
+body.light-mode .nav-lbl{color:rgba(255,255,255,0.7);font-size:10px;}
+body.light-mode .nav-btn.active .nav-lbl{color:var(--gold);}
+
+/* Sidebar navy */
+body.light-mode #desktop-sidebar{background:#0D1B3E;border-right:1px solid rgba(212,162,0,0.2);}
+body.light-mode #desktop-sidebar .smenu-lbl{color:rgba(255,255,255,0.9);font-weight:600;}
+body.light-mode #desktop-sidebar .smenu-ico{color:#FFFFFF;font-size:16px;}
+body.light-mode #desktop-sidebar .smenu-item{border-radius:8px;margin:1px 8px;}
+body.light-mode #desktop-sidebar .smenu-item:hover{background:rgba(255,255,255,0.1);}
+body.light-mode #desktop-sidebar .smenu-item.active{background:rgba(212,162,0,0.2);border-left:3px solid var(--gold);}
+body.light-mode #desktop-right{background:#FFFFFF;border-left:1px solid rgba(14,28,80,0.08);}
+
+body.light-mode .view-scroll{background:var(--bg0);}
+body.light-mode .view{background:var(--bg0);}
+
+/* Cards con sombra suave */
+body.light-mode .bets-match-card,
+body.light-mode .bet-ticket,
+body.light-mode .bets-history,
+body.light-mode .bets-slip{background:#FFFFFF;border-color:rgba(14,28,80,0.08);box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+body.light-mode .crash-card{background:#FFFFFF;border-color:rgba(14,28,80,0.1);box-shadow:0 2px 8px rgba(0,0,0,0.08);}
+body.light-mode .home-feed{background:#FFFFFF;border-color:rgba(14,28,80,0.08);box-shadow:0 1px 4px rgba(0,0,0,0.05);}
+
+/* Side menu navy */
+body.light-mode #side-menu{background:#0D1B3E;box-shadow:2px 0 20px rgba(0,0,0,0.25);}
+body.light-mode .smenu-item{color:rgba(255,255,255,0.92);}
+body.light-mode .smenu-item:hover{background:rgba(255,255,255,0.1);}
+body.light-mode .smenu-lbl{color:rgba(255,255,255,0.92);font-weight:500;}
+body.light-mode .smenu-ico{color:#FFFFFF;}
+
+/* Hero con acento gold vibrante */
+body.light-mode .home-hero{background:linear-gradient(135deg,rgba(212,162,0,.12),#FFFFFF);border-color:rgba(212,162,0,0.2);}
+
+/* Entry screen */
+body.light-mode #entry-screen{background:#FFFFFF;border-color:rgba(14,28,80,0.08);}
+body.light-mode .entry-op-card{background:var(--bg0);border-color:rgba(14,28,80,0.1);}
+
+/* Vault hero — fondo claro en modo claro */
+body.light-mode .vault-hero{
+  background:linear-gradient(160deg,rgba(255,107,53,.12),rgba(255,245,235,1) 60%);
+  border-bottom:1px solid rgba(255,107,53,0.2);
+}
+body.light-mode .vault-hero-bg{background:radial-gradient(ellipse at 80% 20%,rgba(255,107,53,.1),transparent 60%);}
+body.light-mode .vault-hero-title{color:#0A0E1A;}
+body.light-mode .vault-hero-tagline{color:#3C4048;}
+
+/* gs-card (partido en vivo) — fondo claro */
+body.light-mode .gs-card{
+  background:#FFFFFF;
+  border-color:rgba(14,28,80,0.12);
+  box-shadow:0 4px 16px rgba(0,0,0,0.08);
+}
+body.light-mode .gs-score-home,
+body.light-mode .gs-score-away{color:#0A0E1A;}
+body.light-mode .gs-team-name{color:#3C4048;}
+body.light-mode .gs-minute{color:#5A6278;}
+body.light-mode .gs-relato{background:#F4F6FA;border-color:rgba(14,28,80,0.08);color:#3C4048;}
+body.light-mode .live-stats-bar{background:#F4F6FA;border-color:rgba(14,28,80,0.08);}
+body.light-mode .live-ctx-bar{background:#FFFFFF;}
+body.light-mode .live-data-bar{background:#F4F6FA;border-color:rgba(14,28,80,0.08);}
+body.light-mode .mb-countdown-bar{background:#F4F6FA;border-color:rgba(14,28,80,0.08);}
+body.light-mode .mb-stage-waiting,
+body.light-mode .mb-stage-active{background:#FFFFFF;}
+
+/* Casino crash — fondo claro */
+body.light-mode .crash-mult-wrap{background:#FFFFFF;}
+body.light-mode .crash-topbar{background:#F4F6FA;border-bottom-color:rgba(14,28,80,0.08);}
+body.light-mode .crash-sub{color:#5A6278;}
+body.light-mode .crash-history-row{color:#3C4048;}
+body.light-mode .crash-players-wrap{background:#F4F6FA;}
+
+/* Match cards en apuestas */
+body.light-mode .match-card{background:#FFFFFF;border-color:rgba(14,28,80,0.1);box-shadow:0 1px 4px rgba(0,0,0,0.06);}
+body.light-mode .match-league{color:#5A6278;}
+body.light-mode .match-team-name{color:#0A0E1A;}
 
 /* ── THEME TOGGLE ── */
 #theme-toggle-btn{
@@ -3416,8 +3526,8 @@ const AuthUI = (() => {
           <span id="tut-reward-txt">¡Recompensa!</span>
         </div>
         <div class="tut-actions-row">
-          <button id="tut-skip" onclick="Tutorial.skip()">Saltar tutorial</button>
-          <button id="tut-next" onclick="Tutorial.next()">Siguiente →</button>
+          <button id="tut-skip" onclick="Tutorial.skip()" ontouchstart="Tutorial.skip()">Saltar tutorial</button>
+          <button id="tut-next" onclick="Tutorial.next()" ontouchstart="event.preventDefault();Tutorial.next();" style="touch-action:manipulation;">Siguiente →</button>
         </div>
       </div>
     </div>
@@ -4486,8 +4596,11 @@ const MicroBet = (() => {
 
   function _startActive(forceDef) {
     const pool = _getEnabledEvents();
-    if (!pool.length) { _scheduleWait(); return; } // no types enabled → keep waiting
+    // Si viene forceDef (tutorial o evento real) siempre proceder aunque pool esté vacío
+    if (!forceDef && !pool.length) { _scheduleWait(); return; }
     const def = forceDef || pool[Math.floor(Math.random()*pool.length)];
+    // Fallback si def es undefined (no debería pasar pero por seguridad)
+    if (!def) return;
     // Duración aleatoria dentro del rango — el usuario no sabe cuándo cierra
     const durMin = def.durMin || 8;
     const durMax = def.durMax || 14;
@@ -4831,7 +4944,8 @@ const MicroBet = (() => {
   function getPhase() { return ev ? ev.phase : 'waiting'; }
   function getEventDef() { return ev && ev.phase==='active' ? ev.eventDef : null; }
 
-  return { init, pick, setStake, pause, resume, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef };
+  function setLiveActive(val) { _liveActive = val; }
+  return { init, pick, setStake, pause, resume, dismissFocus, onViewChange, forceEvent, initPopup, getPhase, getEventDef, setLiveActive };
 })();
 
 /* ── VAULT MODULE ───────────────────────────────────────────── */
@@ -5660,38 +5774,51 @@ const CasinoModule = (() => {
     var overlay = document.getElementById('crash-overlay');
     var overlayMult = document.getElementById('crash-overlay-mult');
 
-    // Número rojo grande
-    if (me) {
-      me.style.color = '#FF3355';
-      me.style.textShadow = '0 0 50px rgba(255,51,85,.7)';
-      me.classList.remove('pulsing');
-      me.classList.add('crashed');
+    if (cashed) {
+      // ── Ya cobraste → mantener verde, mostrar victoria ──
+      if (me) {
+        me.classList.remove('pulse-slow','pulse-med','pulse-fast','pulse-danger','pulsing');
+        // mantener el color verde/dorado que tenía al cobrar
+      }
+      if (line) { line.setAttribute('stroke', '#39FF14'); }
+      if (dot)  { dot.setAttribute('fill', '#39FF14'); }
+      if (card) {
+        card.style.background = '';
+        card.className = 'crash-card';
+      }
+      if (overlay) overlay.classList.add('show');
+      if (overlayMult) overlayMult.textContent = '✓ Cobraste antes del crash';
+      // Overlay verde en lugar de rojo
+      if (overlay) overlay.style.background = 'rgba(57,255,20,.06)';
+      _showBanner('win', '✓ ¡Cobraste a tiempo! El crash fue a ' + finalMult.toFixed(2) + 'x');
+    } else {
+      // ── No cobraste → rojo, perdiste ──
+      if (me) {
+        me.style.color = '#FF3355';
+        me.style.textShadow = '0 0 50px rgba(255,51,85,.7)';
+        me.classList.remove('pulse-slow','pulse-med','pulse-fast','pulse-danger','pulsing');
+        me.classList.add('crashed');
+      }
+      if (line) { line.setAttribute('stroke', '#FF3355'); line.removeAttribute('filter'); }
+      if (dot)  { dot.setAttribute('fill', '#FF3355'); dot.setAttribute('r', '4'); }
+      if (card) {
+        card.style.background = '';
+        card.className = 'crash-card crashed-state crash-shake';
+        setTimeout(function() { card.classList.remove('crash-shake'); }, 500);
+      }
+      if (overlay) { overlay.classList.add('show'); overlay.style.background = ''; }
+      if (overlayMult) overlayMult.textContent = 'Crasheó a ' + finalMult.toFixed(2) + 'x';
+      if (betPlaced) {
+        Store.simulateLoss();
+        _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
+      } else {
+        _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x');
+      }
     }
-
-    // Gráfico rojo
-    if (line) { line.setAttribute('stroke', '#FF3355'); line.removeAttribute('filter'); }
-    if (dot)  { dot.setAttribute('fill', '#FF3355'); dot.setAttribute('r', '4'); }
-
-    // Card rojo + shake
-    if (card) {
-      card.className = 'crash-card crashed-state crash-shake';
-      setTimeout(function() { card.classList.remove('crash-shake'); }, 500);
-    }
-
-    // Overlay de crash
-    if (overlay) overlay.classList.add('show');
-    if (overlayMult) overlayMult.textContent = 'Crasheó a ' + finalMult.toFixed(2) + 'x';
 
     // Marcar perdedores en el feed
     _players.forEach(function(p){ if (!p.cashout_at) p.lost = true; });
     _renderPlayers();
-
-    if (betPlaced && !cashed) {
-      Store.simulateLoss();
-      _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x — perdiste ' + stake.toLocaleString('es-AR') + ' G');
-    } else {
-      _showBanner('loss', '💥 CRASH a ' + finalMult.toFixed(2) + 'x');
-    }
 
     _setUI({ status:'<span class="live-dot red"></span> CRASHED', multCls:'crashed', sub:'Crasheó a ' + finalMult.toFixed(2) + 'x', btnTxt:'Apostar', btnDis:true, btnCls:'' });
     betPlaced = false;
@@ -7655,26 +7782,25 @@ const Tutorial = (() => {
       view: 'bets', selector: '.bets-hero',
       badge: '🎯 Apuestas',
       title: 'Apuestas en partidos reales',
-      text: 'Elegís un partido, seleccionás 1X2, definís cuánto apostás en G-Coins y confirmás. Ganás G-Coins y XP proporcional a lo que apostaste.',
+      text: 'Elegís un partido, seleccionás el resultado, definís cuánto apostás y confirmás. El ticket queda abierto hasta que termine el partido — el resultado es real.',
       action: 'next',
       onEnter: () => Router.go('bets'),
     },
     {
-      view: 'live', selector: '.gs-card',
+      view: 'live', selector: null,
       badge: '⚡ En Vivo',
       title: 'El partido en tiempo real',
-      text: 'Ves el marcador, el minuto y la presión de cada equipo actualizándose en vivo. Cuando aparece un micro-evento, tenés segundos para decidir.',
+      text: 'Cuando hay un partido en vivo de tus ligas favoritas, ves el marcador, el minuto y la presión actualizándose. Además se activan los micro-eventos para apostar en segundos.',
       action: 'next',
       onEnter: () => Router.go('live'),
     },
     {
-      view: 'live', selector: '#mb-stage-active',
-      badge: '🎯 Acción requerida', badgeAction: true,
-      title: '¡Hacé tu primera micro-apuesta!',
-      text: 'Vamos a disparar un evento ahora. Elegí una opción — A o B — antes de que cierre el contador. ¡Vas a ganar XP aunque pierdas!',
-      action: 'microbet',
-      hint: '👆 Tocá una de las opciones de abajo para apostar',
-      onEnter: () => { MicroBet.forceEvent(); },
+      view: 'live', selector: null,
+      badge: '⚡ Micro-apuestas',
+      title: '¡Apostá en segundos!',
+      text: 'Cuando hay un partido en vivo, aparecen micro-eventos: un córner, un penal, un gol. Tenés segundos para elegir A o B. Ganás XP y G-Coins aunque estés perdiendo.',
+      action: 'next',
+      onEnter: () => {},
     },
     {
       view: 'vault', selector: '.vault-cta',
@@ -7700,11 +7826,10 @@ const Tutorial = (() => {
     },
     {
       view: 'casino', selector: '.crash-controls',
-      badge: '🎰 Acción requerida', badgeAction: true,
-      title: '¡Tirá una ronda!',
-      text: 'Arranca con 50 G-Coins. Apretá "Apostar", mirá cómo sube el multiplicador y cobrá cuando quieras. Si no cobrás, crashea.',
-      action: 'crash',
-      hint: '👆 Tocá "Apostar" para arrancar la ronda',
+      badge: '🎰 Casino',
+      title: '¡Jugá cuando quieras!',
+      text: 'El Crash es multijugador en tiempo real. Apretá "Apostar" al inicio de cada ronda, mirá subir el multiplicador y cobrá antes del crash. Cuanto más esperás, más arriesgás.',
+      action: 'next',
       onEnter: () => {
         Router.go('casino');
         const btn = document.querySelector('.crash-stake-btn');
@@ -7715,7 +7840,7 @@ const Tutorial = (() => {
       view: 'missions', selector: '#mission-1',
       badge: '🎯 Misiones',
       title: 'Misiones diarias',
-      text: 'Cada día tenés 3 misiones para completar. Completarlas suma XP y desbloquea cajas de botín. Tocá "Simular" en cualquiera para probar.',
+      text: 'Cada día tenés 3 misiones para completar. Se cumplen jugando — apostando, ganando microbets, jugando al crash. Completarlas suma XP y desbloquea cajas de botín.',
       action: 'next',
       onEnter: () => Router.go('missions'),
     },
@@ -7723,7 +7848,7 @@ const Tutorial = (() => {
       view: 'loot', selector: '#lc-common',
       badge: '🎁 Botín',
       title: 'Cajas de botín',
-      text: 'Al completar misiones y ganar micro-apuestas desbloqueás cajas. Cada apertura tiene contenido variable — la incertidumbre es parte del juego.',
+      text: 'Al completar misiones desbloqueás cajas de botín con recompensas variables: G-Coins, boosts de XP, escudos. Cada apertura es diferente.',
       action: 'next',
       onEnter: () => Router.go('loot'),
     },
@@ -7768,12 +7893,22 @@ const Tutorial = (() => {
   function skip() { _finish(); }
 
   function next() {
+    console.log('[Tutorial] next() called — _active:', _active, '_step:', _step);
+    if (!_active) { console.warn('[Tutorial] next() aborted: not active'); return; }
     const s = STEPS[_step];
+    console.log('[Tutorial] step action:', s.action, 'actionDone:', _actionDone);
     const needsAction = s.action && s.action !== 'next';
-    if (needsAction && !_actionDone) return;
+    if (needsAction && !_actionDone) { console.warn('[Tutorial] next() blocked: needs action'); return; }
     if (_step >= STEPS.length - 1) { _finish(); return; }
     _step++;
     _actionDone = false;
+
+    // Si el siguiente step requiere microbet pero no hay partido en vivo, activar igual
+    var ns = STEPS[_step];
+    if (ns && ns.action === 'microbet') {
+      if (typeof MicroBet !== 'undefined') MicroBet.setLiveActive(true);
+    }
+
     _renderStep();
   }
 
@@ -8001,13 +8136,20 @@ const Tutorial = (() => {
         requestAnimationFrame(() => requestAnimationFrame(() => _paintSpotlight(el)));
       } else {
         if (sp) sp.style.display = 'none';
-        // Retry up to 2s while waiting for DOM to render
-        const deadline = Date.now() + 2000;
+        // Retry up to 1s while waiting for DOM to render
+        const deadline = Date.now() + 1000;
         const poll = () => {
           if (_step !== snap || !_active) return;
           const found = _findTarget(selector);
           if (found) { _scrollToTarget(found); requestAnimationFrame(() => _paintSpotlight(found)); }
           else if (Date.now() < deadline) setTimeout(poll, 80);
+          else {
+            // Elemento no encontrado — habilitar Siguiente solo si el step actual es 'next'
+            var cur = STEPS[_step];
+            if (cur && (!cur.action || cur.action === 'next')) {
+              _setNextBtn(false, 'Siguiente →');
+            }
+          }
         };
         setTimeout(poll, 80);
       }
@@ -8070,12 +8212,12 @@ const Onboarding = (() => {
   const STEPS = [
     { selector: '.home-hero',          title: 'Tu progreso',      text: 'Nivel, XP y racha diaria — todo acá.' },
     { selector: '.hdr-gcoin',          title: 'G-Coins 🪙',       text: 'Tu saldo de monedas. Siempre visible arriba.' },
-    { selector: '#home-block-live',    title: 'Micro-apuestas ⚡', text: 'Eventos en vivo. Predecís en segundos, ganás XP al instante.' },
+    { selector: '#home-block-live',    title: 'Micro-apuestas ⚡', text: 'Cuando hay partidos en vivo, aparecen eventos para predecir en segundos y ganar XP al instante.' },
     { selector: '#home-block-vault',   title: 'Bóveda 🛡️',       text: 'Tus pérdidas acumulan combustible y activás escudos.' },
     { selector: '#home-block-missions',title: 'Misiones 🎯',      text: '3 misiones diarias. Completarlas desbloquea cajas de botín.' },
     { selector: '#home-block-loot',    title: 'Botín 🎁',         text: 'Cajas con recompensas variables. La incertidumbre es el juego.' },
     { selector: '#home-block-ranking', title: 'Ranking 📊',       text: 'Competís en tiempo real. No jugás hoy, bajás posiciones.' },
-    { selector: '#bottom-nav',         title: 'Navegación',       text: 'Apuestas, En Vivo, Casino, Bóveda — todo desde acá.', finalBtn: '¡Listo!' },
+    { selector: '#bottom-nav',         title: 'Navegación',       text: 'Apuestas, En Vivo, Casino, Bóveda — todo desde acá. El ranking se resetea cada lunes, así que jugá seguido.', finalBtn: '¡Listo!' },
   ];
 
   let _step = 0;
