@@ -536,6 +536,24 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bet-ticket-total{display:flex;justify-content:space-between;align-items:center;padding:4px 11px 9px;font-size:10px;color:var(--t3);}
 .bet-ticket-total strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;}
 
+/* ── SISTEMA DE LIGAS ── */
+.league-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
+.league-badge.primera{background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);color:var(--gold);}
+.league-badge.nacional_b{background:rgba(180,180,180,.12);border:1px solid rgba(180,180,180,.3);color:#C0C0C0;}
+.league-badge.tercera{background:rgba(139,90,43,.12);border:1px solid rgba(139,90,43,.35);color:#CD853F;}
+.league-header{padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.05);}
+.league-header-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;}
+.league-header-name{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;color:var(--t1);}
+.league-header-info{font-size:10px;color:var(--t3);}
+.league-zone-label{font-size:8px;font-weight:800;letter-spacing:.8px;text-transform:uppercase;padding:2px 8px;}
+.league-zone-up{background:rgba(57,255,20,.06);color:var(--neon);}
+.league-zone-down{background:rgba(255,51,85,.06);color:var(--red);}
+.league-zone-mid{background:transparent;color:var(--t3);}
+.lb-row.zone-up{border-left:3px solid var(--neon);}
+.lb-row.zone-down{border-left:3px solid var(--red);}
+.league-promo-banner{display:flex;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(135deg,rgba(57,255,20,.08),rgba(57,255,20,.02));border-bottom:1px solid rgba(57,255,20,.15);font-size:11px;color:var(--neon);}
+.league-promo-banner.down{background:linear-gradient(135deg,rgba(255,51,85,.08),rgba(255,51,85,.02));border-bottom-color:rgba(255,51,85,.15);color:var(--red);}
+
 /* ── FEED GLOBAL HOME ── */
 .home-feed{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-top:10px;}
 .home-feed-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--t2);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
@@ -3069,18 +3087,22 @@ const AuthUI = (() => {
           <div class="simple-view-sub">Datos en tiempo real del piloto</div>
         </div>
 
-        <!-- Tabs XP / G-Coins / Clubes -->
-        <div style="display:flex;gap:6px;margin-bottom:10px;">
+        <!-- Tabs División / Global / G-Coins / Clubes -->
+        <div style="display:flex;gap:5px;margin-bottom:10px;flex-wrap:wrap;">
+          <button id="rank-tab-division" onclick="RankingModule.setTab('division')"
+            style="flex:1;min-width:80px;padding:9px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            🏆 División
+          </button>
           <button id="rank-tab-xp" onclick="RankingModule.setTab('xp')"
-            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(212,175,55,.4);background:rgba(212,175,55,.1);color:var(--gold);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
-            ⚡ XP
+            style="flex:1;min-width:80px;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            🌍 Global
           </button>
           <button id="rank-tab-gc" onclick="RankingModule.setTab('gcoins')"
-            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            style="flex:1;min-width:80px;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
             🪙 G-Coins
           </button>
           <button id="rank-tab-clubs" onclick="RankingModule.setTab('clubs')"
-            style="flex:1;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
+            style="flex:1;min-width:80px;padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:800;cursor:pointer;letter-spacing:.4px;">
             ⚔️ Clubes
           </button>
         </div>
@@ -3091,7 +3113,10 @@ const AuthUI = (() => {
         </div>
 
         <!-- Lista dinámica -->
-        <div class="lb-list" id="ranking-list-xp">
+        <div class="lb-list" id="ranking-list-division">
+          <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando división…</div>
+        </div>
+        <div class="lb-list" id="ranking-list-xp" style="display:none;">
           <div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando ranking…</div>
         </div>
         <div class="lb-list" id="ranking-list-gcoins" style="display:none;">
@@ -3692,6 +3717,12 @@ const Store = (() => {
   }
 
   function addXP(amount) {
+    // Chequear ascenso de liga después de sumar XP
+    setTimeout(function() {
+      if (typeof RankingModule !== 'undefined' && RankingModule.checkPromotion) {
+        RankingModule.checkPromotion();
+      }
+    }, 500);
     // Aplicar doble XP si el boost está activo
     var multiplier = 1;
     if (S.xpBoost && S.xpBoost.active && Date.now() < S.xpBoost.endsAt) {
@@ -8447,39 +8478,196 @@ const MBConfig = (() => {
 const RankingModule = (() => {
   let _lastData     = null;
   let _lastDataGC   = null;
-  let _activeTab    = 'xp';
+  let _activeTab    = 'division';
+
+  // ── CONFIGURACIÓN DE LIGAS ────────────────────────────────────
+  const LEAGUES = {
+    primera:    { name: '🥇 Primera División', minXP: 4000, color: 'var(--gold)',    badge: 'primera',    ascendFrom: null,         descendTo: 'nacional_b' },
+    nacional_b: { name: '🥈 Nacional B',        minXP: 1000, color: '#C0C0C0',        badge: 'nacional_b', ascendFrom: 'primera',    descendTo: '3ra' },
+    '3ra':      { name: '🥉 3ra División',       minXP: 0,    color: '#CD853F',        badge: 'tercera',    ascendFrom: 'nacional_b', descendTo: null },
+  };
+
+  // Recompensas por ascenso
+  const PROMO_REWARDS = {
+    nacional_b: { gcoins: 500,  xp: 200, msg: '🎉 ¡Ascendiste a Nacional B! +500 G-Coins +200 XP' },
+    primera:    { gcoins: 1500, xp: 500, msg: '👑 ¡Ascendiste a Primera División! +1500 G-Coins +500 XP' },
+  };
+
+  function getLeagueForXP(xp) {
+    if (xp >= 4000) return 'primera';
+    if (xp >= 1000) return 'nacional_b';
+    return '3ra';
+  }
+
+  function getLeagueName(league) {
+    return LEAGUES[league]?.name || '🥉 3ra División';
+  }
+
+  // Chequear si el usuario subió de liga y dar recompensa
+  async function checkPromotion() {
+    if (!Auth.isLoggedIn()) return;
+    try {
+      var S = Store.get();
+      var xp = S.xp || 0;
+      var newLeague = getLeagueForXP(xp);
+
+      var { data: prof } = await _sb.from('profiles')
+        .select('league')
+        .eq('id', Auth.getUser().id)
+        .single();
+
+      var oldLeague = prof?.league || '3ra';
+      if (oldLeague === newLeague) return;
+
+      // Verificar que es un ascenso (no descenso)
+      var order = ['3ra', 'nacional_b', 'primera'];
+      var oldIdx = order.indexOf(oldLeague);
+      var newIdx = order.indexOf(newLeague);
+      if (newIdx <= oldIdx) return; // no es ascenso
+
+      // Actualizar liga en Supabase
+      await _sb.from('profiles').update({ league: newLeague }).eq('id', Auth.getUser().id);
+
+      // Dar recompensa
+      var reward = PROMO_REWARDS[newLeague];
+      if (reward) {
+        Store.addGCoins(reward.gcoins);
+        Store.addXP(reward.xp);
+        HeaderModule.refresh();
+        Store.showGCoinToast(reward.msg);
+      }
+    } catch(e) {
+      console.warn('[League] checkPromotion error:', e.message);
+    }
+  }
 
   function setTab(tab) {
     _activeTab = tab;
+    var divList   = document.getElementById('ranking-list-division');
     var xpList    = document.getElementById('ranking-list-xp');
     var gcList    = document.getElementById('ranking-list-gcoins');
     var clubsList = document.getElementById('ranking-list-clubs');
+    var tabDiv    = document.getElementById('rank-tab-division');
     var tabXP     = document.getElementById('rank-tab-xp');
     var tabGC     = document.getElementById('rank-tab-gc');
     var tabClubs  = document.getElementById('rank-tab-clubs');
     var desc      = document.getElementById('rank-tab-desc');
-    if (xpList)    xpList.style.display    = tab === 'xp'     ? '' : 'none';
-    if (gcList)    gcList.style.display    = tab === 'gcoins' ? '' : 'none';
-    if (clubsList) clubsList.style.display = tab === 'clubs'  ? '' : 'none';
+
+    if (divList)   divList.style.display   = tab === 'division' ? '' : 'none';
+    if (xpList)    xpList.style.display    = tab === 'xp'       ? '' : 'none';
+    if (gcList)    gcList.style.display    = tab === 'gcoins'   ? '' : 'none';
+    if (clubsList) clubsList.style.display = tab === 'clubs'    ? '' : 'none';
 
     var tabs = [
+      { el: tabDiv,   active: tab === 'division' },
       { el: tabXP,    active: tab === 'xp' },
       { el: tabGC,    active: tab === 'gcoins' },
       { el: tabClubs, active: tab === 'clubs' },
     ];
     tabs.forEach(function(t) {
       if (!t.el) return;
-      t.el.style.background   = t.active ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
-      t.el.style.borderColor  = t.active ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
-      t.el.style.color        = t.active ? 'var(--gold)' : 'var(--t2)';
+      t.el.style.background  = t.active ? 'rgba(212,175,55,.1)' : 'rgba(255,255,255,.03)';
+      t.el.style.borderColor = t.active ? 'rgba(212,175,55,.4)' : 'rgba(255,255,255,.08)';
+      t.el.style.color       = t.active ? 'var(--gold)' : 'var(--t2)';
     });
 
     if (desc) desc.textContent =
-      tab === 'xp'     ? 'Premia la constancia — cuanto más jugás, más subís.' :
-      tab === 'gcoins' ? 'Premia la habilidad — tu saldo actual de G-Coins define tu posición.' :
-                         'Clubes ordenados por score semanal ponderado.';
+      tab === 'division' ? 'Tu división — jugás contra jugadores de tu nivel.' :
+      tab === 'xp'       ? 'Ranking global — todos los jugadores por XP.' :
+      tab === 'gcoins'   ? 'Premia la habilidad — tu saldo actual de G-Coins.' :
+                           'Clubes ordenados por score semanal.';
 
+    if (tab === 'division') _loadDivisionRanking();
     if (tab === 'clubs') _loadClubsRanking();
+  }
+
+  async function _loadDivisionRanking() {
+    var list = document.getElementById('ranking-list-division');
+    if (!list) return;
+    list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Cargando…</div>';
+
+    try {
+      var S = Store.get();
+      var myXP = S.xp || 0;
+      var myLeague = getLeagueForXP(myXP);
+      var leagueCfg = LEAGUES[myLeague];
+
+      // Traer jugadores de la misma liga
+      var minXP = leagueCfg.minXP;
+      var maxXP = myLeague === 'primera' ? 999999 :
+                  myLeague === 'nacional_b' ? 3999 : 999;
+
+      var { data: players } = await _sb.from('profiles')
+        .select('username, xp, g_coins')
+        .gte('xp', minXP)
+        .lte('xp', maxXP)
+        .order('xp', { ascending: false })
+        .limit(50);
+
+      if (!players || !players.length) {
+        list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">No hay jugadores en tu división aún.</div>';
+        return;
+      }
+
+      var total = players.length;
+      var ascendZone  = Math.max(1, Math.floor(total * 0.25)); // top 25% sube
+      var descendZone = Math.max(1, Math.floor(total * 0.25)); // bottom 25% baja
+      var myUsername  = (Auth.getUser()?.email || '').split('@')[0];
+
+      // Header con info de la liga
+      var nextLeague = myLeague === '3ra' ? 'Nacional B (1.000 XP)' :
+                       myLeague === 'nacional_b' ? 'Primera División (4.000 XP)' : null;
+      var xpToNext = myLeague === '3ra' ? Math.max(0, 1000 - myXP) :
+                     myLeague === 'nacional_b' ? Math.max(0, 4000 - myXP) : 0;
+
+      var headerHtml = '<div class="league-header">' +
+        '<div class="league-header-top">' +
+          '<span class="league-header-name">' + leagueCfg.name + '</span>' +
+          '<span class="league-badge ' + leagueCfg.badge + '">' + total + ' jugadores</span>' +
+        '</div>' +
+        '<div class="league-header-info">' +
+          (nextLeague ? '⬆️ ' + xpToNext + ' XP para ' + nextLeague : '👑 División máxima') +
+          ' · Corte semanal los lunes' +
+        '</div>' +
+      '</div>';
+
+      // Zonas
+      var prevZone = '';
+      var rows = players.map(function(p, i) {
+        var isMe = p.username === myUsername;
+        var zone = i < ascendZone ? 'up' : i >= total - descendZone ? 'down' : 'mid';
+        var zoneLabel = '';
+
+        if (zone !== prevZone) {
+          prevZone = zone;
+          if (zone === 'up') zoneLabel = '<div class="league-zone-label league-zone-up">⬆️ Zona de ascenso</div>';
+          else if (zone === 'down' && myLeague !== '3ra') zoneLabel = '<div class="league-zone-label league-zone-down">⬇️ Zona de descenso</div>';
+          else if (zone === 'mid') zoneLabel = '<div class="league-zone-label league-zone-mid">— Zona segura</div>';
+        }
+
+        var medals = ['🥇','🥈','🥉'];
+        var medal = medals[i] || (i + 1);
+        var rowCls = 'lb-row' + (isMe ? ' me' : '') + (zone === 'up' ? ' zone-up' : zone === 'down' && myLeague !== '3ra' ? ' zone-down' : '');
+
+        return zoneLabel + '<div class="' + rowCls + '">' +
+          '<span class="lb-rank ' + (i===0?'g':i===1?'s':i===2?'b':'') + '">' + (i < 3 ? medals[i] : i+1) + '</span>' +
+          '<span class="lb-ava">👤</span>' +
+          '<div class="lb-info">' +
+            '<div class="lb-name">' + (p.username || 'Jugador') + (isMe ? ' ← Vos' : '') + '</div>' +
+            '<div class="lb-lvl">' + (p.xp || 0).toLocaleString('es-AR') + ' XP</div>' +
+            '<div class="lb-bar-track"><div class="lb-bar-fill" style="width:' + Math.min(100, ((p.xp||0) / (maxXP || 999)) * 100).toFixed(0) + '%;' + (isMe ? 'background:linear-gradient(90deg,var(--neon-d),var(--neon))' : '') + '"></div></div>' +
+          '</div>' +
+          '<span class="lb-extra" style="font-size:10px;color:' + (zone==='up'?'var(--neon)':zone==='down'&&myLeague!=='3ra'?'var(--red)':'var(--t3)') + '">' +
+            (zone==='up'?'⬆️':zone==='down'&&myLeague!=='3ra'?'⬇️':'') +
+          '</span>' +
+        '</div>';
+      }).join('');
+
+      list.innerHTML = headerHtml + rows;
+    } catch(e) {
+      console.warn('[RankingModule] division error:', e.message);
+      list.innerHTML = '<div style="padding:20px;text-align:center;font-size:11px;color:var(--t3);">Error cargando división.</div>';
+    }
   }
 
   async function _loadClubsRanking() {
@@ -8551,6 +8739,9 @@ const RankingModule = (() => {
       _renderList(dataGC, 'ranking-list-gcoins', 'gcoins');
     }
     if (_activeTab === 'clubs') _loadClubsRanking();
+    if (_activeTab === 'division') _loadDivisionRanking();
+    // Default tab: division
+    if (_activeTab === 'xp') setTab('division');
   }
 
   function _getMyUsername() {
@@ -8656,7 +8847,7 @@ const RankingModule = (() => {
     panel.innerHTML = html;
   }
 
-  return { refresh: refresh, setTab: setTab };
+  return { refresh: refresh, setTab: setTab, checkPromotion: checkPromotion, getLeagueForXP: getLeagueForXP, getLeagueName: getLeagueName };
 })();
 
 /* ── SETTINGS MODAL MODULE ──────────────────────────────────── */
