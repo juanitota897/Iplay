@@ -560,37 +560,54 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bet-result-bar-amt.pending{color:var(--gold);}
 
 
-/* ── CLUBS ONBOARDING ───────────────────────────────────────── */
+/* ── CLUBS ONBOARDING (mismo sistema que onboarding del home) ── */
 #club-ob-overlay{
   position:absolute;inset:0;z-index:350;
-  background:rgba(4,4,12,.92);backdrop-filter:blur(6px);
-  display:flex;align-items:flex-end;justify-content:center;
-  opacity:0;pointer-events:none;transition:opacity .3s;
+  pointer-events:none !important;
+  opacity:0;transition:opacity .3s;
 }
-#club-ob-overlay.active{opacity:1;pointer-events:all;}
+#club-ob-overlay.active{opacity:1;}
+#club-ob-spotlight{
+  position:absolute;pointer-events:none !important;
+  border-radius:12px;
+  box-shadow:0 0 0 9999px rgba(4,4,12,.84);
+  z-index:351;display:none;
+  border:2px solid rgba(212,175,55,.7);
+  transition:top .3s,left .3s,width .3s,height .3s;
+}
 #club-ob-card{
-  width:100%;max-width:430px;
+  position:absolute;
+  left:12px;right:12px;
   background:var(--bg2);
   border:1px solid var(--border-b);
-  border-radius:24px 24px 0 0;
-  padding:24px 20px 32px;
-  transform:translateY(40px);
-  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+  border-radius:var(--r-xl);
+  padding:18px 16px 14px;
+  box-shadow:0 12px 48px rgba(0,0,0,.7),0 0 0 1px rgba(212,175,55,.08);
+  pointer-events:none;
+  z-index:352;
+  animation:slide-up .32s cubic-bezier(.34,1.56,.64,1);
+  transition:bottom .4s cubic-bezier(.4,0,.2,1),top .4s cubic-bezier(.4,0,.2,1);
 }
-#club-ob-overlay.active #club-ob-card{transform:translateY(0);}
-.club-ob-handle{width:36px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin:0 auto 20px;}
-.club-ob-steps{display:flex;gap:6px;justify-content:center;margin-bottom:20px;}
-.club-ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg5);transition:all .25s;}
-.club-ob-dot.active{width:18px;border-radius:3px;background:var(--gold);}
-.club-ob-dot.done{background:var(--gold-d);}
-.club-ob-ico{font-size:44px;text-align:center;margin-bottom:12px;line-height:1;}
-.club-ob-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--t1);letter-spacing:.3px;text-align:center;margin-bottom:8px;}
-.club-ob-text{font-size:13px;color:var(--t2);line-height:1.6;text-align:center;margin-bottom:20px;min-height:52px;}
-.club-ob-actions{display:flex;align-items:center;gap:8px;}
-.club-ob-skip{flex:0 0 auto;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;padding:8px 4px;}
-.club-ob-next{flex:1;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.3px;cursor:pointer;transition:opacity .15s;}
-.club-ob-next:active{opacity:.85;}
-.club-ob-prev{flex:0 0 auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;padding:8px 12px;}
+#club-ob-card::before{
+  content:'';position:absolute;top:0;left:16px;right:16px;height:2px;border-radius:0 0 2px 2px;
+  background:linear-gradient(90deg,transparent,var(--gold),var(--gold-l),var(--gold),transparent);
+}
+#club-ob-overlay.active #club-ob-card{pointer-events:all;}
+.club-ob-dots{display:flex;gap:6px;margin-bottom:12px;}
+.club-ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg5);border:1px solid rgba(212,175,55,.2);transition:all .25s;}
+.club-ob-dot.active{width:18px;border-radius:3px;background:var(--gold);border-color:var(--gold);}
+.club-ob-dot.done{background:var(--gold-d);border-color:var(--gold-d);}
+#club-ob-title{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--t1);letter-spacing:.3px;margin-bottom:6px;line-height:1.1;}
+#club-ob-text{font-size:13px;color:var(--t2);line-height:1.55;margin-bottom:14px;}
+#club-ob-actions{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+#club-ob-skip{background:none;border:none;font-size:12px;color:var(--t3);padding:6px 4px;flex-shrink:0;transition:color .15s;}
+#club-ob-skip:hover{color:var(--t2);}
+#club-ob-nav{display:flex;gap:8px;}
+#club-ob-prev{padding:9px 14px;border-radius:var(--r-md);border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;letter-spacing:.3px;transition:all .15s;}
+#club-ob-prev:hover{background:rgba(255,255,255,.09);color:var(--t1);}
+#club-ob-prev:disabled{opacity:0;pointer-events:none;}
+#club-ob-next{padding:9px 16px;border-radius:var(--r-md);border:none;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;box-shadow:0 3px 14px rgba(212,175,55,.25);transition:all .2s;}
+#club-ob-next:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(212,175,55,.35);}
 
 /* ── FEED GLOBAL PANEL ── */
 #global-feed-btn{
@@ -3767,16 +3784,17 @@ const AuthUI = (() => {
 
   <!-- ── CLUBS ONBOARDING OVERLAY ── -->
   <div id="club-ob-overlay">
+    <div id="club-ob-spotlight"></div>
     <div id="club-ob-card">
-      <div class="club-ob-handle"></div>
-      <div class="club-ob-steps" id="club-ob-steps"></div>
-      <div class="club-ob-ico" id="club-ob-ico">⚔️</div>
-      <div class="club-ob-title" id="club-ob-title"></div>
-      <div class="club-ob-text" id="club-ob-text"></div>
-      <div class="club-ob-actions">
-        <button class="club-ob-skip" onclick="ClubsOnboarding.skip()">Omitir</button>
-        <button class="club-ob-prev" id="club-ob-prev" onclick="ClubsOnboarding.prev()">← Atrás</button>
-        <button class="club-ob-next" id="club-ob-next" onclick="ClubsOnboarding.next()">Siguiente →</button>
+      <div class="club-ob-dots" id="club-ob-dots"></div>
+      <div id="club-ob-title"></div>
+      <div id="club-ob-text"></div>
+      <div id="club-ob-actions">
+        <button id="club-ob-skip" onclick="ClubsOnboarding.skip()">Omitir</button>
+        <div id="club-ob-nav">
+          <button id="club-ob-prev" onclick="ClubsOnboarding.prev()">← Anterior</button>
+          <button id="club-ob-next" onclick="ClubsOnboarding.next()">Siguiente →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -9930,57 +9948,53 @@ const ClubsModule = (() => {
 })();
 
 
-/* ── CLUBS ONBOARDING MODULE ────────────────────────────────── */
+/* ── CLUBS ONBOARDING MODULE (mismo sistema que Onboarding del home) ── */
 const ClubsOnboarding = (() => {
   const STORAGE_KEY = 'glayer_clubs_ob_seen';
-  const STEPS = [
-    {
-      ico:   '⚔️',
-      title: '¿Qué son los Clubes?',
-      text:  'Un Club es tu equipo en G-Layer. Juntos acumulan puntos, abren la Bóveda grupal y compiten en el ranking de Clubes.',
-    },
-    {
-      ico:   '🏦',
-      title: 'Bóveda del Club',
-      text:  'Cada apuesta, micro-apuesta y ronda de Crash que haga cualquier miembro suma combustible. Al llegar a la meta, todos cobran.',
-    },
-    {
-      ico:   '🌐',
-      title: 'Feed en tiempo real',
-      text:  'Ves la actividad de tus compañeros al instante. Cada apuesta, cada ganancia, cada logro aparece en el feed del Club.',
-    },
-    {
-      ico:   '🚀',
-      title: '¡Empezá ahora!',
-      text:  'Creá tu propio Club o unite al de un amigo con un código. Los primeros 50 miembros de cada Club arrancan con bonus de fundador.',
-      final: true,
-    },
+
+  // Pasos: selector apunta al elemento real de la pantalla de clubes.
+  // Cuando el usuario no tiene club → apuntan a .club-empty y .club-empty-btns
+  // Cuando tiene club → apuntan a .club-hdr-card, .club-score-card, etc.
+  // Usamos selectores que existen en AMBOS estados donde sea posible,
+  // y fallback a null (sin spotlight) cuando el elemento no esté visible.
+  const STEPS_NO_CLUB = [
+    { selector: '.club-empty',       title: '⚔️ ¿Qué son los Clubes?',  text: 'Un Club es tu equipo en G-Layer. Juntos acumulan puntos, compiten en el ranking y abren la Bóveda grupal cada semana.' },
+    { selector: '.club-empty-btns',  title: '🚀 Crear o unirse',         text: 'Podés crear tu propio Club (Nivel 2+) o unirte al de un amigo con un código de 6 letras.' },
+    { selector: null,                title: '🏦 Bóveda del Club',        text: 'Cada apuesta, micro-apuesta y ronda de Crash suma combustible a la bóveda. Al llegar a la meta, todos los miembros cobran XP y G-Coins.' },
+    { selector: null,                title: '🌐 Feed en tiempo real',    text: 'Ves la actividad de tus compañeros al instante — cada apuesta, ganancia y logro aparece en el feed compartido.', finalBtn: '¡Entendido!' },
+  ];
+  const STEPS_WITH_CLUB = [
+    { selector: '.club-hdr-card',    title: '⚔️ Tu Club',               text: 'Acá ves el nombre, tu rol y el código de invitación para sumar compañeros. Compartilo con tus amigos.' },
+    { selector: '.club-score-card',  title: '⚡ Score Semanal',          text: 'Cada acción del equipo suma puntos. El ranking de Clubes se actualiza en tiempo real y se resetea los lunes.' },
+    { selector: '.club-vault-card',  title: '🏦 Bóveda del Club',        text: 'Al llegar a la meta semanal, todos los miembros cobran la recompensa. Apostá y jugá para llenarla más rápido.' },
+    { selector: '.club-feed-card',   title: '🌐 Feed en tiempo real',    text: 'La actividad de todo el equipo aparece acá al instante. Cada apuesta, cada win, cada Crash jugado.', finalBtn: '¡Entendido!' },
   ];
 
   let _step = 0;
   let _active = false;
+  let _resizeTimer = null;
+  let _steps = STEPS_NO_CLUB; // se elige al abrir según contexto
+  let _forceMode = false; // true cuando se abre con forceShow() — no guarda en Supabase
 
-  // ── Verificar si ya lo vio ────────────────────────────────────
+  // ── Verificar si ya lo vio ──────────────────────────────────────
   async function shouldShow() {
     try {
-      // Supabase es la fuente de verdad — igual que el onboarding principal
       if (Auth.isLoggedIn()) {
         var { data } = await _sb.from('profiles')
           .select('clubs_onboarding_seen')
           .eq('id', Auth.getUser().id)
           .single();
-        // Si la columna no existe todavía en profiles, usa localStorage como fallback
         if (data && data.clubs_onboarding_seen != null) {
           return !data.clubs_onboarding_seen;
         }
       }
     } catch(e) {}
-    // Fallback a localStorage
     try { return !localStorage.getItem(STORAGE_KEY); } catch(e) { return false; }
   }
 
-  // ── Marcar como visto ─────────────────────────────────────────
+  // ── Marcar como visto (solo en cierre natural, no en forceShow) ──
   function _markSeen() {
+    if (_forceMode) return;
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
     try {
       if (Auth.isLoggedIn()) {
@@ -9991,54 +10005,135 @@ const ClubsOnboarding = (() => {
     } catch(e) {}
   }
 
-  // ── Mostrar si corresponde (llamar al entrar a la tab Clubs) ──
+  // ── Mostrar si corresponde ──────────────────────────────────────
   async function tryShow() {
     if (_active) return;
     if (!(await shouldShow())) return;
-    _start();
+    _forceMode = false;
+    _open();
   }
 
-  function _start() {
+  // ── Forzar sin guardar en Supabase ─────────────────────────────
+  function forceShow() {
+    _forceMode = true;
+    _open();
+  }
+
+  function _open() {
+    // Elegir pasos según si el usuario tiene club o no
+    var hasClub = !!document.querySelector('.club-hdr-card');
+    _steps = hasClub ? STEPS_WITH_CLUB : STEPS_NO_CLUB;
     _step = 0;
     _active = true;
-    var ov = document.getElementById('club-ob-overlay');
-    if (!ov) return;
     _buildDots();
     _render();
-    ov.classList.add('active');
+    var ov = document.getElementById('club-ob-overlay');
+    if (ov) {
+      ov.style.opacity = '0';
+      ov.classList.add('active');
+      requestAnimationFrame(function() {
+        ov.style.transition = 'opacity .3s';
+        ov.style.opacity = '1';
+      });
+    }
+    window.addEventListener('resize', _onResize);
   }
 
   function _buildDots() {
-    var el = document.getElementById('club-ob-steps');
+    var el = document.getElementById('club-ob-dots');
     if (!el) return;
-    el.innerHTML = STEPS.map(function(_, i) {
+    el.innerHTML = _steps.map(function(_, i) {
       return '<span class="club-ob-dot" data-i="' + i + '"></span>';
     }).join('');
   }
 
   function _render() {
-    var s = STEPS[_step];
+    var s = _steps[_step];
+    var last = _step === _steps.length - 1;
     var g = function(id) { return document.getElementById(id); };
-    if (g('club-ob-ico'))   g('club-ob-ico').textContent   = s.ico;
-    if (g('club-ob-title')) g('club-ob-title').textContent = s.title;
-    if (g('club-ob-text'))  g('club-ob-text').textContent  = s.text;
+
     // Dots
     document.querySelectorAll('.club-ob-dot').forEach(function(d, i) {
       d.classList.toggle('active', i === _step);
       d.classList.toggle('done',   i < _step);
     });
-    // Botones
-    var prev = g('club-ob-prev');
-    var next = g('club-ob-next');
-    if (prev) prev.style.display = _step === 0 ? 'none' : '';
-    if (next) next.textContent = s.final ? '¡Entendido! →' : 'Siguiente →';
+
+    if (g('club-ob-title')) g('club-ob-title').textContent = s.title;
+    if (g('club-ob-text'))  g('club-ob-text').textContent  = s.text;
+    if (g('club-ob-prev'))  g('club-ob-prev').disabled = _step === 0;
+    if (g('club-ob-next'))  g('club-ob-next').textContent = last ? (s.finalBtn || 'Finalizar') : 'Siguiente →';
+
+    _applySpotlight();
+  }
+
+  function _applySpotlight() {
+    var s = _steps[_step];
+    var sp   = document.getElementById('club-ob-spotlight');
+    var card = document.getElementById('club-ob-card');
+    var app  = document.getElementById('app');
+    if (!sp || !card || !app) return;
+
+    if (!s.selector) {
+      // Sin selector → ocultar spotlight, centrar card
+      sp.style.display = 'none';
+      card.style.top  = 'auto';
+      card.style.bottom = '80px';
+      return;
+    }
+
+    var target = document.querySelector(s.selector);
+    if (!target) { sp.style.display = 'none'; return; }
+
+    var snap = _step;
+    var paint = function() {
+      if (_step !== snap || !_active) return;
+      var ar  = app.getBoundingClientRect();
+      var r   = target.getBoundingClientRect();
+      var pad = 8;
+      var t = r.top  - ar.top  - pad;
+      var l = r.left - ar.left - pad;
+      var w = r.width  + pad * 2;
+      var h = r.height + pad * 2;
+      var appH = ar.height;
+
+      Object.assign(sp.style, {
+        display:  'block',
+        top:      t + 'px',
+        left:     l + 'px',
+        width:    w + 'px',
+        height:   h + 'px',
+      });
+
+      // Card: si el target está en la mitad superior → card abajo, si no → card arriba
+      var targetMidY = t + h / 2;
+      var gap = 14;
+      if (targetMidY < appH * 0.5) {
+        card.style.top    = (t + h + gap) + 'px';
+        card.style.bottom = 'auto';
+      } else {
+        card.style.top    = 'auto';
+        card.style.bottom = (appH - t + gap) + 'px';
+      }
+    };
+
+    // Scroll si el elemento está fuera de la vista
+    var view = document.querySelector('#view-clubs');
+    if (view) {
+      var vr = view.getBoundingClientRect();
+      var er = target.getBoundingClientRect();
+      if (er.top < vr.top || er.bottom > vr.bottom) {
+        view.scrollTo({ top: view.scrollTop + er.top - vr.top - 80, behavior: 'smooth' });
+        setTimeout(function() { requestAnimationFrame(paint); }, 360);
+        return;
+      }
+    }
+    requestAnimationFrame(paint);
   }
 
   function next() {
     if (!_active) return;
-    if (_step >= STEPS.length - 1) { _finish(); return; }
-    _step++;
-    _render();
+    if (_step < _steps.length - 1) { _step++; _render(); }
+    else { _finish(); }
   }
 
   function prev() {
@@ -10052,25 +10147,24 @@ const ClubsOnboarding = (() => {
   function _finish() {
     _active = false;
     _markSeen();
+    window.removeEventListener('resize', _onResize);
+    var sp = document.getElementById('club-ob-spotlight');
+    if (sp) sp.style.display = 'none';
     var ov = document.getElementById('club-ob-overlay');
     if (ov) {
+      ov.style.transition = 'opacity .25s';
       ov.style.opacity = '0';
       setTimeout(function() {
         ov.classList.remove('active');
-        ov.style.opacity = '';
-      }, 300);
+        ov.style.opacity = ov.style.transition = '';
+      }, 260);
     }
   }
 
-  // Fuerza el tour sin marcar como visto en Supabase — para el botón manual
-  function forceShow() {
-    _step = 0;
-    _active = true;
-    var ov = document.getElementById('club-ob-overlay');
-    if (!ov) return;
-    _buildDots();
-    _render();
-    ov.classList.add('active');
+  function _onResize() {
+    if (!_active) return;
+    clearTimeout(_resizeTimer);
+    _resizeTimer = setTimeout(function() { if (_active) _applySpotlight(); }, 120);
   }
 
   return { tryShow, forceShow, skip, next, prev };
