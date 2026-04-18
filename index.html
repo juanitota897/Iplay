@@ -3901,12 +3901,140 @@ const LiveProvider = (() => {
   };
 
   // Evento de API → tipo de microbet
+  function _randDur(min, max) { return Math.floor(min + Math.random() * (max - min)); }
+
+  // ── GENERADOR DE EVENTOS PREDICTIVOS ─────────────────────────
+  // Los eventos NO reaccionan a lo que pasó — preguntan sobre el futuro
+  // El usuario no puede saber la respuesta aunque esté mirando la tele
+  // Ventana predictiva: siempre entre +5 y +15 minutos del minuto actual
+  function _buildPredictiveEvent(match) {
+    const min   = match.minute || 0;
+    const homeG = match.homeG || 0;
+    const awayG = match.awayG || 0;
+    const home  = match.home  || 'Local';
+    const away  = match.away  || 'Visitante';
+    const diff  = homeG - awayG;
+    const winMin = min + 5 + Math.floor(Math.random() * 8); // ventana +5 a +13 min
+
+    // Pool de preguntas según contexto del partido
+    const pool = [];
+
+    // ── Preguntas universales (siempre disponibles) ──
+    pool.push({
+      type: '⚽ Próximo gol',
+      q: '¿Quién anota el próximo gol?',
+      optA: home, optB: away,
+      durMin: 20, durMax: 35,
+      winA: 0.50, multA: 1.85, multB: 1.85,
+      resolveMin: winMin + 10,
+    });
+
+    pool.push({
+      type: '📊 Resultado',
+      q: '¿Cambia el marcador en los próximos ' + (winMin - min) + ' min?',
+      optA: 'Sí, hay gol', optB: 'Sigue igual',
+      durMin: 18, durMax: 30,
+      winA: 0.38, multA: 2.2, multB: 1.55,
+      resolveMin: winMin,
+    });
+
+    // ── Contexto: primer tiempo ──
+    if (min < 40) {
+      pool.push({
+        type: '🕐 Primer tiempo',
+        q: '¿Hay gol antes del descanso?',
+        optA: 'Sí', optB: 'No',
+        durMin: 20, durMax: 30,
+        winA: 0.42, multA: 2.0, multB: 1.7,
+        resolveMin: 45,
+      });
+    }
+
+    // ── Contexto: segundo tiempo temprano ──
+    if (min >= 45 && min < 60) {
+      pool.push({
+        type: '⚡ Arranque 2T',
+        q: '¿Gol en los primeros 15 min del segundo tiempo?',
+        optA: 'Sí', optB: 'No',
+        durMin: 18, durMax: 28,
+        winA: 0.40, multA: 2.1, multB: 1.65,
+        resolveMin: 60,
+      });
+    }
+
+    // ── Contexto: partido igualado ──
+    if (diff === 0) {
+      pool.push({
+        type: '⚖️ Igualdad',
+        q: '¿Quién rompe el empate antes del min ' + winMin + '?',
+        optA: home, optB: away,
+        durMin: 20, durMax: 32,
+        winA: 0.50, multA: 1.9, multB: 1.9,
+        resolveMin: winMin,
+      });
+    }
+
+    // ── Contexto: hay diferencia de 1 gol ──
+    if (Math.abs(diff) === 1) {
+      const leader  = diff > 0 ? home : away;
+      const trailer = diff > 0 ? away : home;
+      const trailerWinA = diff > 0; // optA = empate (trailer lo logra)
+      pool.push({
+        type: '🔄 Descuento',
+        q: '¿' + trailer + ' empata antes del min ' + winMin + '?',
+        optA: 'Sí, empata', optB: 'No llega',
+        durMin: 18, durMax: 28,
+        winA: 0.30, multA: 2.6, multB: 1.4,
+        resolveMin: winMin,
+      });
+      pool.push({
+        type: '🔒 Cierre',
+        q: '¿' + leader + ' hace el segundo gol antes del min ' + winMin + '?',
+        optA: 'Sí', optB: 'No',
+        durMin: 18, durMax: 28,
+        winA: 0.25, multA: 3.0, multB: 1.35,
+        resolveMin: winMin,
+      });
+    }
+
+    // ── Contexto: final del partido (min 70+) ──
+    if (min >= 70) {
+      const scoreStr = homeG + '-' + awayG;
+      pool.push({
+        type: '🏁 Final',
+        q: '¿Termina ' + scoreStr + ' o cambia el marcador?',
+        optA: 'Termina ' + scoreStr, optB: 'Hay más goles',
+        durMin: 20, durMax: 35,
+        winA: 0.55, multA: 1.6, multB: 2.1,
+        resolveMin: 90,
+      });
+
+      if (diff === 0) {
+        pool.push({
+          type: '⏱ Tiempo extra',
+          q: '¿Alguien gana antes del 90 o hay tiempo extra?',
+          optA: 'Gana alguien', optB: 'Va al alargue',
+          durMin: 20, durMax: 30,
+          winA: 0.45, multA: 1.95, multB: 1.85,
+          resolveMin: 90,
+        });
+      }
+    }
+
+    // Elegir uno al azar del pool contextual
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  // EVENT_MAP: solo para corner/penal/falta — se usa SOLO si el evento
+  // ocurrió hace menos de 1 min (filtro en _processEvents)
+  // Y la pregunta apunta al SIGUIENTE evento similar, no al que ya pasó
   const EVENT_MAP = {
-    'Corner':    { type:'Córner',    q:'¿Qué pasa en el área?',        optA:'Remate',  optB:'Despeje',    dur:35 },
-    'Penalty':   { type:'Penal',     q:'¿El penal entra?',             optA:'Gol',     optB:'Ataja/Erra', dur:20 },
-    'Free Kick': { type:'Tiro libre',q:'¿Qué pasa en la ejecución?',   optA:'Al arco', optB:'Centro',     dur:30 },
-    'Yellow Card':{ type:'Falta',    q:'¿Cómo sigue el juego?',        optA:'Tarjeta', optB:'Juego sigue',dur:25 },
-    'Goal':      { type:'Gol',       q:'¿Cómo reacciona el partido?',  optA:'Domina quien anota', optB:'Se nivela',dur:40 },
+    'Corner':     { type:'📐 Córner',    q:'¿Hay otro córner en los próximos 4 min?',   optA:'Sí',  optB:'No',  durMin:12, durMax:18, winA:0.45, multA:1.9, multB:1.9 },
+    'Penalty':    { type:'🎯 Penal',     q:'¿Hay otro penal antes que termine el tiempo?', optA:'Sí', optB:'No', durMin:15, durMax:22, winA:0.18, multA:4.0, multB:1.2 },
+    'Free Kick':  { type:'🎯 Tiro libre',q:'¿El equipo que pateó genera otro en 5 min?', optA:'Sí', optB:'No',  durMin:12, durMax:18, winA:0.40, multA:2.1, multB:1.7 },
+    'Yellow Card':{ type:'🟨 Tarjeta',   q:'¿Otra tarjeta antes del min ' + '?',         optA:'Sí', optB:'No',  durMin:12, durMax:20, winA:0.35, multA:2.3, multB:1.5 },
+    'Goal':       { type:'⚽ Gol',       q:'¿El partido cambia de ritmo y hay otro gol en 10 min?', optA:'Sí', optB:'No', durMin:18, durMax:28, winA:0.30, multA:2.7, multB:1.4 },
+    'Substitution':{ type:'🔄 Cambio',   q:'¿El cambio genera una jugada peligrosa en 5 min?', optA:'Sí', optB:'No', durMin:12, durMax:18, winA:0.40, multA:2.1, multB:1.7 },
   };
 
   let _match = null;         // partido activo
@@ -3919,7 +4047,30 @@ const LiveProvider = (() => {
 
   const RELATOS = ['⚡ Contraataque veloz','🔥 Presión alta del local','🎯 Jugada peligrosa','🛡️ Defensa sólida','💥 Disparo al arco','⚡ Transición rápida','🔥 Dominio en el centro','🎯 Centro peligroso','💨 Velocidad por el costado'];
 
-  // ── API FETCH ─────────────────────────────────────────────────
+  // ── CACHE FETCH — lee de api_cache en Supabase ───────────────
+  // El live-poller cron actualiza estos datos cada 60s
+  // Todos los usuarios comparten el mismo cache → 0 requests a la API
+  async function _cacheGet(key) {
+    try {
+      const { data, error } = await _sb.from('api_cache')
+        .select('data, created_at')
+        .eq('key', key)
+        .single();
+      if (error || !data) return null;
+      // Rechazar cache mayor a 3 minutos (stale)
+      const age = Date.now() - new Date(data.created_at).getTime();
+      if (age > 3 * 60 * 1000) {
+        console.warn('[LiveProvider] cache stale para', key, Math.round(age/1000) + 's');
+        return null;
+      }
+      return data.data;
+    } catch(e) {
+      console.warn('[LiveProvider] cache error:', e.message);
+      return null;
+    }
+  }
+
+  // Fallback al proxy directo si el cache no tiene datos aún
   async function _apiFetch(endpoint) {
     try {
       const path = endpoint.replace(/^\//, '');
@@ -3939,8 +4090,13 @@ const LiveProvider = (() => {
   async function connect() {
     _updateBadge(false);
 
-    // Optimización: un solo request para todos los partidos en vivo
-    const data = await _apiFetch('/fixtures?live=all');
+    // Leer de api_cache primero — el live-poller lo actualiza cada 60s
+    // Si el cache está stale o vacío, fallback al proxy directo
+    var data = await _cacheGet('live_fixtures');
+    if (!data) {
+      console.log('[LiveProvider] cache miss — fallback a proxy');
+      data = await _apiFetch('/fixtures?live=all');
+    }
 
     if (!data || !data.length) {
       _showNoGames();
@@ -4006,26 +4162,36 @@ const LiveProvider = (() => {
   }
 
   // ── POLL: actualizar datos cada 5 minutos (optimizado) ───────
+  let _eventsPollTimer = null;
+
   function _startPoll() {
     clearInterval(_pollTimer);
-    // Poll cada 5 minutos en lugar de 3 — ahorra ~33% de requests
-    _pollTimer = setInterval(_poll, 5 * 60 * 1000);
-    setTimeout(_poll, 20000); // primer poll a los 20s
+    clearInterval(_eventsPollTimer);
+    // Marcador/estado: cada 5 min (va por caché del proxy, ahorra requests)
+    _pollTimer = setInterval(_pollFixture, 5 * 60 * 1000);
+    setTimeout(_pollFixture, 20000); // primer poll a los 20s
+    // Eventos (corners, penales, goles): cada 60s — el proxy cachea 1 min
+    // Múltiples usuarios del mismo partido pegan UNA sola vez a la API por minuto
+    _eventsPollTimer = setInterval(_pollEvents, 60 * 1000);
+    setTimeout(_pollEvents, 25000); // primer poll de eventos a los 25s
   }
 
-  async function _poll() {
+  async function _pollFixture() {
     if (!_fixtureId) return;
-
-    // Un solo request con fixture + events combinados
-    const fixtures = await _apiFetch('/fixtures?id=' + _fixtureId);
-    if (!fixtures || !fixtures[0]) return;
-
-    const f = fixtures[0];
+    // Leer fixture del cache — el live-poller lo actualiza cada 60s
+    var f = await _cacheGet('live_fixture_' + _fixtureId);
+    if (!f) {
+      // Fallback a proxy si no hay cache todavía
+      const fixtures = await _apiFetch('/fixtures?id=' + _fixtureId);
+      f = fixtures && fixtures[0] ? fixtures[0] : null;
+    }
+    if (!f) return;
 
     // Verificar si el partido terminó
     if (f.fixture.status.short === 'FT' || f.fixture.status.short === 'AET') {
       _fixtureId = null;
       _match = null;
+      clearInterval(_eventsPollTimer);
       _showNoGames();
       return;
     }
@@ -4034,7 +4200,6 @@ const LiveProvider = (() => {
     _match.awayG  = f.goals.away  || 0;
     _match.minute = f.fixture.status.elapsed || _match.minute;
 
-    // Momentum con posesión real si disponible
     if (f.statistics && f.statistics.length >= 2) {
       const poss = (f.statistics[0].statistics || []).find(s => s.type === 'Ball Possession');
       if (poss && poss.value) {
@@ -4042,11 +4207,21 @@ const LiveProvider = (() => {
       }
     }
     _render();
+  }
 
-    // Eventos — request separado solo si hay minutos nuevos
-    const events = await _apiFetch('/fixtures/events?fixture=' + _fixtureId);
+  async function _pollEvents() {
+    if (!_fixtureId) return;
+    // Leer eventos del cache — el live-poller los actualiza cada 60s
+    var events = await _cacheGet('live_events_' + _fixtureId);
+    if (!events) {
+      // Fallback a proxy si no hay cache todavía
+      events = await _apiFetch('/fixtures/events?fixture=' + _fixtureId);
+    }
     if (events && events.length) _processEvents(events);
   }
+
+  // Mantener _poll como alias por si algo lo llama
+  async function _poll() { await _pollFixture(); await _pollEvents(); }
 
   // ── PROCESAR EVENTOS REALES ───────────────────────────────────
   function _processEvents(events) {
@@ -4055,10 +4230,11 @@ const LiveProvider = (() => {
       if (_lastEventIds.has(evId)) return; // ya procesado
       _lastEventIds.add(evId);
 
-      // Solo eventos de los últimos 5 minutos (recientes)
+      // Solo eventos de los últimos 60s — si llegamos tarde, descartamos
+      // Evita que el usuario ya sepa el resultado mirando la tele
       const elapsed = ev.time.elapsed || 0;
       const currentMin = _match.minute || 0;
-      if (currentMin - elapsed > 5) return; // evento viejo
+      if (currentMin - elapsed > 1) return; // evento con más de 1 min → descartado
 
       // Mapear evento a microbet
       const mbDef = EVENT_MAP[ev.type];
@@ -4174,12 +4350,12 @@ const LiveProvider = (() => {
 
 /* ── MICROBET MODULE ────────────────────────────────────────── */
 const MicroBet = (() => {
+  // EVENTS ya no se usan para generar eventos aleatorios (solo vienen de la API)
+  // Se mantiene como fallback para el tutorial
   const EVENTS = [
-    {type:'Penal',        q:'¿El penal entra?',            optA:'Gol',        optB:'Ataja/Erra', dur:20},
-    {type:'Contraataque', q:'¿Cómo termina la corrida?',   optA:'Remate',     optB:'Corta def.', dur:15},
-    {type:'Tiro libre',   q:'¿Qué pasa en la ejecución?',  optA:'Al arco',    optB:'Centro',     dur:50},
-    {type:'Córner',       q:'¿Qué pasa en el área?',       optA:'Remate',     optB:'Despeje',    dur:35},
-    {type:'Falta',        q:'¿Cómo sigue?',                optA:'Tarjeta',    optB:'Juego sigue',dur:25},
+    {type:'Penal',    q:'¿El penal entra?',           optA:'Gol',             optB:'Ataja o afuera', durMin:8,  durMax:12, winA:0.72, multA:1.3, multB:2.8},
+    {type:'Córner',   q:'¿Qué pasa en el área?',      optA:'Rematan al arco', optB:'Despeje',        durMin:6,  durMax:10, winA:0.38, multA:2.1, multB:1.6},
+    {type:'Tiro libre',q:'¿Qué pasa con el tiro libre?',optA:'Al arco directo',optB:'Centro / pared',durMin:7,  durMax:11, winA:0.35, multA:2.3, multB:1.5},
   ];
   const MICRO_XP = 25;        // XP por ganar microbet (economía v2)
   const MICRO_FUEL_LOSS = 12; // fuel por perder microbet
@@ -4188,12 +4364,17 @@ const MicroBet = (() => {
   var ev=null; // {phase, endsAt, eventDef, pick, dismissed, focusShown}
   let _timer=null;
 
+  var _liveActive = false; // solo true cuando LiveProvider confirma partido en vivo
+
   function init() {
-    _scheduleWait(2000);
+    // No arrancar el timer aquí — esperamos a que LiveProvider llame resume()
+    // Si no hay partido en vivo, los microbets permanecen silenciados
+    pause();
   }
 
   // FIX: pausar microbets cuando no hay partido en vivo
   function pause() {
+    _liveActive = false;
     clearTimeout(_timer);
     ev = null;
     // Mostrar mensaje en el stage
@@ -4213,6 +4394,7 @@ const MicroBet = (() => {
   }
 
   function resume() {
+    _liveActive = true;
     // Restaurar mensaje original y arrancar
     var ico = document.getElementById('mb-wait-ico');
     var txt = document.getElementById('mb-wait-txt');
@@ -4250,18 +4432,31 @@ const MicroBet = (() => {
 
   function _scheduleWait(delay) {
     clearTimeout(_timer);
+    if (!_liveActive) return; // no hay partido en vivo, no lanzar eventos
     const [wMin, wMax] = _getWaitRange();
     const wait = delay !== undefined ? delay : (wMin + Math.random()*(wMax-wMin));
     ev = { phase:'waiting', endsAt: Date.now()+wait };
     _applyWaitUI();
-    _timer = setTimeout(_startActive, wait);
+    // Usar evento predictivo si hay estado del partido disponible
+    _timer = setTimeout(function() {
+      if (typeof LiveProvider !== 'undefined' && LiveProvider.getMatch && LiveProvider.getMatch()) {
+        var predictive = _buildPredictiveEvent(LiveProvider.getMatch());
+        _startActive(predictive);
+      } else {
+        _startActive();
+      }
+    }, wait);
   }
 
   function _startActive(forceDef) {
     const pool = _getEnabledEvents();
     if (!pool.length) { _scheduleWait(); return; } // no types enabled → keep waiting
     const def = forceDef || pool[Math.floor(Math.random()*pool.length)];
-    ev = { phase:'active', endsAt: Date.now()+def.dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
+    // Duración aleatoria dentro del rango — el usuario no sabe cuándo cierra
+    const durMin = def.durMin || 8;
+    const durMax = def.durMax || 14;
+    const dur = _randDur(durMin, durMax);
+    ev = { phase:'active', endsAt: Date.now()+dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
     _applyActiveUI();
     _runTick();
     const cfg = Store.get().mbConfig || {};
@@ -4278,13 +4473,18 @@ const MicroBet = (() => {
     const cd = document.getElementById('mb-countdown');
     const fo_cd = document.getElementById('fo-countdown');
     const fmt = s => { const m=Math.floor(s/60), sec=s%60; return (m<10?'0':'')+m+':'+(sec<10?'0':'')+sec; };
+    // No mostrar segundos exactos — solo urgencia visual para evitar explotación
+    var totalDur = (ev.eventDef.durMax || 14) * 1000;
+    var elapsed  = totalDur - Math.max(0, ev.endsAt - Date.now());
+    var pct      = Math.min(100, Math.round(elapsed / totalDur * 100));
+    var urgency  = remaining <= 4 ? ' critical' : remaining <= 8 ? ' urgent' : '';
     if(cd) {
-      cd.textContent = fmt(remaining);
-      cd.className = 'mb-countdown-val'+(remaining<=10&&remaining>0?' critical':remaining<=30?' urgent':'');
+      cd.textContent = remaining <= 3 ? '⚡' : remaining <= 6 ? '🔥' : '●';
+      cd.className = 'mb-countdown-val' + urgency;
     }
     if(fo_cd) {
-      fo_cd.textContent = fmt(remaining);
-      fo_cd.className = 'fo-cd-val'+(remaining<=10&&remaining>0?' critical':remaining<=30?' urgent':'');
+      fo_cd.textContent = remaining <= 3 ? '⚡ ¡Ya!' : remaining <= 6 ? '🔥 ¡Rápido!' : '⏱ Decidí';
+      fo_cd.className = 'fo-cd-val' + urgency;
     }
     // Update fo bar urgency
     const foBar = document.getElementById('fo-bar');
@@ -4327,20 +4527,30 @@ const MicroBet = (() => {
       const stake = ev.stake || S.microbet.stake || 50;
       S.microbet.rounds++;
       S.energy = Math.max(0, (S.energy || 200) - MICRO_ENERGY);
-      const win = Math.random() < 0.55;
+      // Usar win rate y multiplicador específico del tipo de evento
+      var def     = ev.eventDef || {};
+      var pickSide = ev.pick; // 'A' o 'B'
+      var winA    = def.winA  != null ? def.winA  : 0.50;
+      var multA   = def.multA != null ? def.multA : 1.8;
+      var multB   = def.multB != null ? def.multB : 1.8;
+      // Si apostó A → gana si random < winA; si apostó B → gana si random >= winA
+      var roll    = Math.random();
+      var aWon    = roll < winA;
+      var win     = (pickSide === 'A') ? aWon : !aWon;
+      var mult    = (pickSide === 'A') ? multA : multB;
+      var won     = Math.round(stake * mult);
+
       if (win) {
-        const won = Math.round(stake * 1.8); // multiplicador 1.8x en microbet
         S.microbet.wins++;
         if (S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier].wins++;
         Store.save();
         Store.addXP(MICRO_XP);
-        Store.addGCoins(won); // FIX: acreditar ganancia
+        Store.addGCoins(won);
         _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP · +' + won.toLocaleString('es-AR') + ' G');
         LootModule.refresh();
         MissionsModule.checkTrigger('microbet', { won: true });
         if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('microbet_win');
       } else {
-        // FIX: en derrota el stake ya fue descontado al hacer pick, solo agregar fuel
         Store.save();
         Store.simulateLoss();
         _showResult('loss', '❌', 'Perdiste ' + stake.toLocaleString('es-AR') + ' G · +' + MICRO_FUEL_LOSS + ' fuel');
@@ -4400,8 +4610,11 @@ const MicroBet = (() => {
     if(et) et.textContent = def.type;
     const ba = document.getElementById('mb-btn-a');
     const bb = document.getElementById('mb-btn-b');
-    if(ba) { ba.textContent = def.optA; ba.disabled=false; ba.className='mb-btn'; }
-    if(bb) { bb.textContent = def.optB; bb.disabled=false; bb.className='mb-btn'; }
+    // Mostrar cuotas en los botones — diferenciadas por dificultad
+    var mA = def.multA ? def.multA.toFixed(1) + 'x' : '1.8x';
+    var mB = def.multB ? def.multB.toFixed(1) + 'x' : '1.8x';
+    if(ba) { ba.innerHTML = def.optA + '<span style="display:block;font-size:10px;opacity:.7;">' + mA + '</span>'; ba.disabled=false; ba.className='mb-btn'; }
+    if(bb) { bb.innerHTML = def.optB + '<span style="display:block;font-size:10px;opacity:.7;">' + mB + '</span>'; bb.disabled=false; bb.className='mb-btn'; }
     // Focus overlay
     const foType = document.getElementById('fo-event-type');
     const foQ    = document.getElementById('fo-question');
@@ -4412,8 +4625,8 @@ const MicroBet = (() => {
     if(foType) foType.textContent = def.type;
     if(foQ)    foQ.textContent    = def.q;
     if(foStake) foStake.textContent = (Store.get().microbet.stake || 50) + ' G';
-    if(foBa)  { foBa.textContent = def.optA; foBa.disabled=false; foBa.className='fo-bet'; }
-    if(foBb)  { foBb.textContent = def.optB; foBb.disabled=false; foBb.className='fo-bet'; }
+    if(foBa)  { foBa.innerHTML = def.optA + '<span style="display:block;font-size:11px;font-weight:800;color:var(--gold);">' + mA + '</span>'; foBa.disabled=false; foBa.className='fo-bet'; }
+    if(foBb)  { foBb.innerHTML = def.optB + '<span style="display:block;font-size:11px;font-weight:800;color:var(--gold);">' + mB + '</span>'; foBb.disabled=false; foBb.className='fo-bet'; }
     if(foReg) foReg.classList.remove('show');
     // Popup
     const mpEv = document.getElementById('mp-event');
@@ -4506,6 +4719,7 @@ const MicroBet = (() => {
   }
 
   function forceEvent(typeOrDef) {
+    // Eventos reales de la API siempre pasan, independiente de _liveActive
     clearTimeout(_timer);
     var def;
     if (typeOrDef && typeof typeOrDef === 'object' && typeOrDef.type) {
@@ -7146,7 +7360,8 @@ const HomeModule = (() => {
 
   function goLive() { Router.go('live'); }
 
-  return { refresh, goLive };
+  function getMatch() { return _match; }
+  return { refresh, goLive, getMatch };
 })();
 
 /* ── ENTRY MODULE ───────────────────────────────────────────── */
