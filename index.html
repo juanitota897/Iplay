@@ -561,6 +561,35 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 
 
 
+
+/* ── NAV BADGE ──────────────────────────────────────────────── */
+.bnav-badge{
+  position:absolute;top:2px;right:calc(50% - 16px);
+  min-width:16px;height:16px;
+  background:var(--red);border-radius:8px;
+  font-size:9px;font-weight:800;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  padding:0 4px;pointer-events:none;
+  animation:blink .5s ease-in-out 3;
+  border:2px solid var(--bg0);
+}
+
+/* ── LIVE EMPTY STATE ───────────────────────────────────────── */
+.live-empty-wrap{padding:16px 0 8px;display:flex;flex-direction:column;gap:10px;}
+.live-empty-hdr{text-align:center;padding:20px 16px 12px;}
+.live-empty-ico{font-size:40px;margin-bottom:10px;}
+.live-empty-title{font-family:'Barlow Condensed',sans-serif;font-size:18px;font-weight:800;color:var(--t2);letter-spacing:.5px;margin-bottom:6px;}
+.live-empty-sub{font-size:11px;color:var(--t3);line-height:1.6;}
+.live-next-title{font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;padding:0 0 8px;}
+.live-next-card{background:var(--bg1);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:border-color .2s;}
+.live-next-card:hover{border-color:rgba(212,175,55,.2);}
+.live-next-time{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;color:var(--gold);flex-shrink:0;min-width:42px;text-align:center;}
+.live-next-info{flex:1;min-width:0;}
+.live-next-teams{font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.live-next-league{font-size:9px;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.4px;}
+.live-next-odds{display:flex;gap:4px;flex-shrink:0;}
+.live-next-odd{background:var(--bg3);border-radius:6px;padding:3px 7px;font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t2);}
+
 /* ── PROFILE STATS REALES ───────────────────────────────────── */
 .profile-stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
 .profile-stat-box{background:var(--bg3);border:1px solid rgba(255,255,255,.06);border-radius:var(--r-md);padding:10px 12px;}
@@ -3562,7 +3591,7 @@ const AuthUI = (() => {
   <!-- ═══ BOTTOM NAV ═══ -->
   <div id="bottom-nav">
     <div class="bnav-item bnav-item--clubs" data-nav="social" onclick="Router.go('social')"><span class="bnav-ico">⚔️</span><span class="bnav-lbl">Clubes</span></div>
-    <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎲</span><span class="bnav-lbl">Apuestas</span></div>
+    <div class="bnav-item bnav-item--bets" data-nav="bets" onclick="Router.go('bets')"><span class="bnav-ico">🎲</span><span class="bnav-lbl">Apuestas</span><span class="bnav-badge" id="nav-bets-badge" style="display:none;"></span></div>
     <div class="bnav-item bnav-item--home" data-nav="home" onclick="Router.go('home')"><span class="bnav-ico">🏠</span><span class="bnav-lbl">Inicio</span></div>
     <div class="bnav-item bnav-item--primary" data-nav="live" onclick="Router.go('live')"><span class="bnav-ico">⚡</span><span class="bnav-lbl">En Vivo</span></div>
     <div class="bnav-item bnav-item--casino" data-nav="casino" onclick="Router.go('casino')"><span class="bnav-ico">🎰</span><span class="bnav-lbl">Casino</span></div>
@@ -4191,7 +4220,7 @@ const Router = (() => {
     if (viewId === 'loot')     LootModule.refresh();
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
-    if (viewId === 'bets')     BetsModule.refresh();
+    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; }
     if (viewId === 'live')     BetsModule.refreshLiveList();
     // Ocultar sticky slip cuando no estás en bets
     if (viewId !== 'bets') {
@@ -7100,6 +7129,7 @@ const BetsModule = (() => {
         _sbHistory = data;
         _historyLoaded = true;
         _renderHistory();
+        _updateBetsBadge();
         // Solo notificar apuestas resueltas que aún no fueron procesadas en este cliente.
         // El saldo real (g_coins, xp) ya viene de Supabase via loadProfile al login —
         // aquí solo mostramos el toast informativo para apuestas recientes (< 24hs).
@@ -7153,6 +7183,7 @@ const BetsModule = (() => {
             _sbHistory.unshift(updated);
           }
           _renderHistory();
+          _updateBetsBadge();
 
           // Notificar resolución — solo si no fue ya procesada (evita doble acreditación)
           if (updated.status === 'won' || updated.status === 'lost') {
@@ -7261,6 +7292,7 @@ const BetsModule = (() => {
     _renderMatches();
     _renderSlip();
     _renderHistory();
+    _updateBetsBadge();
     Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada — resultado al terminar el partido');
 
     // Trigger misiones
@@ -7739,6 +7771,18 @@ const BetsModule = (() => {
   function clamp(v, min, max) { return Math.max(min, Math.min(max, Math.round(v * 100) / 100)); }
 
   // ── Historial con soporte combinadas y near-miss ───────────────
+  function _updateBetsBadge() {
+    var badge = document.getElementById('nav-bets-badge');
+    if (!badge) return;
+    var pending = _sbHistory.filter(function(b){ return b.status === 'pending'; }).length;
+    if (pending > 0) {
+      badge.textContent = pending > 9 ? '9+' : pending;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
   function _renderHistory() {
     const list = document.getElementById('bets-history-list');
     if (!list) return;
@@ -7871,6 +7915,37 @@ const BetsModule = (() => {
     if (!list) return;
     if (!_matches.length) {
       list.innerHTML = '<div style="padding:12px;text-align:center;font-size:11px;color:var(--t3);">Cargando partidos…</div>';
+      return;
+    }
+    // Separar en vivo y próximos
+    var liveNow  = _matches.filter(function(m){ return m.live; });
+    var upcoming = _matches.filter(function(m){ return !m.live; });
+    // Si no hay ninguno en vivo, mostrar estado vacío con próximos
+    if (!liveNow.length) {
+      var sh = function(n){ return n && n.length > 10 ? n.slice(0,10) : (n||''); };
+      var nextCards = upcoming.slice(0, 5).map(function(m) {
+        return '<div class="live-next-card" onclick="Router.go(\'bets\')">' +
+          '<div class="live-next-time">' + (m.time || '—') + '</div>' +
+          '<div class="live-next-info">' +
+            '<div class="live-next-teams">' + sh(m.home) + ' vs ' + sh(m.away) + '</div>' +
+            '<div class="live-next-league">' + (m.leagueName || '') + '</div>' +
+          '</div>' +
+          '<div class="live-next-odds">' +
+            '<div class="live-next-odd">' + (m.odds && m.odds.h ? m.odds.h.toFixed(2) : '—') + '</div>' +
+            '<div class="live-next-odd">X</div>' +
+            '<div class="live-next-odd">' + (m.odds && m.odds.a ? m.odds.a.toFixed(2) : '—') + '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      list.innerHTML =
+        '<div class="live-empty-wrap">' +
+          '<div class="live-empty-hdr">' +
+            '<div class="live-empty-ico">📡</div>' +
+            '<div class="live-empty-title">Sin partidos en vivo ahora</div>' +
+            '<div class="live-empty-sub">Los micro-eventos se activan automáticamente cuando empiece un partido de tus ligas.</div>' +
+          '</div>' +
+          (upcoming.length ? '<div class="live-next-title">Próximos partidos de hoy</div>' + nextCards : '') +
+        '</div>';
       return;
     }
     // Mostrar en vivo primero, después próximos — máximo 5
