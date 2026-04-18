@@ -8023,14 +8023,9 @@ const Tutorial = (() => {
           .select('tutorial_seen')
           .eq('id', userId)
           .single();
-        console.log('[Tutorial] start check — userId:', userId, 'data:', data, 'error:', error);
-        if (data && data.tutorial_seen) {
-          console.log('[Tutorial] ya visto en Supabase, no mostrar');
-          return;
-        }
+        if (data && data.tutorial_seen) return;
         // También chequear localStorage como doble seguro
         if (localStorage.getItem(STORAGE_KEY)) {
-          console.log('[Tutorial] ya visto en localStorage, no mostrar');
           // Sincronizar a Supabase si no estaba
           _sb.from('profiles').update({ tutorial_seen: true }).eq('id', userId);
           return;
@@ -8042,7 +8037,6 @@ const Tutorial = (() => {
       console.warn('[Tutorial] start error:', e.message);
       if (localStorage.getItem(STORAGE_KEY)) return;
     }
-    console.log('[Tutorial] lanzando tutorial');
     _launch();
   }
 
