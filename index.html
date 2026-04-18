@@ -4235,7 +4235,7 @@ const Router = (() => {
     if (viewId === 'loot')     LootModule.refresh();
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
-    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; _loadRecentResultsIfNeeded(); }
+    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; BetsModule.showResults(); }
     if (viewId === 'live')     BetsModule.refreshLiveList();
     // Ocultar sticky slip cuando no estás en bets
     if (viewId !== 'bets') {
@@ -8250,7 +8250,7 @@ const BetsModule = (() => {
     }, 150);
   }
 
-  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip, scrollLeagues, toggleResults };
+  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip, scrollLeagues, toggleResults, showResults: _loadRecentResultsIfNeeded };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
