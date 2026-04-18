@@ -7422,6 +7422,9 @@ const HomeModule = (() => {
       el.classList.remove('unlocked');
       if(statusEl) statusEl.textContent = 'Bloqueada';
     }
+    // Feed global
+    _loadFeed();
+    _initFeedRealtime();
   }
 
   function goLive() { Router.go('live'); }
@@ -7503,15 +7506,7 @@ const HomeModule = (() => {
       .subscribe();
   }
 
-  // Hook al refresh original
-  var _origRefresh = refresh;
-  function refresh() {
-    _origRefresh();
-    _loadFeed();
-    _initFeedRealtime();
-  }
-
-  return { refresh, goLive, getMatch };
+  return { refresh, goLive, getMatch, loadFeed: _loadFeed, initFeedRealtime: _initFeedRealtime };
 })();
 
 /* ── ENTRY MODULE ───────────────────────────────────────────── */
