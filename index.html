@@ -3094,35 +3094,22 @@ const AuthUI = (() => {
         <!-- Misión de nivel — se renderiza dinámicamente -->
         <div id="level-mission-container" style="display:none;"></div>
 
-        <div class="mission-stats">
-          <div class="mission-stats-title">📊 Análisis de racha</div>
+        <div class="mission-stats" id="mission-stats-block" style="display:none;">
+          <div class="mission-stats-title">📊 Tu progreso hoy</div>
           <div class="stat-grid stat-grid-3">
-            <div class="stat-cell"><span class="stat-num" id="stat-accuracy">73%</span><span class="stat-lbl">Precisión</span></div>
-            <div class="stat-cell"><span class="stat-num" style="color:var(--gold)">3.2</span><span class="stat-lbl">Cuota avg</span></div>
-            <div class="stat-cell"><span class="stat-num" style="color:var(--plasma)" id="stat-nearmiss">8</span><span class="stat-lbl">Near-misses</span></div>
+            <div class="stat-cell"><span class="stat-num" id="stat-accuracy">—</span><span class="stat-lbl">Apuestas</span></div>
+            <div class="stat-cell"><span class="stat-num" style="color:var(--gold)" id="stat-crash-rounds">—</span><span class="stat-lbl">Rondas crash</span></div>
+            <div class="stat-cell"><span class="stat-num" style="color:var(--plasma)" id="stat-microbets">—</span><span class="stat-lbl">Micro-eventos</span></div>
           </div>
         </div>
 
-        <!-- CROSS-OPERATOR MISSIONS -->
-        <div style="border-top:1px solid var(--border);padding-top:4px;">
-          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:var(--shield);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;">⚡ Misiones Cross-Operator</div>
-          <div class="mission-card">
-            <span class="mission-diff cross">Cross-Op · BetArena × G-Layer</span>
-            <div class="mission-hdr">
-              <div class="mission-txt"><strong>🌐 Explorador Multi-Casa</strong><br>Realizá al menos 1 apuesta en BetArena usando el módulo G-Layer activo. Recompensa acumulada en todos tus operadores.</div>
-              <div class="mission-reward"><div class="mission-xp">+180</div><div class="mission-xp-lbl">XP</div></div>
-            </div>
-            <div class="mission-prog-track"><div class="mission-prog-fill" style="width:0%;background:linear-gradient(90deg,var(--shield),var(--cyan))"></div></div>
-            <button class="mission-btn" style="border-color:rgba(68,136,255,.35);color:var(--shield);">📡 Pendiente de sincronización</button>
-          </div>
-          <div class="mission-card">
-            <span class="mission-diff cross">Cross-Op · Fidelidad</span>
-            <div class="mission-hdr">
-              <div class="mission-txt"><strong>🔗 Racha Compartida</strong><br>Mantené tu racha activa por 3 días consecutivos en cualquier operador conectado. El progreso se une entre plataformas.</div>
-              <div class="mission-reward"><div class="mission-xp">+320</div><div class="mission-xp-lbl">XP</div></div>
-            </div>
-            <div class="mission-prog-track"><div class="mission-prog-fill" style="width:33%;background:linear-gradient(90deg,var(--shield),var(--cyan))"></div></div>
-            <button class="mission-btn" style="border-color:rgba(68,136,255,.35);color:var(--shield);">Día 1 de 3 ✓</button>
+        <!-- STATS DINÁMICOS DE MISIONES -->
+        <div id="mission-extra-stats" style="border-top:1px solid var(--border);padding-top:12px;display:none;">
+          <div style="font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;">📈 Tu progreso de hoy</div>
+          <div class="stat-grid stat-grid-3">
+            <div class="stat-cell"><span class="stat-num" id="ms-bets">0</span><span class="stat-lbl">Apuestas</span></div>
+            <div class="stat-cell"><span class="stat-num" id="ms-crash">0</span><span class="stat-lbl">Rondas crash</span></div>
+            <div class="stat-cell"><span class="stat-num" id="ms-ligas">0</span><span class="stat-lbl">Ligas dist.</span></div>
           </div>
         </div>
       </div>
@@ -5063,7 +5050,10 @@ const MicroBet = (() => {
 
         if (win) {
           S.microbet.wins++;
-          if (S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier].wins++;
+          if (S.loot.progress[S.loot.tier]) {
+          S.loot.progress[S.loot.tier].wins++;
+          S.loot.progress[S.loot.tier].bets = (S.loot.progress[S.loot.tier].bets || 0) + 1;
+        }
           Store.save();
           Store.addXP(MICRO_XP);
           Store.addGCoins(wonAmt);
@@ -5411,21 +5401,29 @@ const LootModule = (() => {
     const op = S.loot.opened[tier]   || {};
     const t = tier-1;
     const reqs = {
-      common: {xp:100+t*150, wins:1+t},
-      rare:   {done:2+t, wins:2+t},
-      epic:   {level:5+t, done:3+t, streak:7}
+      common: { xp: 100+t*100, crash: 1 },              // 100 XP + 1 ronda de crash
+      rare:   { missions: 2+t, bets: 2+t },              // misiones + apuestas colocadas
+      epic:   { level: 3+t, missions: 3+t, streak: 3 }  // nivel + misiones + racha de 3 días
     };
     const li = Store.getLevelInfo();
-    // Evaluate unlocks (irreversible)
-    if (!ul.common && S.xp >= reqs.common.xp && lp.wins >= reqs.common.wins) { ul.common=true; S.loot.unlocked[tier]=ul; Store.save(); }
-    if (!ul.rare && lp.missions >= reqs.rare.done && lp.wins >= reqs.rare.wins)  { ul.rare=true; S.loot.unlocked[tier]=ul; Store.save(); }
-    if (!ul.epic && li.level >= reqs.epic.level && lp.missions >= reqs.epic.done && S.streak >= reqs.epic.streak) { ul.epic=true; S.loot.unlocked[tier]=ul; Store.save(); }
+    // Evaluate unlocks (irreversible) — sin dependencia de wins
+    if (!ul.common && S.xp >= reqs.common.xp && (lp.crashRounds||0) >= reqs.common.crash) { ul.common=true; S.loot.unlocked[tier]=ul; Store.save(); }
+    if (!ul.rare && lp.missions >= reqs.rare.missions && (lp.bets||0) >= reqs.rare.bets) { ul.rare=true; S.loot.unlocked[tier]=ul; Store.save(); }
+    if (!ul.epic && li.level >= reqs.epic.level && lp.missions >= reqs.epic.missions && S.streak >= reqs.epic.streak) { ul.epic=true; S.loot.unlocked[tier]=ul; Store.save(); }
 
     const g = id => document.getElementById(id);
     if(g('loot-tier-num')) g('loot-tier-num').textContent = tier;
-    _applyBox('common',ul.common,op.common,'Caja Común Tier '+tier,Math.min(S.xp,reqs.common.xp)+'/'+reqs.common.xp+' XP · '+Math.min(lp.wins,reqs.common.wins)+'/'+reqs.common.wins+' wins',Math.min(100,Math.round(((Math.min(S.xp,reqs.common.xp)/reqs.common.xp)+(Math.min(lp.wins,reqs.common.wins)/reqs.common.wins))/2*100)));
-    _applyBox('rare', ul.rare, op.rare, 'Caja Rara Tier '+tier, Math.min(lp.missions,reqs.rare.done)+'/'+reqs.rare.done+' mis · '+Math.min(lp.wins,reqs.rare.wins)+'/'+reqs.rare.wins+' wins',Math.min(100,Math.round(((Math.min(lp.missions,reqs.rare.done)/reqs.rare.done)+(Math.min(lp.wins,reqs.rare.wins)/reqs.rare.wins))/2*100)));
-    _applyBox('epic', ul.epic, op.epic, 'Caja Épica Tier '+tier, (li.level>=reqs.epic.level?'✓':'✗')+' Niv.'+reqs.epic.level+' · '+Math.min(lp.missions,reqs.epic.done)+'/'+reqs.epic.done+' mis',Math.min(100,Math.round(((li.level>=reqs.epic.level?1:0)+(lp.missions>=reqs.epic.done?1:0)+(S.streak>=reqs.epic.streak?1:0))/3*100)));
+    var crashDone = Math.min(lp.crashRounds||0, reqs.common.crash);
+    var betsDone  = Math.min(lp.bets||0, reqs.rare.bets);
+    _applyBox('common', ul.common, op.common, 'Caja Común Tier '+tier,
+      Math.min(S.xp,reqs.common.xp)+'/'+reqs.common.xp+' XP · '+crashDone+'/'+reqs.common.crash+' crash',
+      Math.min(100,Math.round(((Math.min(S.xp,reqs.common.xp)/reqs.common.xp)+(crashDone/reqs.common.crash))/2*100)));
+    _applyBox('rare', ul.rare, op.rare, 'Caja Rara Tier '+tier,
+      Math.min(lp.missions,reqs.rare.missions)+'/'+reqs.rare.missions+' mis · '+betsDone+'/'+reqs.rare.bets+' apuestas',
+      Math.min(100,Math.round(((Math.min(lp.missions,reqs.rare.missions)/reqs.rare.missions)+(betsDone/reqs.rare.bets))/2*100)));
+    _applyBox('epic', ul.epic, op.epic, 'Caja Épica Tier '+tier,
+      (li.level>=reqs.epic.level?'✓':'✗')+' Niv.'+reqs.epic.level+' · '+Math.min(lp.missions,reqs.epic.missions)+'/'+reqs.epic.missions+' mis · '+Math.min(S.streak,reqs.epic.streak)+'/'+reqs.epic.streak+' días',
+      Math.min(100,Math.round(((li.level>=reqs.epic.level?1:0)+(Math.min(lp.missions,reqs.epic.missions)/reqs.epic.missions)+(Math.min(S.streak,reqs.epic.streak)/reqs.epic.streak))/3*100)));
   }
 
   function _applyBox(id, unlocked, opened, name, req, pct) {
@@ -5545,15 +5543,17 @@ const MissionsModule = (() => {
   // Cada misión tiene: título, descripción, XP, dificultad, botón texto
   // Los XP escalan con el nivel del usuario
   var DAILY_POOL = [
-    { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',    desc:'Realizá tu primera apuesta del día.',                  xpBase:40,  btn:'⚡ Ir a Apuestas',  nav:'bets' },
-    { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',         desc:'Participá en 2 micro-apuestas en vivo.',               xpBase:45,  btn:'🎯 Ir a En Vivo',   nav:'live' },
-    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:25,  btn:'🎰 Ir al Casino',   nav:'casino' },
-    { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',            desc:'Realizá una apuesta combinada de 2+ eventos.',         xpBase:90,  btn:'🔗 Ir a Apuestas',  nav:'bets' },
-    { id:'m_ganador',  diff:'med',  ico:'🏆', name:'Racha Ganadora',        desc:'Ganá 2 micro-apuestas seguidas en vivo.',             xpBase:90,  btn:'🏆 Ir a En Vivo',   nav:'live' },
-    { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',   desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',      xpBase:80,  btn:'🛡️ Ver Bóveda',    nav:'vault' },
-    { id:'m_cuota',    diff:'hard', ico:'👑', name:'Cazador de Cuotas',     desc:'Acertá una apuesta con cuota mayor a 3.0.',            xpBase:160, btn:'👑 Ir a Apuestas',  nav:'bets' },
-    { id:'m_streak',   diff:'hard', ico:'🔥', name:'Racha Imparable',       desc:'Completá las otras 2 misiones del día.',               xpBase:160, btn:'🔥 Se completa sola', nav:null },
-    { id:'m_casino2',  diff:'hard', ico:'💎', name:'El Gran Apostador',     desc:'Jugá 3 rondas del Crash en una sesión.',               xpBase:140, btn:'💎 Ir al Casino',   nav:'casino' },
+    { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',     desc:'Realizá tu primera apuesta del día.',                              xpBase:40,  btn:'⚡ Ir a Apuestas',  nav:'bets' },
+    { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',          desc:'Participá en 2 micro-eventos en vivo (no hace falta ganar).',      xpBase:45,  btn:'🎯 Ir a En Vivo',   nav:'live' },
+    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',       desc:'Jugá una ronda del Crash y cobrá antes del 2x.',                   xpBase:40,  btn:'🎰 Ir al Casino',   nav:'casino' },
+    { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',             desc:'Realizá una apuesta combinada de 2+ eventos.',                     xpBase:90,  btn:'🔗 Ir a Apuestas',  nav:'bets' },
+    { id:'m_ligas',    diff:'med',  ico:'🌍', name:'Explorador de Ligas',    desc:'Apostá en 2 ligas distintas hoy.',                                xpBase:85,  btn:'🌍 Ir a Apuestas',  nav:'bets' },
+    { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',    desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',                  xpBase:80,  btn:'🛡️ Ver Bóveda',    nav:'vault' },
+    { id:'m_cuota',    diff:'hard', ico:'👑', name:'Apostador de Valor',     desc:'Colocá una apuesta con cuota mayor a 2.5 (no hace falta ganar).',  xpBase:120, btn:'👑 Ir a Apuestas',  nav:'bets' },
+    { id:'m_streak',   diff:'hard', ico:'🔥', name:'Racha Imparable',        desc:'Completá las otras 2 misiones del día.',                           xpBase:160, btn:'🔥 Se completa sola', nav:null },
+    { id:'m_casino2',  diff:'hard', ico:'💎', name:'El Gran Apostador',      desc:'Jugá 2 rondas del Crash en una sesión.',                           xpBase:120, btn:'💎 Ir al Casino',   nav:'casino' },
+    { id:'m_mercados', diff:'med',  ico:'📊', name:'Multi-Mercado',          desc:'Apostá en 3 mercados distintos hoy (1x2, ambos marcan, +2.5…).',   xpBase:90,  btn:'📊 Ir a Apuestas',  nav:'bets' },
+    { id:'m_crash3x',  diff:'easy', ico:'🚀', name:'Crash Arriesgado',       desc:'Cobrá en el Crash con un multiplicador mayor a 3x.',               xpBase:60,  btn:'🚀 Ir al Casino',   nav:'casino' },
   ];
 
   // Misiones de nivel — una por nivel, se completan una sola vez
@@ -5855,6 +5855,32 @@ const MissionsModule = (() => {
     _checkDailyReset();
     _renderDailyMissions();
     _renderLevelMission();
+    _renderDailyStats();
+  }
+
+  function _renderDailyStats() {
+    var S = Store.get();
+    var d = S.missions.daily || {};
+    // Stats block
+    var block = document.getElementById('mission-stats-block');
+    var acc   = document.getElementById('stat-accuracy');
+    var crash = document.getElementById('stat-crash-rounds');
+    var micro = document.getElementById('stat-microbets');
+    if (block) block.style.display = '';
+    if (acc)   acc.textContent   = d.bets || 0;
+    if (crash) crash.textContent = d.crashRounds || 0;
+    if (micro) micro.textContent = d.microbets || 0;
+    // Extra stats (ligas)
+    var extra = document.getElementById('mission-extra-stats');
+    if (extra) {
+      extra.style.display = '';
+      var msB = document.getElementById('ms-bets');
+      var msC = document.getElementById('ms-crash');
+      var msL = document.getElementById('ms-ligas');
+      if (msB) msB.textContent = d.bets || 0;
+      if (msC) msC.textContent = d.crashRounds || 0;
+      if (msL) msL.textContent = Object.keys(d.leaguesPlayed || {}).length;
+    }
   }
 
   // ── checkTrigger: llamado por acciones reales ─────────────────
@@ -5869,7 +5895,17 @@ const MissionsModule = (() => {
       case 'bet':
         d.bets++;
         if (data && data.isCombo) d.combos++;
-        if (data && data.odd > 3.0 && data.won) d.highOddWin = true;
+        if (data && data.odd > 2.5) d.highOddBet = true;
+        // Merge ligas del snapshot
+        if (data && data.leaguesPlayed) {
+          if (!d.leaguesPlayed) d.leaguesPlayed = {};
+          Object.assign(d.leaguesPlayed, data.leaguesPlayed);
+        }
+        // Merge mercados del snapshot
+        if (data && data.marketsPlayed) {
+          if (!d.marketsPlayed) d.marketsPlayed = {};
+          Object.assign(d.marketsPlayed, data.marketsPlayed);
+        }
         break;
       case 'microbet':
         d.microbets++;
@@ -5883,6 +5919,7 @@ const MissionsModule = (() => {
       case 'crash':
         d.crashRounds++;
         if (data && data.cashedBefore2x) d.crashCashedBefore2x++;
+        if (data && data.cashoutMult && data.cashoutMult >= 3) d.crashAbove3x = (d.crashAbove3x||0) + 1;
         break;
       case 'fuel':
         // se chequea contra fuelStart
@@ -5914,10 +5951,12 @@ const MissionsModule = (() => {
       case 'm_microbet': return d.microbets >= 2;
       case 'm_crash':    return d.crashCashedBefore2x >= 1;
       case 'm_combo':    return d.combos >= 1;
-      case 'm_ganador':  return d.consecutiveWins >= 2;
+      case 'm_ligas':    return Object.keys(d.leaguesPlayed || {}).length >= 2;
       case 'm_vault':    return (S.vault.fuel - d.fuelStart) >= 30;
-      case 'm_cuota':    return d.highOddWin === true;
-      case 'm_casino2':  return d.crashRounds >= 3;
+      case 'm_cuota':    return d.highOddBet === true;
+      case 'm_casino2':  return d.crashRounds >= 2;
+      case 'm_mercados': return Object.keys(d.marketsPlayed || {}).length >= 3;
+      case 'm_crash3x':  return (d.crashAbove3x || 0) >= 1;
       case 'm_streak':   return false; // se maneja aparte
       default: return false;
     }
@@ -6100,7 +6139,7 @@ const CasinoModule = (() => {
       HeaderModule.refresh();
       _addToHistory(cashoutMult, 'cashout');
       _showBanner('win', '✓ Cobraste ' + profit.toLocaleString('es-AR') + ' G a ' + cashoutMult.toFixed(2) + 'x');
-      MissionsModule.checkTrigger('crash', { cashedBefore2x: cashoutMult < 2 });
+      MissionsModule.checkTrigger('crash', { cashedBefore2x: cashoutMult < 2, cashoutMult: cashoutMult });
       _setUI({ status:'<span class="live-dot neon"></span> Cobrado', sub:'+ ' + profit.toLocaleString('es-AR') + ' G-Coins', btnTxt:'Cobrado ✓', btnDis:true, btnCls:'' });
     } catch(e) {
       console.warn('[Crash] Error en cashout:', e.message);
@@ -6971,14 +7010,14 @@ const BetsModule = (() => {
       if (_picks[existingIdx].pick === pick) {
         _picks.splice(existingIdx, 1);
       } else {
-        _picks[existingIdx] = { matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live };
+        _picks[existingIdx] = { matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live, leagueKey: match.league || '', marketType: pick };
       }
     } else {
       if (_picks.length >= MAX_PICKS) {
         Store.showVaultToast('Máximo ' + MAX_PICKS + ' selecciones por cupón');
         return;
       }
-      _picks.push({ matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live });
+      _picks.push({ matchId, pick, odd, label, matchName: match.home + ' vs ' + match.away, live: match.live, leagueKey: match.league || '', marketType: pick });
     }
     _renderMatches();
     _renderSlip();
@@ -7288,6 +7327,11 @@ const BetsModule = (() => {
       _sbHistory.unshift(localEntry);
     }
 
+    // Snapshot de ligas y mercados ANTES de limpiar el slip
+    var _betLeagues = {};
+    var _betMarkets = {};
+    _picks.forEach(function(p) { if(p.leagueKey) _betLeagues[p.leagueKey]=true; if(p.marketType) _betMarkets[p.marketType]=true; });
+
     _picks = [];
     _renderMatches();
     _renderSlip();
@@ -7295,8 +7339,15 @@ const BetsModule = (() => {
     _updateBetsBadge();
     Store.showXPToast('⏳ ' + (isParlay ? 'Combinada' : 'Apuesta') + ' registrada — resultado al terminar el partido');
 
-    // Trigger misiones
-    MissionsModule.checkTrigger('bet', { isCombo: isParlay, odd: totalOdd, won: false });
+    // Trigger misiones con contexto de ligas y mercados
+    MissionsModule.checkTrigger('bet', { isCombo: isParlay, odd: totalOdd, won: false, leaguesPlayed: _betLeagues, marketsPlayed: _betMarkets });
+    // Trackear apuestas en progreso del loot
+    var _S = Store.get();
+    if (_S.loot.progress[_S.loot.tier]) {
+      _S.loot.progress[_S.loot.tier].bets = (_S.loot.progress[_S.loot.tier].bets || 0) + 1;
+      Store.save();
+      LootModule.refresh();
+    }
     if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('bet_placed');
   }
 
