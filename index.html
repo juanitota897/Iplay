@@ -4063,7 +4063,10 @@ const LiveProvider = (() => {
         console.warn('[LiveProvider] cache stale para', key, Math.round(age/1000) + 's');
         return null;
       }
-      return data.data;
+      // El live-poller guarda arrays como { list: [...] } para compatibilidad con jsonb
+      var d = data.data;
+      if (d && d.list !== undefined) return d.list;
+      return d;
     } catch(e) {
       console.warn('[LiveProvider] cache error:', e.message);
       return null;
