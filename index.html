@@ -9978,29 +9978,39 @@ const ClubsOnboarding = (() => {
 
   // ── Verificar si ya lo vio ──────────────────────────────────────
   async function shouldShow() {
+    // localStorage es la primera barrera — rápida y siempre disponible
+    try { if (localStorage.getItem(STORAGE_KEY)) return false; } catch(e) {}
+    // Supabase como fuente de verdad secundaria (si la columna existe)
     try {
       if (Auth.isLoggedIn()) {
         var { data } = await _sb.from('profiles')
           .select('clubs_onboarding_seen')
           .eq('id', Auth.getUser().id)
           .single();
-        if (data && data.clubs_onboarding_seen != null) {
+        // Solo usar el valor de Supabase si la columna existe y tiene un booleano real
+        if (data && typeof data.clubs_onboarding_seen === 'boolean') {
           return !data.clubs_onboarding_seen;
         }
       }
     } catch(e) {}
-    try { return !localStorage.getItem(STORAGE_KEY); } catch(e) { return false; }
+    return true; // primera vez — mostrar
   }
 
   // ── Marcar como visto (solo en cierre natural, no en forceShow) ──
   function _markSeen() {
     if (_forceMode) return;
+    // localStorage primero — garantiza que no vuelva a salir aunque Supabase falle
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    // Supabase para sincronizar entre dispositivos (best-effort)
     try {
       if (Auth.isLoggedIn()) {
         _sb.from('profiles')
           .update({ clubs_onboarding_seen: true, updated_at: new Date().toISOString() })
-          .eq('id', Auth.getUser().id);
+          .eq('id', Auth.getUser().id)
+          .then(function(res) {
+            // Si falla por columna inexistente, no es crítico — localStorage ya lo cubre
+            if (res.error) console.warn('[ClubsOB] Supabase mark failed (columna existe?):', res.error.message);
+          });
       }
     } catch(e) {}
   }
