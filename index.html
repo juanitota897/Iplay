@@ -4327,9 +4327,10 @@ const LiveProvider = (() => {
         .eq('key', key)
         .single();
       if (error || !data) return null;
-      // Rechazar cache mayor a 3 minutos (stale)
+      // Rechazar cache mayor a 15 minutos (stale)
+      // Permisivo para cuando el cron no corrió (fuera de horario de partidos)
       const age = Date.now() - new Date(data.created_at).getTime();
-      if (age > 3 * 60 * 1000) {
+      if (age > 15 * 60 * 1000) {
         console.warn('[LiveProvider] cache stale para', key, Math.round(age/1000) + 's');
         return null;
       }
@@ -7851,7 +7852,16 @@ const EntryModule = (() => {
     }
     // Cargar ranking real en el panel derecho
     setTimeout(function() { RankingModule.refresh(); }, 1000);
-    setTimeout(async function() { await Tutorial.start(); }, 400);
+    // Tutorial: esperar a que el perfil esté cargado antes de chequear Supabase
+    setTimeout(async function() {
+      if (Auth.isLoggedIn()) {
+        // Esperar un poco más para que loadProfile haya terminado
+        await Tutorial.start();
+      } else {
+        // Sin cuenta — usar localStorage directamente
+        Tutorial.start();
+      }
+    }, 1500);
   }
 
   function switchAccount() {
