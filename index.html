@@ -7910,13 +7910,32 @@ const Tutorial = (() => {
 
   function isActive() { return _active; }
 
-  function start() {
-    try { if (localStorage.getItem(STORAGE_KEY)) return; } catch(e) {}
+  async function start() {
+    // Chequear primero en Supabase (por perfil), fallback a localStorage
+    try {
+      if (Auth.isLoggedIn()) {
+        var { data } = await _sb.from('profiles')
+          .select('tutorial_seen')
+          .eq('id', Auth.getUser().id)
+          .single();
+        if (data && data.tutorial_seen) return;
+      } else {
+        if (localStorage.getItem(STORAGE_KEY)) return;
+      }
+    } catch(e) {
+      if (localStorage.getItem(STORAGE_KEY)) return;
+    }
     _launch();
   }
 
   function restart() {
     try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    // Limpiar en Supabase también
+    try {
+      if (Auth.isLoggedIn()) {
+        _sb.from('profiles').update({ tutorial_seen: false }).eq('id', Auth.getUser().id);
+      }
+    } catch(e) {}
     if (_active) _cleanup(false);
     setTimeout(_launch, 100);
   }
@@ -8208,6 +8227,12 @@ const Tutorial = (() => {
   function _finish() {
     _cleanup(true);
     try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    // Guardar en Supabase por perfil
+    try {
+      if (Auth.isLoggedIn()) {
+        _sb.from('profiles').update({ tutorial_seen: true }).eq('id', Auth.getUser().id);
+      }
+    } catch(e) {}
 
     const ov = document.getElementById('tut-overlay');
     if (ov) {
@@ -8257,12 +8282,30 @@ const Onboarding = (() => {
   const STORAGE_KEY = 'glayer_onboardingSeen';
 
   function isActive() { return _active; }
-  function shouldShow() { try { return !localStorage.getItem(STORAGE_KEY); } catch(e) { return true; } }
+  async function shouldShow() {
+    try {
+      if (Auth.isLoggedIn()) {
+        var { data } = await _sb.from('profiles')
+          .select('onboarding_seen')
+          .eq('id', Auth.getUser().id)
+          .single();
+        return !(data && data.onboarding_seen);
+      }
+      return !localStorage.getItem(STORAGE_KEY);
+    } catch(e) {
+      return !localStorage.getItem(STORAGE_KEY);
+    }
+  }
 
   function start() { /* explicit restart only */ }
 
   function restart() {
     try { localStorage.removeItem(STORAGE_KEY); } catch(e) {}
+    try {
+      if (Auth.isLoggedIn()) {
+        _sb.from('profiles').update({ onboarding_seen: false }).eq('id', Auth.getUser().id);
+      }
+    } catch(e) {}
     if (typeof Tutorial !== 'undefined') Tutorial.resetPanels();
     _step = 0;
     _active = true;
@@ -8412,7 +8455,15 @@ const Onboarding = (() => {
     }
   }
 
-  function _markSeen() { try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {} }
+  function _markSeen() {
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    // Guardar en Supabase por perfil
+    try {
+      if (Auth.isLoggedIn()) {
+        _sb.from('profiles').update({ onboarding_seen: true }).eq('id', Auth.getUser().id);
+      }
+    } catch(e) {}
+  }
 
   function _onResize() {
     if (!_active) return;
@@ -9658,10 +9709,18 @@ const ThemeModule = (() => {
   return { init, toggle };
 })();
 
-function devReset() {
+async function devReset() {
   try {
     localStorage.removeItem('glayer_tutorialSeen');
     localStorage.removeItem('glayer_onboardingSeen');
+    // Limpiar en Supabase también
+    try {
+      var sess = await _sb.auth.getSession();
+      if (sess.data.session) {
+        await _sb.from('profiles').update({ tutorial_seen: false, onboarding_seen: false })
+          .eq('id', sess.data.session.user.id);
+      }
+    } catch(e) {}
     localStorage.removeItem('glayer_v5');
   } catch(e) {}
   location.reload();
