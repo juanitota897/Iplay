@@ -1994,6 +1994,7 @@ const Auth = (() => {
   }
 
   async function signOut() {
+    try { localStorage.removeItem('glayer_last_user_id'); } catch(e) {}
     await _sb.auth.signOut();
   }
 
@@ -2033,17 +2034,28 @@ const SupaStore = (() => {
     var res = await _sb.from('profiles').select('*').eq('id', user.id).single();
     if (res.error || !res.data) return null;
     var data = res.data;
+
+    // ── Detectar cambio de usuario ────────────────────────────────
+    // Si el userId cambió respecto al último login, limpiar el store local
+    // para que no se contamine con datos de otra cuenta
+    var lastUserId = null;
+    try { lastUserId = localStorage.getItem('glayer_last_user_id'); } catch(e) {}
+    var currentUserId = user.id;
+    if (lastUserId && lastUserId !== currentUserId) {
+      // Usuario distinto — limpiar store local completamente
+      Store.load(); // reload defaults
+      console.log('[SupaStore] Usuario distinto detectado, store limpiado');
+    }
+    try { localStorage.setItem('glayer_last_user_id', currentUserId); } catch(e) {}
+
     var S = Store.get();
 
-    // Supabase es la fuente de verdad para G-Coins y todos los campos de economía.
-    // XP: tomar el mayor entre local y server para proteger contra regresión
-    // (ej: si el sync tardó y el local tiene XP más reciente)
+    // Supabase es la única fuente de verdad — local nunca gana al server
+    // Esto evita que alguien manipule el localStorage para inflar XP o G-Coins
     var localXP  = S.xp || 0;
     var serverXP = data.xp || 0;
-    S.xp         = Math.max(localXP, serverXP);
-
-    // G-Coins: siempre server — addGCoins() sincroniza en tiempo real
-    S.gcoins     = data.g_coins     != null ? data.g_coins     : (S.gcoins || 0);
+    S.xp         = serverXP;  // server siempre gana
+    S.gcoins     = data.g_coins     != null ? data.g_coins     : 0;
     S.energy     = data.energy      != null ? data.energy      : S.energy;
     S.streak     = data.streak      != null ? data.streak      : S.streak;
     S.vault.fuel = data.vault_fuel  != null ? data.vault_fuel  : S.vault.fuel;
@@ -2051,8 +2063,8 @@ const SupaStore = (() => {
 
     Store.save();
 
-    // Si el XP local era mayor, sincronizarlo al servidor
-    if (localXP > serverXP) {
+    // Si el XP local era mayor al server (mismo usuario, sync pendiente), pushear al server
+    if (lastUserId === currentUserId && localXP > serverXP) {
       await syncProfile();
     }
 
