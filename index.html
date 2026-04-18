@@ -3455,7 +3455,7 @@ const AuthUI = (() => {
         <div id="bets-matches-list"></div>
 
         <!-- RESULTADOS RECIENTES -->
-        <div class="bets-results-section" id="bets-results-section" style="display:none;">
+        <div class="bets-results-section" id="bets-results-section">
           <div class="bets-results-hdr">
             <span class="bets-results-title">📋 Resultados recientes</span>
             <button class="bets-results-toggle" id="bets-results-toggle" onclick="BetsModule.toggleResults()">▼ Ver</button>
@@ -4235,7 +4235,7 @@ const Router = (() => {
     if (viewId === 'loot')     LootModule.refresh();
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
-    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; BetsModule.showResults(); }
+    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; }
     if (viewId === 'live')     BetsModule.refreshLiveList();
     // Ocultar sticky slip cuando no estás en bets
     if (viewId !== 'bets') {
