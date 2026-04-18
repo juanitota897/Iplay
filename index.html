@@ -219,6 +219,20 @@ button{font-family:inherit;cursor:pointer;}
 .pup-club-name{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--cyan);}
 .pup-club-role{font-size:10px;color:var(--t3);}
 .pup-loading{text-align:center;padding:32px;font-size:12px;color:var(--t3);}
+.pup-bets-title{font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;color:var(--t3);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:8px;}
+.pup-bet-row{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg2);border-radius:var(--r-md);border:1px solid rgba(255,255,255,.05);margin-bottom:5px;}
+.pup-bet-row:last-child{margin-bottom:0;}
+.pup-bet-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pup-bet-dot.won{background:var(--neon);box-shadow:0 0 5px rgba(57,255,20,.5);}
+.pup-bet-dot.lost{background:var(--red);}
+.pup-bet-dot.pending{background:rgba(212,175,55,.5);}
+.pup-bet-info{flex:1;min-width:0;}
+.pup-bet-label{font-size:11px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pup-bet-meta{font-size:9px;color:var(--t3);margin-top:1px;}
+.pup-bet-amt{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;}
+.pup-bet-amt.won{color:var(--neon);}
+.pup-bet-amt.lost{color:var(--red);}
+.pup-bet-amt.pending{color:var(--gold);}
 
 .bmc-expand-btn{width:100%;padding:7px;border:none;background:rgba(255,255,255,.03);color:var(--t3);font-family:'Barlow Condensed',sans-serif;font-size:11px;font-weight:700;letter-spacing:.5px;cursor:pointer;border-top:1px solid rgba(255,255,255,.04);transition:background .15s;display:flex;align-items:center;justify-content:center;gap:5px;}
 .bmc-expand-btn:hover{background:rgba(255,255,255,.06);color:var(--t2);}
@@ -535,6 +549,15 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bet-single-odd{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:800;flex-shrink:0;}
 .bet-ticket-total{display:flex;justify-content:space-between;align-items:center;padding:4px 11px 9px;font-size:10px;color:var(--t3);}
 .bet-ticket-total strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;}
+.bet-result-bar{display:flex;justify-content:space-between;align-items:center;padding:8px 11px;margin:0 0 0 0;border-top:1px solid rgba(255,255,255,.05);}
+.bet-result-bar.won{background:rgba(57,255,20,.06);}
+.bet-result-bar.lost{background:rgba(255,51,85,.05);}
+.bet-result-bar.pending{background:rgba(212,175,55,.04);}
+.bet-result-bar-lbl{font-size:10px;color:var(--t3);}
+.bet-result-bar-amt{font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;}
+.bet-result-bar-amt.won{color:var(--neon);}
+.bet-result-bar-amt.lost{color:var(--red);}
+.bet-result-bar-amt.pending{color:var(--gold);}
 
 /* ── FEED GLOBAL PANEL ── */
 #global-feed-btn{
@@ -639,6 +662,14 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 /* ── TOAST G-COINS ── */
 .toast-gcoin{top:120px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--neon);box-shadow:0 8px 28px rgba(57,255,20,.12);}
 .toast-gcoin .toast-txt{color:var(--neon);}
+/* Toast resolución de apuesta */
+.toast-bet{top:72px;min-width:220px;border-radius:14px;padding:12px 20px;flex-direction:column;align-items:flex-start;gap:3px;}
+.toast-bet-won{background:linear-gradient(135deg,rgba(57,255,20,.14),var(--bg2));border:1px solid rgba(57,255,20,.5);box-shadow:0 8px 32px rgba(57,255,20,.2);}
+.toast-bet-lost{background:linear-gradient(135deg,rgba(255,51,85,.1),var(--bg2));border:1px solid rgba(255,51,85,.4);box-shadow:0 8px 32px rgba(255,51,85,.15);}
+.toast-bet-title{font-family:'Barlow Condensed',sans-serif;font-size:16px;font-weight:800;letter-spacing:.3px;}
+.toast-bet-won .toast-bet-title{color:var(--neon);}
+.toast-bet-lost .toast-bet-title{color:var(--red);}
+.toast-bet-sub{font-size:10px;color:var(--t3);}
 
 /* Toast */
 .toast{position:absolute;left:50%;transform:translateX(-50%) translateY(-16px);border-radius:24px;padding:9px 18px;display:flex;align-items:center;gap:8px;opacity:0;pointer-events:none;z-index:200;transition:all .35s cubic-bezier(.34,1.56,.64,1);white-space:nowrap;}
@@ -2601,7 +2632,7 @@ const AuthUI = (() => {
             <div class="home-block-left">
               <span class="home-block-ico">🎯</span>
               <span class="home-block-title">MISIONES</span>
-              <span class="pill pill-gold" style="padding:2px 7px;font-size:9px;" id="home-missions-pill">3 pendientes</span>
+              <span class="pill pill-gold" style="padding:2px 7px;font-size:9px;" id="home-missions-pill">…</span>
             </div>
             <span class="home-block-arrow">›</span>
           </div>
@@ -3629,6 +3660,10 @@ const AuthUI = (() => {
   <!-- TOASTS -->
   <div class="toast toast-xp" id="toast-xp"><span class="toast-ico" id="toast-xp-ico">⚡</span><span class="toast-txt" id="toast-xp-txt">+100 XP</span></div>
   <div class="toast toast-vault" id="toast-vault"><span class="toast-ico">🛡️</span><span class="toast-txt" id="toast-vault-txt">Escudo activado</span></div>
+  <div class="toast toast-bet toast-bet-won" id="toast-bet-result" style="display:none;pointer-events:none;">
+    <div class="toast-bet-title" id="toast-bet-result-title">🏆 ¡APUESTA GANADA!</div>
+    <div class="toast-bet-sub" id="toast-bet-result-sub">+0 G-Coins</div>
+  </div>
 
   <!-- ═══ INTERACTIVE TUTORIAL ═══ -->
   <div id="tut-overlay">
@@ -4030,7 +4065,26 @@ const Store = (() => {
     if(t) { t.classList.add('show'); setTimeout(()=>t.classList.remove('show'), 2800); }
   }
 
-  return { load, save, get, getLevelInfo, addXP, addGCoins, activateRescue, activateXPBoost, checkRescue: _checkRescueTrigger, showGCoinToast, simulateWin, simulateLoss, resetDemo, showXPToast, showVaultToast };
+  function showBetResultToast(won, amount, matchLabel) {
+    const t     = document.getElementById('toast-bet-result');
+    const title = document.getElementById('toast-bet-result-title');
+    const sub   = document.getElementById('toast-bet-result-sub');
+    if (!t) return;
+    t.style.display = 'flex';
+    if (won) {
+      t.className = 'toast toast-bet toast-bet-won';
+      if (title) title.textContent = '🏆 ¡APUESTA GANADA!';
+      if (sub)   sub.textContent   = '+' + amount.toLocaleString('es-AR') + ' G-Coins' + (matchLabel ? ' · ' + matchLabel : '');
+    } else {
+      t.className = 'toast toast-bet toast-bet-lost';
+      if (title) title.textContent = '❌ APUESTA PERDIDA';
+      if (sub)   sub.textContent   = matchLabel || 'Mejor suerte la próxima';
+    }
+    t.classList.add('show');
+    setTimeout(() => { t.classList.remove('show'); setTimeout(() => { t.style.display = 'none'; }, 400); }, 4000);
+  }
+
+  return { load, save, get, getLevelInfo, addXP, addGCoins, activateRescue, activateXPBoost, checkRescue: _checkRescueTrigger, showGCoinToast, simulateWin, simulateLoss, resetDemo, showXPToast, showVaultToast, showBetResultToast };
 })();
 
 /* ── ROUTER ─────────────────────────────────────────────────── */
@@ -6806,12 +6860,14 @@ const BetsModule = (() => {
           // Notificar resolución
           if (updated.status === 'won') {
             var winAmt = Math.round(updated.stake * updated.odd);
-            Store.showGCoinToast('🏆 ¡Apuesta ganada! +' + winAmt.toLocaleString('es-AR') + ' G-Coins');
+            var matchLbl = updated.match_name || updated.label || '';
+            Store.showBetResultToast(true, winAmt, matchLbl);
             Store.addXP(updated.xp_gain || 0);
             HeaderModule.refresh();
           } else if (updated.status === 'lost') {
             var consolXP = Math.round((updated.xp_gain || 0) * 0.25);
-            Store.showVaultToast('❌ Apuesta perdida — +' + consolXP + ' XP de consolación');
+            var matchLbl2 = updated.match_name || updated.label || '';
+            Store.showBetResultToast(false, 0, matchLbl2);
             if (consolXP > 0) { Store.addXP(consolXP); HeaderModule.refresh(); }
           }
         })
@@ -7452,7 +7508,10 @@ const BetsModule = (() => {
         legsHtml = '<div class="bet-ticket-legs">' + legsRows + '</div>' +
           '<div class="bet-ticket-total">' +
             '<span>' + progressTxt + '</span>' +
-            '<strong style="color:' + (isWon ? 'var(--neon)' : isPending ? 'var(--gold)' : 'var(--red)') + '">' + amtTxt + '</strong>' +
+          '</div>' +
+          '<div class="bet-result-bar ' + cls + '">' +
+            '<span class="bet-result-bar-lbl">' + (isPending ? '⏳ Potencial' : isWon ? '✓ Ganancia' : '✗ Perdido') + '</span>' +
+            '<span class="bet-result-bar-amt ' + cls + '">' + amtTxt + '</span>' +
           '</div>';
       } else {
         // Single pick
@@ -7470,7 +7529,10 @@ const BetsModule = (() => {
             '<div class="bet-single-match">' + matchName + scoreHtml + '</div>' +
             '<div class="bet-single-pick ' + singleCls + '">' + label + '</div>' +
           '</div>' +
-          '<div class="bet-single-odd" style="color:' + (isWon ? 'var(--neon)' : isPending ? 'var(--gold)' : 'var(--red)') + '">' + amtTxt + '</div>' +
+        '</div>' +
+        '<div class="bet-result-bar ' + cls + '">' +
+          '<span class="bet-result-bar-lbl">' + (isPending ? '⏳ Potencial' : isWon ? '✓ Ganancia' : '✗ Perdido') + '</span>' +
+          '<span class="bet-result-bar-amt ' + cls + '">' + amtTxt + '</span>' +
         '</div>';
       }
 
@@ -9709,6 +9771,10 @@ const PublicProfile = (() => {
       var p = res.data;
       var li = _pupCalcLevel(p.xp || 0);
 
+      // Buscar id del usuario para luego traer apuestas
+      var userIdRes = await _sb.from('profiles').select('id').eq('username', username).maybeSingle();
+      var targetUserId = userIdRes.data ? userIdRes.data.id : null;
+
       // Club (si tiene)
       var clubHtml = '';
       var clubRes = await _sb.from('club_members')
@@ -9732,6 +9798,36 @@ const PublicProfile = (() => {
       var avatarEmojis = ['🎮','⚡','🏆','🎯','🔥','💎','🌟','🦁','🐺','🦅'];
       var ava = avatarEmojis[(p.username || '').charCodeAt(0) % avatarEmojis.length] || '🎮';
 
+      // Últimas 5 apuestas del usuario
+      var betsHtml = '';
+      if (targetUserId) {
+        var betsRes = await _sb.from('bets')
+          .select('match_name, label, stake, odd, status, is_parlay, picks, created_at')
+          .eq('user_id', targetUserId)
+          .in('status', ['won', 'lost', 'pending'])
+          .order('created_at', { ascending: false })
+          .limit(5);
+        if (betsRes.data && betsRes.data.length > 0) {
+          var betRows = betsRes.data.map(function(b) {
+            var st  = b.status === 'won' ? 'won' : b.status === 'lost' ? 'lost' : 'pending';
+            var lbl = b.is_parlay ? '🔗 Combinada ' + (b.picks ? b.picks.length : '') + ' picks' : (b.match_name || b.label || '—');
+            var winAmt = Math.round((b.stake || 0) * (b.odd || 1));
+            var amtTxt = st === 'won' ? '+' + winAmt.toLocaleString('es-AR') + ' G'
+                       : st === 'lost' ? '-' + (b.stake || 0).toLocaleString('es-AR') + ' G'
+                       : '+' + winAmt.toLocaleString('es-AR') + ' G?';
+            return '<div class="pup-bet-row">' +
+              '<div class="pup-bet-dot ' + st + '"></div>' +
+              '<div class="pup-bet-info">' +
+                '<div class="pup-bet-label">' + lbl + '</div>' +
+                '<div class="pup-bet-meta">' + (b.odd || 1).toFixed(2) + 'x · ' + (b.stake || 0).toLocaleString('es-AR') + ' G</div>' +
+              '</div>' +
+              '<div class="pup-bet-amt ' + st + '">' + amtTxt + '</div>' +
+            '</div>';
+          }).join('');
+          betsHtml = '<div style="margin-top:14px;"><div class="pup-bets-title">📋 Últimas apuestas</div>' + betRows + '</div>';
+        }
+      }
+
       body.innerHTML =
         '<div class="pup-header">' +
           '<div class="pup-avatar">' + ava + '</div>' +
@@ -9753,7 +9849,8 @@ const PublicProfile = (() => {
           '<div class="pup-stat"><div class="pup-stat-val" style="color:var(--neon)">' + (p.streak || 0) + ' 🔥</div><div class="pup-stat-lbl">Racha</div></div>' +
           '<div class="pup-stat"><div class="pup-stat-val" style="color:var(--gold)">' + (p.g_coins || 0).toLocaleString('es-AR') + '</div><div class="pup-stat-lbl">G-Coins</div></div>' +
         '</div>' +
-        clubHtml;
+        clubHtml +
+        betsHtml;
 
     } catch(e) {
       body.innerHTML = '<div class="pup-loading">Error al cargar el perfil.</div>';
