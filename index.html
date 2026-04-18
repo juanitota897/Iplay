@@ -504,17 +504,18 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bets-results-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t2);letter-spacing:1px;text-transform:uppercase;}
 .bets-results-toggle{background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:2px 4px;transition:color .15s;}
 .bets-results-toggle:hover{color:var(--t2);}
-.result-card{background:var(--bg1);border:1px solid rgba(255,255,255,.05);border-radius:var(--r-md);padding:10px 12px;margin-bottom:6px;}
+.result-card{background:var(--bg1);border:1px solid rgba(255,255,255,.07);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:6px;transition:border-color .2s;position:relative;overflow:hidden;}
+.result-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--gold-d),var(--gold));border-radius:3px 0 0 3px;opacity:.5;}
 .result-card:last-child{margin-bottom:0;}
-.result-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
-.result-league{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.result-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.result-league{font-size:9px;color:var(--gold-d);text-transform:uppercase;letter-spacing:.6px;font-weight:800;}
 .result-date{font-size:9px;color:var(--t3);}
-.result-teams{display:flex;align-items:center;gap:8px;}
-.result-team{flex:1;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result-teams{display:flex;align-items:center;gap:10px;}
+.result-team{flex:1;font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:.3px;}
 .result-team.away{text-align:right;}
-.result-score{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--t1);flex-shrink:0;min-width:48px;text-align:center;letter-spacing:1px;}
-.result-score.ft{color:var(--t1);}
-.result-status{font-size:9px;text-align:center;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+.result-score-wrap{flex-shrink:0;display:flex;flex-direction:column;align-items:center;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:4px 10px;}
+.result-score{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--t1);line-height:1;letter-spacing:2px;}
+.result-status{font-size:8px;text-align:center;color:var(--t3);margin-top:1px;text-transform:uppercase;letter-spacing:.5px;}
 
 /* ── MIS APUESTAS ── */
 .bets-history{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
@@ -6851,20 +6852,26 @@ const BetsModule = (() => {
       return (a.priority || 99) - (b.priority || 99);
     });
 
-    var sh = function(n) { return n && n.length > 12 ? n.slice(0, 12) : (n || ''); };
+    var sh = function(n) { return n && n.length > 14 ? n.slice(0, 14) : (n || ''); };
     list.innerHTML = allResults.map(function(r) {
+      var homeG = r.homeG != null ? r.homeG : '?';
+      var awayG = r.awayG != null ? r.awayG : '?';
+      var homeWon = typeof homeG === 'number' && typeof awayG === 'number' && homeG > awayG;
+      var awayWon = typeof homeG === 'number' && typeof awayG === 'number' && awayG > homeG;
+      var homeStyle = homeWon ? 'color:var(--neon)' : awayWon ? 'color:var(--t3)' : '';
+      var awayStyle = awayWon ? 'color:var(--neon);text-align:right' : homeWon ? 'color:var(--t3);text-align:right' : 'text-align:right';
       return '<div class="result-card">' +
         '<div class="result-card-top">' +
           '<span class="result-league">' + r.leagueName + '</span>' +
           '<span class="result-date">' + r.date + '</span>' +
         '</div>' +
         '<div class="result-teams">' +
-          '<span class="result-team">' + sh(r.home) + '</span>' +
-          '<div>' +
-            '<div class="result-score ft">' + r.homeG + ' — ' + r.awayG + '</div>' +
+          '<span class="result-team" style="' + homeStyle + '">' + sh(r.home) + '</span>' +
+          '<div class="result-score-wrap">' +
+            '<div class="result-score">' + homeG + ' - ' + awayG + '</div>' +
             '<div class="result-status">Final</div>' +
           '</div>' +
-          '<span class="result-team away">' + sh(r.away) + '</span>' +
+          '<span class="result-team away" style="' + awayStyle + '">' + sh(r.away) + '</span>' +
         '</div>' +
       '</div>';
     }).join('');
