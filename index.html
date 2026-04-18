@@ -2130,6 +2130,9 @@ const SupaStore = (() => {
 
     Store.save();
 
+    // Lanzar tutorial AQUÍ — cuando el perfil ya está cargado y tutorial_seen es conocido
+    setTimeout(function() { Tutorial.start(); }, 500);
+
     // Si el XP local era mayor al server (mismo usuario, sync pendiente), pushear al server
     if (lastUserId === currentUserId && localXP > serverXP) {
       await syncProfile();
@@ -7852,16 +7855,11 @@ const EntryModule = (() => {
     }
     // Cargar ranking real en el panel derecho
     setTimeout(function() { RankingModule.refresh(); }, 1000);
-    // Tutorial: esperar a que el perfil esté cargado antes de chequear Supabase
-    setTimeout(async function() {
-      if (Auth.isLoggedIn()) {
-        // Esperar un poco más para que loadProfile haya terminado
-        await Tutorial.start();
-      } else {
-        // Sin cuenta — usar localStorage directamente
-        Tutorial.start();
-      }
-    }, 1500);
+    // Tutorial se lanza desde loadProfile() después de cargar el perfil
+    // Para usuarios sin cuenta, lanzar directamente
+    if (!Auth.isLoggedIn()) {
+      setTimeout(function() { Tutorial.start(); }, 800);
+    }
   }
 
   function switchAccount() {
