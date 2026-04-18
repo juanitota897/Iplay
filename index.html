@@ -536,6 +536,73 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bet-ticket-total{display:flex;justify-content:space-between;align-items:center;padding:4px 11px 9px;font-size:10px;color:var(--t3);}
 .bet-ticket-total strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;}
 
+/* ── FEED GLOBAL PANEL ── */
+#global-feed-btn{
+  position:fixed;
+  right:12px;
+  top:80px; /* debajo del header fijo */
+  width:40px;height:40px;
+  border-radius:50%;
+  background:linear-gradient(135deg,var(--gold-d),var(--gold));
+  border:2px solid rgba(255,255,255,.2);
+  box-shadow:0 4px 16px rgba(212,175,55,.4);
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;line-height:1;
+  touch-action:manipulation;
+  z-index:80;
+  transition:transform .2s,box-shadow .2s;
+}
+#global-feed-btn:hover{transform:scale(1.08);box-shadow:0 6px 20px rgba(212,175,55,.5);}
+#global-feed-btn .gfb-dot{
+  position:absolute;top:2px;right:2px;
+  width:7px;height:7px;border-radius:50%;
+  background:var(--neon);
+  animation:blink 2s infinite;
+  display:none;
+}
+#global-feed-btn.has-activity .gfb-dot{display:block;}
+#global-feed-panel{
+  position:fixed;top:0;right:0;bottom:0;
+  width:280px;max-width:85vw;
+  background:var(--bg2);
+  border-left:1px solid var(--border-b);
+  box-shadow:-8px 0 24px rgba(0,0,0,.4);
+  z-index:95;
+  transform:translateX(100%);
+  transition:transform .3s cubic-bezier(.4,0,.2,1);
+  display:flex;flex-direction:column;
+  overflow:hidden;
+}
+#global-feed-panel.open{transform:translateX(0);}
+#global-feed-overlay{
+  position:fixed;inset:0;z-index:94;
+  background:rgba(0,0,0,.5);
+  opacity:0;pointer-events:none;
+  transition:opacity .3s;
+}
+#global-feed-overlay.open{opacity:1;pointer-events:all;}
+.gfp-header{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 14px 10px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  flex-shrink:0;
+}
+.gfp-title{font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:800;color:var(--t1);letter-spacing:.5px;display:flex;align-items:center;gap:6px;}
+.gfp-close{background:none;border:none;color:var(--t3);font-size:18px;cursor:pointer;padding:2px 6px;border-radius:6px;}
+.gfp-close:hover{color:var(--t1);background:rgba(255,255,255,.06);}
+.gfp-list{flex:1;overflow-y:auto;padding:8px 0;}
+.gfp-list::-webkit-scrollbar{width:3px;}
+.gfp-list::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px;}
+.gfp-item{display:flex;align-items:center;gap:9px;padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.03);animation:feedIn .3s ease;}
+.gfp-item:last-child{border-bottom:none;}
+.gfp-ico{font-size:18px;width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.gfp-info{flex:1;min-width:0;}
+.gfp-txt{font-size:11px;color:var(--t2);line-height:1.3;}
+.gfp-txt strong{color:var(--t1);}
+.gfp-ago{font-size:9px;color:var(--t3);margin-top:2px;}
+.gfp-empty{padding:24px;text-align:center;font-size:11px;color:var(--t3);}
+
 /* ── SISTEMA DE LIGAS ── */
 .league-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:10px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;}
 .league-badge.primera{background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.4);color:var(--gold);}
@@ -2315,6 +2382,23 @@ const AuthUI = (() => {
         <span class="hdr-energy-pct" id="hdr-energy-pct">100%</span>
       </div>
       <div class="hdr-energy-track"><div class="hdr-energy-fill" id="hdr-energy-bar" style="width:100%"></div></div>
+    </div>
+  </div>
+
+  <!-- ── GLOBAL FEED FAB ── -->
+  <button id="global-feed-btn" onclick="GlobalFeed.toggle()" title="Actividad global">
+    🌍<span class="gfb-dot"></span>
+  </button>
+
+  <!-- ── GLOBAL FEED PANEL ── -->
+  <div id="global-feed-overlay" onclick="GlobalFeed.close()"></div>
+  <div id="global-feed-panel">
+    <div class="gfp-header">
+      <div class="gfp-title">🌍 Actividad Global <span class="home-feed-dot"></span></div>
+      <button class="gfp-close" onclick="GlobalFeed.close()">✕</button>
+    </div>
+    <div class="gfp-list" id="gfp-list">
+      <div class="gfp-empty">Cargando actividad…</div>
     </div>
   </div>
 
@@ -5203,7 +5287,7 @@ const MissionsModule = (() => {
   var DAILY_POOL = [
     { id:'m_apuesta',  diff:'easy', ico:'⚡', name:'Apostador del Día',    desc:'Realizá tu primera apuesta del día.',                  xpBase:40,  btn:'⚡ Ir a Apuestas',  nav:'bets' },
     { id:'m_microbet', diff:'easy', ico:'🎯', name:'Micro-cazador',         desc:'Participá en 2 micro-apuestas en vivo.',               xpBase:45,  btn:'🎯 Ir a En Vivo',   nav:'live' },
-    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:40,  btn:'🎰 Ir al Casino',   nav:'casino' },
+    { id:'m_crash',    diff:'easy', ico:'🎰', name:'Piloto de Riesgo',      desc:'Jugá una ronda del Crash y cobrá antes del 2x.',       xpBase:25,  btn:'🎰 Ir al Casino',   nav:'casino' },
     { id:'m_combo',    diff:'med',  ico:'🔗', name:'Combinador',            desc:'Realizá una apuesta combinada de 2+ eventos.',         xpBase:90,  btn:'🔗 Ir a Apuestas',  nav:'bets' },
     { id:'m_ganador',  diff:'med',  ico:'🏆', name:'Racha Ganadora',        desc:'Ganá 2 micro-apuestas seguidas en vivo.',             xpBase:90,  btn:'🏆 Ir a En Vivo',   nav:'live' },
     { id:'m_vault',    diff:'med',  ico:'🛡️', name:'Guardián de Bóveda',   desc:'Acumulá 30 pts de combustible en tu Bóveda hoy.',      xpBase:80,  btn:'🛡️ Ver Bóveda',    nav:'vault' },
@@ -5752,7 +5836,7 @@ const CasinoModule = (() => {
       // Calcular profit localmente para mostrarlo inmediatamente
       var profit = Math.round(stake * cashoutMult);
       Store.addGCoins(profit);
-      Store.addXP(20);
+      Store.addXP(8); // XP moderado por cashout — la misión da el resto
       HeaderModule.refresh();
       _addToHistory(cashoutMult, 'cashout');
       _showBanner('win', '✓ Cobraste ' + profit.toLocaleString('es-AR') + ' G a ' + cashoutMult.toFixed(2) + 'x');
@@ -7767,7 +7851,7 @@ const EntryModule = (() => {
     }
     // Cargar ranking real en el panel derecho
     setTimeout(function() { RankingModule.refresh(); }, 1000);
-    setTimeout(function() { Tutorial.start(); }, 400);
+    setTimeout(async function() { await Tutorial.start(); }, 400);
   }
 
   function switchAccount() {
@@ -9738,6 +9822,106 @@ async function devReset() {
   location.reload();
 }
 
+/* ── GLOBAL FEED MODULE ── */
+const GlobalFeed = (() => {
+  var _items = [];
+  var _sub = null;
+  var _open = false;
+
+  var _icoMap = { microbet_win:'🎯', bet_placed:'🎲', crash_played:'🎰' };
+  var _txtMap = {
+    microbet_win: 'ganó una microbet',
+    bet_placed:   'apostó en un partido',
+    crash_played: 'jugó una ronda de Crash',
+  };
+
+  function _timeAgo(ts) {
+    var s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (s < 60)   return 'hace ' + s + 's';
+    if (s < 3600) return 'hace ' + Math.floor(s/60) + 'min';
+    return 'hace ' + Math.floor(s/3600) + 'h';
+  }
+
+  function _render() {
+    var list = document.getElementById('gfp-list');
+    if (!list) return;
+    if (!_items.length) {
+      list.innerHTML = '<div class="gfp-empty">Sin actividad reciente</div>';
+      return;
+    }
+    list.innerHTML = _items.slice(0, 20).map(function(item) {
+      var ico  = _icoMap[item.event_type] || '⚡';
+      var txt  = _txtMap[item.event_type] || item.event_type;
+      var name = (item.profiles && item.profiles.username) || item.username || 'Jugador';
+      var ago  = _timeAgo(item.created_at);
+      return '<div class="gfp-item">' +
+        '<div class="gfp-ico">' + ico + '</div>' +
+        '<div class="gfp-info">' +
+          '<div class="gfp-txt"><strong>' + name + '</strong> ' + txt + '</div>' +
+          '<div class="gfp-ago">' + ago + '</div>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function _load() {
+    try {
+      var { data } = await _sb.from('club_activity')
+        .select('*, profiles(username)')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (data) { _items = data; _render(); }
+    } catch(e) {}
+  }
+
+  function _initRealtime() {
+    if (_sub) return;
+    _sub = _sb.channel('global-feed-panel')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'club_activity' },
+        function(payload) {
+          var item = payload.new;
+          if (!item) return;
+          _items.unshift(item);
+          if (_items.length > 20) _items = _items.slice(0, 20);
+          // Mostrar punto de actividad en el botón
+          var btn = document.getElementById('global-feed-btn');
+          if (btn && !_open) btn.classList.add('has-activity');
+          if (_open) _render();
+        })
+      .subscribe();
+  }
+
+  function toggle() {
+    _open ? close() : open();
+  }
+
+  function open() {
+    _open = true;
+    var panel   = document.getElementById('global-feed-panel');
+    var overlay = document.getElementById('global-feed-overlay');
+    var btn     = document.getElementById('global-feed-btn');
+    if (panel)   panel.classList.add('open');
+    if (overlay) overlay.classList.add('open');
+    if (btn)     btn.classList.remove('has-activity');
+    _load();
+  }
+
+  function close() {
+    _open = false;
+    var panel   = document.getElementById('global-feed-panel');
+    var overlay = document.getElementById('global-feed-overlay');
+    if (panel)   panel.classList.remove('open');
+    if (overlay) overlay.classList.remove('open');
+  }
+
+  function init() {
+    _load();
+    _initRealtime();
+  }
+
+  return { toggle, open, close, init };
+})();
+
 document.addEventListener('DOMContentLoaded', async () => {
 
   Store.load();
@@ -9774,6 +9958,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   CasinoModule.init();
   ClubsModule.init();
   Store.checkRescue(); // revisar si ya tiene balance bajo al arrancar
+  GlobalFeed.init(); // iniciar feed global
 
   // Hamburguesa — binding directo, máxima prioridad, sobrescribe cualquier cosa
   var btn = document.getElementById('hamburger-btn');
