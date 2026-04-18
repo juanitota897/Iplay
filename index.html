@@ -6757,48 +6757,99 @@ const BetsModule = (() => {
     list.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:var(--t3);">Cargando resultados…</div>';
 
     var allResults = [];
-    var CONMEBOL_IDS = { 13: true, 11: true, 128: true, 529: true };
     var FINISHED = { 'FT': true, 'AET': true, 'PEN': true };
 
-    // Leer los últimos 2 días de api_cache — 0 requests a la API externa
-    for (var i = 1; i <= 2; i++) {
-      var d = new Date();
-      d.setDate(d.getDate() - i);
-      var fecha = d.toISOString().slice(0, 10);
-      try {
-        var cached = await _cacheRead('fixtures_api_' + fecha);
-        if (!cached) continue;
-        var fixtures = Array.isArray(cached) ? cached : (cached.response || []);
-        fixtures.forEach(function(f) {
-          var s = f.fixture && f.fixture.status && f.fixture.status.short;
-          if (!FINISHED[s]) return; // solo terminados
-          // Todas las ligas configuradas — no solo CONMEBOL
-          var cfg = LEAGUE_CONFIG[f.league && f.league.id];
-          if (!cfg) return;
-          var lname = (f.league.name || '').toLowerCase();
-          if (lname.includes('u19') || lname.includes('u20') || lname.includes('reserva') || lname.includes('women')) return;
-          allResults.push({
-            home:       f.teams.home.name,
-            away:       f.teams.away.name,
-            homeG:      f.goals && f.goals.home != null ? f.goals.home : '?',
-            awayG:      f.goals && f.goals.away != null ? f.goals.away : '?',
-            leagueName: cfg.name,
-            status:     s,
-            date:       new Date(f.fixture.date).toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' }),
-            priority:   cfg.priority,
-          });
+    // ── Estrategia 1: leer apifootball_fixtures_id_* del cache ───
+    // El poller guarda cada fixture individual — tienen score completo y todas las ligas
+    try {
+      var { data: cacheRows } = await _sb.from('api_cache')
+        .select('key, data, created_at')
+        .like('key', 'apifootball_fixtures_id_%')
+        .order('created_at', { ascending: false })
+        .limit(100);
+
+      if (cacheRows && cacheRows.length) {
+        var cutoff = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // últimas 48hs
+        cacheRows.forEach(function(row) {
+          if (new Date(row.created_at) < cutoff) return;
+          try {
+            var d = typeof row.data === 'string' ? JSON.parse(row.data) : row.data;
+            var f = d.response && d.response[0];
+            if (!f) return;
+            var s = f.fixture && f.fixture.status && f.fixture.status.short;
+            if (!FINISHED[s]) return;
+            var cfg = LEAGUE_CONFIG[f.league && f.league.id];
+            if (!cfg) return;
+            var lname = (f.league.name || '').toLowerCase();
+            if (lname.includes('u19') || lname.includes('u20') || lname.includes('reserva') || lname.includes('women')) return;
+            allResults.push({
+              home:       f.teams.home.name,
+              away:       f.teams.away.name,
+              homeG:      f.goals && f.goals.home != null ? f.goals.home : '?',
+              awayG:      f.goals && f.goals.away != null ? f.goals.away : '?',
+              leagueName: cfg.name,
+              status:     s,
+              date:       new Date(f.fixture.date).toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' }),
+              priority:   cfg.priority,
+              fixtureDate: f.fixture.date,
+            });
+          } catch(e) {}
         });
-      } catch(e) {}
+      }
+    } catch(e) {}
+
+    // ── Estrategia 2: fallback a fixtures_api_{fecha} ────────────
+    if (!allResults.length) {
+      for (var i = 1; i <= 2; i++) {
+        var dObj = new Date();
+        dObj.setDate(dObj.getDate() - i);
+        var fecha = dObj.toISOString().slice(0, 10);
+        try {
+          var cached = await _cacheRead('fixtures_api_' + fecha);
+          if (!cached) continue;
+          var fixtures = Array.isArray(cached) ? cached : (cached.response || cached.list || []);
+          fixtures.forEach(function(f) {
+            var s = f.fixture && f.fixture.status && f.fixture.status.short;
+            if (!FINISHED[s]) return;
+            var cfg = LEAGUE_CONFIG[f.league && f.league.id];
+            if (!cfg) return;
+            allResults.push({
+              home:       f.teams.home.name,
+              away:       f.teams.away.name,
+              homeG:      f.goals && f.goals.home != null ? f.goals.home : '?',
+              awayG:      f.goals && f.goals.away != null ? f.goals.away : '?',
+              leagueName: cfg.name,
+              status:     s,
+              date:       new Date(f.fixture.date).toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' }),
+              priority:   cfg.priority,
+              fixtureDate: f.fixture.date,
+            });
+          });
+        } catch(e) {}
+      }
     }
 
+    // Deduplicar por home+away+date
+    var seen = new Set();
+    allResults = allResults.filter(function(r) {
+      var key = r.home + r.away + (r.fixtureDate || '').slice(0, 10);
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+
     if (!allResults.length) {
-      list.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:var(--t3);">No hay resultados en los últimos 2 días.</div>';
-      section.style.display = '';
+      list.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:var(--t3);">No hay resultados recientes disponibles.</div>';
       return;
     }
 
-    // Ordenar por liga
-    allResults.sort(function(a, b) { return (a.priority || 99) - (b.priority || 99); });
+    // Ordenar: primero por fecha desc, después por liga
+    allResults.sort(function(a, b) {
+      var dateA = a.fixtureDate || '';
+      var dateB = b.fixtureDate || '';
+      if (dateB !== dateA) return dateB.localeCompare(dateA);
+      return (a.priority || 99) - (b.priority || 99);
+    });
 
     var sh = function(n) { return n && n.length > 12 ? n.slice(0, 12) : (n || ''); };
     list.innerHTML = allResults.map(function(r) {
@@ -6818,7 +6869,6 @@ const BetsModule = (() => {
       '</div>';
     }).join('');
 
-    section.style.display = '';
     _resultsLoaded = true;
   }
 
