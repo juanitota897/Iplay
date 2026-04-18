@@ -7424,10 +7424,13 @@ const BetsModule = (() => {
           var legResult = Array.isArray(resultData)
             ? resultData.find(function(r){ return r.matchId === p.matchId; })
             : null;
-          var legCls = isPending ? 'pending' : (legResult ? (legResult.won ? 'won' : 'lost') : 'pending');
+          // won: null = partido no terminó, true = ganó, false = perdió
+          var legWon = legResult ? legResult.won : null;
+          var legFinished = legResult ? legResult.finished : false;
+          var legCls = !legFinished ? 'pending' : (legWon === true ? 'won' : 'lost');
           var scoreHtml = legResult && legResult.score
             ? '<span class="bet-leg-score">' + legResult.score + '</span>'
-            : '';
+            : (legFinished ? '' : '<span class="bet-leg-score" style="color:var(--t3);">⏳</span>');
           return '<div class="bet-leg">' +
             '<div class="bet-leg-dot ' + legCls + '"></div>' +
             '<div class="bet-leg-info">' +
@@ -7455,7 +7458,9 @@ const BetsModule = (() => {
         // Single pick
         var singlePick = picks[0] || {};
         var singleResult = Array.isArray(resultData) && resultData[0] ? resultData[0] : null;
-        var singleCls = isPending ? 'pending' : (singleResult ? (singleResult.won ? 'won' : 'lost') : (isWon ? 'won' : 'lost'));
+        var singleFinished = singleResult ? singleResult.finished : false;
+        var singleWon = singleResult ? singleResult.won : null;
+        var singleCls = (!singleFinished || isPending) ? 'pending' : (singleWon === true ? 'won' : 'lost');
         var scoreHtml = singleResult && singleResult.score
           ? ' <span class="bet-leg-score">' + singleResult.score + '</span>'
           : '';
