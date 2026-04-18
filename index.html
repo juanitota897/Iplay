@@ -874,8 +874,15 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 @keyframes crash-pulse{0%{transform:scale(.7);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}
 @keyframes crash-shake{0%,100%{transform:translateX(0)}15%{transform:translateX(-8px)}30%{transform:translateX(8px)}45%{transform:translateX(-5px)}60%{transform:translateX(5px)}75%{transform:translateX(-2px)}90%{transform:translateX(2px)}}
 .crash-shake{animation:crash-shake .5s ease-in-out;}
-@keyframes mult-pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}
-.crash-mult.pulsing{animation:mult-pulse .6s ease-in-out infinite;}
+@keyframes mult-pulse-slow{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes mult-pulse-med{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes mult-pulse-fast{0%,100%{transform:scale(1)}50%{transform:scale(1.10)}}
+@keyframes mult-pulse-danger{0%,100%{transform:scale(1)}30%{transform:scale(1.12)}60%{transform:scale(0.97)}}
+@keyframes crash-glow{0%,100%{opacity:.6}50%{opacity:1}}
+.crash-mult.pulse-slow{animation:mult-pulse-slow .8s ease-in-out infinite;}
+.crash-mult.pulse-med{animation:mult-pulse-med .5s ease-in-out infinite;}
+.crash-mult.pulse-fast{animation:mult-pulse-fast .3s ease-in-out infinite;}
+.crash-mult.pulse-danger{animation:mult-pulse-danger .25s ease-in-out infinite;}
 
 .crash-topbar{display:flex;align-items:center;justify-content:space-between;padding:9px 13px 6px;border-bottom:1px solid rgba(255,255,255,.05);}
 .crash-status{display:flex;align-items:center;gap:6px;font-family:'Barlow Condensed',sans-serif;font-size:10px;font-weight:800;color:var(--neon);letter-spacing:1.5px;text-transform:uppercase;}
@@ -5725,13 +5732,26 @@ const CasinoModule = (() => {
     if (me) {
       me.innerHTML = mult.toFixed(2) + '<span class="crash-mult-x">x</span>';
       me.style.color = color;
-      me.style.textShadow = '0 0 40px ' + shadow;
-      // Pulso cuando está en zona de peligro
-      if (mult >= 5) me.classList.add('pulsing');
-      else me.classList.remove('pulsing');
+      // Tamaño dinámico — crece con el multiplicador
+      var fontSize = Math.min(68 + (mult - 1) * 6, 100);
+      me.style.fontSize = fontSize + 'px';
+      // Glow más intenso a medida que sube
+      var glowSize = Math.min(32 + mult * 8, 80);
+      me.style.textShadow = '0 0 ' + glowSize + 'px ' + shadow + ', 0 0 ' + (glowSize*2) + 'px ' + shadow;
+      // Pulso con velocidad creciente
+      me.classList.remove('pulse-slow','pulse-med','pulse-fast','pulse-danger','pulsing');
+      if      (mult >= 10) me.classList.add('pulse-danger');
+      else if (mult >= 5)  me.classList.add('pulse-fast');
+      else if (mult >= 3)  me.classList.add('pulse-med');
+      else if (mult >= 2)  me.classList.add('pulse-slow');
     }
 
     if (card) {
+      // Fondo del card se intensifica con el riesgo
+      var bgIntensity = Math.min((mult - 1) * 0.015, 0.12);
+      card.style.background = mult >= 2
+        ? 'linear-gradient(180deg, rgba(255,51,85,' + bgIntensity + ') 0%, var(--bg1) 60%)'
+        : '';
       card.className = 'crash-card' + (cardClass ? ' ' + cardClass : '');
     }
 
