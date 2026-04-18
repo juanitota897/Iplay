@@ -2142,7 +2142,6 @@ const SupaStore = (() => {
     if (lastUserId && lastUserId !== currentUserId) {
       // Usuario distinto — limpiar store local completamente
       Store.load(); // reload defaults
-      console.log('[SupaStore] Usuario distinto detectado, store limpiado');
     }
     try { localStorage.setItem('glayer_last_user_id', currentUserId); } catch(e) {}
 
@@ -4425,7 +4424,6 @@ const LiveProvider = (() => {
     // Si el cache está stale o vacío, fallback al proxy directo
     var data = await _cacheGet('live_fixtures');
     if (!data) {
-      console.log('[LiveProvider] cache miss — fallback a proxy');
       data = await _apiFetch('/fixtures?live=all');
     }
 
@@ -4579,7 +4577,6 @@ const LiveProvider = (() => {
       }
 
       // Disparar microbet con este evento real
-      console.log('[LiveProvider] Evento real detectado:', ev.type, 'en minuto', elapsed);
       if (typeof MicroBet !== 'undefined') {
         MicroBet.forceEvent(mbDef);
       }
@@ -4676,7 +4673,9 @@ const LiveProvider = (() => {
   function goalHome() { if(_match){ _match.homeG++; _momentum = Math.min(.8, _momentum + .15); _render(); } }
   function goalAway() { if(_match){ _match.awayG++; _momentum = Math.max(.2, _momentum - .15); _render(); } }
 
-  return { connect, triggerEvent, goalHome, goalAway, getState };
+  function getMatch() { return _match; }
+  function getFixtureId() { return _fixtureId; }
+  return { connect, triggerEvent, goalHome, goalAway, getState, getMatch, getFixtureId };
 })();
 
 /* ── MICROBET MODULE ────────────────────────────────────────── */
@@ -4790,7 +4789,11 @@ const MicroBet = (() => {
     const durMin = def.durMin || 8;
     const durMax = def.durMax || 14;
     const dur = _randDur(durMin, durMax);
-    ev = { phase:'active', endsAt: Date.now()+dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false };
+    var _liveMatch = (typeof LiveProvider !== 'undefined' && LiveProvider.getMatch) ? LiveProvider.getMatch() : null;
+    var _liveFixtureId = (typeof LiveProvider !== 'undefined' && LiveProvider.getFixtureId) ? LiveProvider.getFixtureId() : null;
+    ev = { phase:'active', endsAt: Date.now()+dur*1000, eventDef:def, pick:null, dismissed:false, focusShown:false,
+           minuteAtStart: _liveMatch ? (_liveMatch.minute || 0) : 0,
+           fixtureId: _liveFixtureId };
     _applyActiveUI();
     _runTick();
     const cfg = Store.get().mbConfig || {};
@@ -4846,6 +4849,44 @@ const MicroBet = (() => {
     _timer = setTimeout(_runTick, 250);
   }
 
+  // Mapea tipo de evento microbet → tipo de evento en api-football
+  const MB_EVENT_TYPE_MAP = {
+    '📐 Córner':    'Corner',
+    '🎯 Penal':     'Penalty',
+    '🎯 Tiro libre':'Free Kick',
+    '🟨 Tarjeta':   'Yellow Card',
+    '⚽ Gol':       'Goal',
+    '🔄 Cambio':    'Substitution',
+  };
+
+  // Consulta api_cache para ver si ocurrió un evento del tipo indicado
+  // entre minuteFrom y minuteTo en el fixtureId dado
+  async function _checkRealOutcome(fixtureId, eventTypeFull, minuteFrom, minuteTo) {
+    if (!fixtureId) return null;
+    try {
+      var { data, error } = await _sb.from('api_cache')
+        .select('data, created_at')
+        .eq('key', 'live_events_' + fixtureId)
+        .single();
+      if (error || !data) return null;
+      // Rechazar cache mayor a 8 minutos — si está muy viejo no podemos confiar
+      var age = Date.now() - new Date(data.created_at).getTime();
+      if (age > 8 * 60 * 1000) return null;
+      var events = Array.isArray(data.data) ? data.data
+                 : (data.data && Array.isArray(data.data.list)) ? data.data.list
+                 : [];
+      // Buscar el tipo de evento de la API (sin emoji)
+      var apiType = MB_EVENT_TYPE_MAP[eventTypeFull] || eventTypeFull;
+      var found = events.some(function(e) {
+        var min = e.time ? (e.time.elapsed || 0) : 0;
+        return e.type === apiType && min > minuteFrom && min <= minuteTo;
+      });
+      return found; // true = ocurrió, false = no ocurrió
+    } catch(e) {
+      return null; // no disponible → fallback
+    }
+  }
+
   function _resolve() {
     const hadPick = !!ev.pick;
     ev.phase = 'resolving';
@@ -4861,45 +4902,77 @@ const MicroBet = (() => {
       const stake = ev.stake || S.microbet.stake || 50;
       S.microbet.rounds++;
       S.energy = Math.max(0, (S.energy || 200) - MICRO_ENERGY);
-      // Usar win rate y multiplicador específico del tipo de evento
-      var def     = ev.eventDef || {};
-      var pickSide = ev.pick; // 'A' o 'B'
-      var winA    = def.winA  != null ? def.winA  : 0.50;
-      var multA   = def.multA != null ? def.multA : 1.8;
-      var multB   = def.multB != null ? def.multB : 1.8;
-      // Si apostó A → gana si random < winA; si apostó B → gana si random >= winA
-      var roll    = Math.random();
-      var aWon    = roll < winA;
-      var win     = (pickSide === 'A') ? aWon : !aWon;
-      var mult    = (pickSide === 'A') ? multA : multB;
-      var won     = Math.round(stake * mult);
 
-      if (win) {
-        S.microbet.wins++;
-        if (S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier].wins++;
-        Store.save();
-        Store.addXP(MICRO_XP);
-        Store.addGCoins(won);
-        _showResult('win', '✅', '¡Acertaste! +' + MICRO_XP + ' XP · +' + won.toLocaleString('es-AR') + ' G');
-        LootModule.refresh();
-        MissionsModule.checkTrigger('microbet', { won: true });
-        if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('microbet_win');
-      } else {
-        Store.save();
-        Store.simulateLoss();
-        _showResult('loss', '❌', 'Perdiste ' + stake.toLocaleString('es-AR') + ' G · +' + MICRO_FUEL_LOSS + ' fuel');
-        MissionsModule.checkTrigger('microbet', { won: false });
-      }
-      HeaderModule.refresh();
-      _updateLiveStats();
+      var def      = ev.eventDef || {};
+      var pickSide = ev.pick;
+      var multA    = def.multA != null ? def.multA : 1.8;
+      var multB    = def.multB != null ? def.multB : 1.8;
+      var mult     = (pickSide === 'A') ? multA : multB;
+      var wonAmt   = Math.round(stake * mult);
+
+      // Snapshot del evento para la verificación real
+      var fixtureId     = ev.fixtureId || null;
+      var minuteAtStart = ev.minuteAtStart || 0;
+      var eventType     = def.type || '';
+      // La ventana real es desde el minuto de inicio hasta + durMax del evento
+      var minuteWindow  = minuteAtStart + Math.ceil((def.durMax || 18) / 60) + 1;
+
+      // Resolver: primero intentar contra datos reales, fallback a probabilidad
+      var winA = def.winA != null ? def.winA : 0.50;
+
+      _checkRealOutcome(fixtureId, eventType, minuteAtStart, minuteWindow).then(function(realResult) {
+        var aWon;
+        var usedRealData = false;
+
+        if (realResult !== null) {
+          // Resultado real de la API disponible
+          // optA siempre es "Sí ocurrió", optB es "No ocurrió"
+          aWon = realResult === true;
+          usedRealData = true;
+        } else {
+          // Fallback: probabilidad calibrada (igual que antes)
+          aWon = Math.random() < winA;
+        }
+
+        var win = (pickSide === 'A') ? aWon : !aWon;
+
+        if (win) {
+          S.microbet.wins++;
+          if (S.loot.progress[S.loot.tier]) S.loot.progress[S.loot.tier].wins++;
+          Store.save();
+          Store.addXP(MICRO_XP);
+          Store.addGCoins(wonAmt);
+          var resultLbl = usedRealData ? '✅ ¡Acertaste! (resultado real)' : '✅ ¡Acertaste!';
+          _showResult('win', '✅', resultLbl + ' +' + MICRO_XP + ' XP · +' + wonAmt.toLocaleString('es-AR') + ' G');
+          LootModule.refresh();
+          MissionsModule.checkTrigger('microbet', { won: true });
+          if (typeof ClubsModule !== 'undefined') ClubsModule.logAction('microbet_win');
+        } else {
+          Store.save();
+          Store.simulateLoss();
+          _showResult('loss', '❌', 'Perdiste ' + stake.toLocaleString('es-AR') + ' G · +' + MICRO_FUEL_LOSS + ' fuel');
+          MissionsModule.checkTrigger('microbet', { won: false });
+        }
+        HeaderModule.refresh();
+        _updateLiveStats();
+
+        _syncHomeMBBadge(false, null);
+        setTimeout(() => {
+          const rb = document.getElementById('mb-result-banner');
+          if(rb) rb.className = 'mb-result-banner';
+          _scheduleWait(5000 + Math.random()*5000);
+        }, 2800);
+      });
+
+    } else {
+      // Sin pick — solo cleanup
+      _syncHomeMBBadge(false, null);
+      setTimeout(() => {
+        const rb = document.getElementById('mb-result-banner');
+        if(rb) rb.className = 'mb-result-banner';
+        _scheduleWait(5000 + Math.random()*5000);
+      }, 2800);
     }
-    _syncHomeMBBadge(false, null);
-    // Show stage result briefly, then cooldown
-    setTimeout(() => {
-      const rb = document.getElementById('mb-result-banner');
-      if(rb) rb.className = 'mb-result-banner';
-      _scheduleWait(5000 + Math.random()*5000);
-    }, 2800);
   }
 
   function _showResult(type, ico, txt) {
@@ -6504,7 +6577,8 @@ const BetsModule = (() => {
         });
       } catch(e) {}
 
-      if (!allMatches.length) { console.log('[BetsModule] Sin partidos'); return; }
+      if (!allMatches.length) {
+ return; }
 
       var seenIds = new Set();
       _matches = allMatches.filter(function(m) {
@@ -6517,7 +6591,6 @@ const BetsModule = (() => {
       _renderMatches();
       _renderSlip();
       BetsModule.refreshLiveList();
-      console.log('[BetsModule] Partidos cargados:', _matches.length);
 
       // ── 4. THE ODDS API: cuotas reales (async, no bloquea render) ─
       _loadRealOdds();
@@ -6548,7 +6621,6 @@ const BetsModule = (() => {
       });
 
       if (updated > 0) {
-        console.log('[Odds] Cuotas reales aplicadas a', updated, 'partidos');
         _renderMatches();
         _renderSlip();
       }
@@ -6794,6 +6866,23 @@ const BetsModule = (() => {
   var _historyLoaded = false;
   var _pollerTimer = null;
 
+  // ── ANTI DOBLE-ACREDITACIÓN ───────────────────────────────────
+  // Persiste en localStorage qué bet IDs ya fueron notificados al cliente.
+  // Sobrevive reloads — evita que cada recarga vuelva a acreditar XP/GCoins.
+  var _CREDITED_KEY = 'glayer_bets_credited';
+  function _getCreditedIds() {
+    try { return new Set(JSON.parse(localStorage.getItem(_CREDITED_KEY) || '[]')); } catch(e) { return new Set(); }
+  }
+  function _markCredited(id) {
+    try {
+      var ids = _getCreditedIds();
+      ids.add(String(id));
+      // Mantener solo los últimos 200 IDs para no inflar el storage
+      var arr = Array.from(ids).slice(-200);
+      localStorage.setItem(_CREDITED_KEY, JSON.stringify(arr));
+    } catch(e) {}
+  }
+
   async function _loadHistory() {
     try {
       var sess = await _sb.auth.getSession();
@@ -6807,17 +6896,21 @@ const BetsModule = (() => {
         _sbHistory = data;
         _historyLoaded = true;
         _renderHistory();
-        // Notificar si alguna apuesta se resolvió desde la última carga
+        // Solo notificar apuestas resueltas que aún no fueron procesadas en este cliente.
+        // El saldo real (g_coins, xp) ya viene de Supabase via loadProfile al login —
+        // aquí solo mostramos el toast informativo para apuestas recientes (< 24hs).
+        var credited = _getCreditedIds();
         data.forEach(function(b) {
-          if ((b.status === 'won' || b.status === 'lost') && !b._notified) {
-            b._notified = true;
-            if (b.status === 'won') {
-              var winAmt = Math.round(b.stake * b.odd);
-              Store.showGCoinToast('🏆 ¡Apuesta resuelta! +' + winAmt.toLocaleString('es-AR') + ' G-Coins');
-              Store.addXP(b.xp_gain || 0);
-              HeaderModule.refresh();
-            } else {
-              Store.showVaultToast('❌ Apuesta perdida — ¡Seguí intentando!');
+          if ((b.status === 'won' || b.status === 'lost') && !credited.has(String(b.id))) {
+            _markCredited(b.id);
+            var age = Date.now() - new Date(b.created_at).getTime();
+            if (age < 24 * 60 * 60 * 1000) { // solo apuestas de las últimas 24hs
+              if (b.status === 'won') {
+                var winAmt = Math.round(b.stake * b.odd);
+                Store.showBetResultToast(true, winAmt, b.match_name || b.label || '');
+              } else {
+                Store.showBetResultToast(false, 0, b.match_name || b.label || '');
+              }
             }
           }
         });
@@ -6857,18 +6950,26 @@ const BetsModule = (() => {
           }
           _renderHistory();
 
-          // Notificar resolución
-          if (updated.status === 'won') {
-            var winAmt = Math.round(updated.stake * updated.odd);
-            var matchLbl = updated.match_name || updated.label || '';
-            Store.showBetResultToast(true, winAmt, matchLbl);
-            Store.addXP(updated.xp_gain || 0);
-            HeaderModule.refresh();
-          } else if (updated.status === 'lost') {
-            var consolXP = Math.round((updated.xp_gain || 0) * 0.25);
-            var matchLbl2 = updated.match_name || updated.label || '';
-            Store.showBetResultToast(false, 0, matchLbl2);
-            if (consolXP > 0) { Store.addXP(consolXP); HeaderModule.refresh(); }
+          // Notificar resolución — solo si no fue ya procesada (evita doble acreditación)
+          if (updated.status === 'won' || updated.status === 'lost') {
+            var alreadyCredited = _getCreditedIds().has(String(updated.id));
+            if (!alreadyCredited) {
+              _markCredited(updated.id);
+              if (updated.status === 'won') {
+                var winAmt = Math.round(updated.stake * updated.odd);
+                var matchLbl = updated.match_name || updated.label || '';
+                Store.showBetResultToast(true, winAmt, matchLbl);
+                Store.addXP(updated.xp_gain || 0);
+                HeaderModule.refresh();
+              } else {
+                var consolXP = Math.round((updated.xp_gain || 0) * 0.25);
+                var matchLbl2 = updated.match_name || updated.label || '';
+                Store.showBetResultToast(false, 0, matchLbl2);
+                if (consolXP > 0) { Store.addXP(consolXP); HeaderModule.refresh(); }
+              }
+              // Recargar saldo real desde Supabase para asegurarse de estar en sync
+              SupaStore.loadProfile();
+            }
           }
         })
         .subscribe();
@@ -6894,12 +6995,8 @@ const BetsModule = (() => {
     // Descontar G-Coins inmediatamente (UX optimista)
     Store.addGCoins(-effectiveStake);
 
-    // XP mínimo de participación al colocar
+    // Guardar en Supabase — XP de participación solo se da si la apuesta se registra OK
     const XP_PARTICIPATION = 10;
-    Store.addXP(XP_PARTICIPATION);
-    HeaderModule.refresh();
-
-    // Guardar en Supabase
     try {
       var sess = await _sb.auth.getSession();
       if (sess.data.session) {
@@ -6919,13 +7016,25 @@ const BetsModule = (() => {
         }).select().single();
 
         if (!error && inserted) {
-          // Agregar al historial local para mostrar inmediatamente
+          // Apuesta registrada correctamente → dar XP de participación
+          Store.addXP(XP_PARTICIPATION);
+          HeaderModule.refresh();
           _sbHistory.unshift(inserted);
           _startPoller();
+        } else if (error) {
+          // Falló el registro → devolver G-Coins
+          console.warn('[BetsModule] Error guardando apuesta, devolviendo stake:', error.message);
+          Store.addGCoins(effectiveStake);
+          Store.showVaultToast('Error al registrar la apuesta — se devolvió el saldo');
+          HeaderModule.refresh();
+          return;
         }
       }
     } catch(e) {
       console.warn('[BetsModule] Error guardando apuesta en Supabase:', e.message);
+      Store.addGCoins(effectiveStake);
+      HeaderModule.refresh();
+      return;
     }
 
     // Feedback local inmediato
@@ -8122,10 +8231,8 @@ const Tutorial = (() => {
   function skip() { _finish(); }
 
   function next() {
-    console.log('[Tutorial] next() called — _active:', _active, '_step:', _step);
     if (!_active) { console.warn('[Tutorial] next() aborted: not active'); return; }
     const s = STEPS[_step];
-    console.log('[Tutorial] step action:', s.action, 'actionDone:', _actionDone);
     const needsAction = s.action && s.action !== 'next';
     if (needsAction && !_actionDone) { console.warn('[Tutorial] next() blocked: needs action'); return; }
     if (_step >= STEPS.length - 1) { _finish(); return; }
