@@ -497,6 +497,25 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bets-confirm-btn{width:100%;margin-top:10px;padding:13px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;transition:all .2s;}
 .bets-confirm-btn:hover{transform:translateY(-1px);}
 .bets-confirm-btn:disabled{opacity:.35;cursor:not-allowed;transform:none;}
+
+/* ── RESULTADOS RECIENTES ───────────────────────────────────── */
+.bets-results-section{margin-bottom:8px;}
+.bets-results-hdr{display:flex;align-items:center;justify-content:space-between;padding:10px 0 8px;}
+.bets-results-title{font-family:'Barlow Condensed',sans-serif;font-size:13px;font-weight:700;color:var(--t2);letter-spacing:1px;text-transform:uppercase;}
+.bets-results-toggle{background:none;border:none;color:var(--t3);font-size:11px;cursor:pointer;padding:2px 4px;transition:color .15s;}
+.bets-results-toggle:hover{color:var(--t2);}
+.result-card{background:var(--bg1);border:1px solid rgba(255,255,255,.05);border-radius:var(--r-md);padding:10px 12px;margin-bottom:6px;}
+.result-card:last-child{margin-bottom:0;}
+.result-card-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;}
+.result-league{font-size:9px;color:var(--t3);text-transform:uppercase;letter-spacing:.5px;font-weight:700;}
+.result-date{font-size:9px;color:var(--t3);}
+.result-teams{display:flex;align-items:center;gap:8px;}
+.result-team{flex:1;font-size:12px;color:var(--t1);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.result-team.away{text-align:right;}
+.result-score{font-family:'Barlow Condensed',sans-serif;font-size:20px;font-weight:800;color:var(--t1);flex-shrink:0;min-width:48px;text-align:center;letter-spacing:1px;}
+.result-score.ft{color:var(--t1);}
+.result-status{font-size:9px;text-align:center;color:var(--t3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px;}
+
 /* ── MIS APUESTAS ── */
 .bets-history{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;}
 .bets-history-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--t2);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;}
@@ -3435,6 +3454,15 @@ const AuthUI = (() => {
         <!-- MATCHES LIST -->
         <div id="bets-matches-list"></div>
 
+        <!-- RESULTADOS RECIENTES -->
+        <div class="bets-results-section" id="bets-results-section" style="display:none;">
+          <div class="bets-results-hdr">
+            <span class="bets-results-title">📋 Resultados recientes</span>
+            <button class="bets-results-toggle" id="bets-results-toggle" onclick="BetsModule.toggleResults()">▼ Ver</button>
+          </div>
+          <div id="bets-results-list" style="display:none;"></div>
+        </div>
+
         <!-- BET SLIP -->
         <div class="bets-slip" id="bets-slip-section">
           <div class="bets-slip-title">📋 Cupón</div>
@@ -4207,7 +4235,7 @@ const Router = (() => {
     if (viewId === 'loot')     LootModule.refresh();
     if (viewId === 'profile')  { ProfileModule.refresh(); MBConfig.render(); }
     if (viewId === 'home')     HomeModule.refresh();
-    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; }
+    if (viewId === 'bets')     { BetsModule.refresh(); var _bb=document.getElementById('nav-bets-badge'); if(_bb) _bb.style.display='none'; _loadRecentResultsIfNeeded(); }
     if (viewId === 'live')     BetsModule.refreshLiveList();
     // Ocultar sticky slip cuando no estás en bets
     if (viewId !== 'bets') {
@@ -6717,6 +6745,93 @@ const BetsModule = (() => {
     }
   }
 
+  // ── RESULTADOS RECIENTES: leer de api_cache sin tocar las APIs ──
+  var _resultsLoaded = false;
+  var _resultsOpen = false;
+
+  async function _loadRecentResults() {
+    var list = document.getElementById('bets-results-list');
+    var section = document.getElementById('bets-results-section');
+    if (!list || !section) return;
+
+    list.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:var(--t3);">Cargando resultados…</div>';
+
+    var allResults = [];
+    var CONMEBOL_IDS = { 13: true, 11: true, 128: true, 529: true };
+    var FINISHED = { 'FT': true, 'AET': true, 'PEN': true };
+
+    // Leer los últimos 2 días de api_cache — 0 requests a la API externa
+    for (var i = 1; i <= 2; i++) {
+      var d = new Date();
+      d.setDate(d.getDate() - i);
+      var fecha = d.toISOString().slice(0, 10);
+      try {
+        var cached = await _cacheRead('fixtures_api_' + fecha);
+        if (!cached) continue;
+        var fixtures = Array.isArray(cached) ? cached : (cached.response || []);
+        fixtures.forEach(function(f) {
+          var s = f.fixture && f.fixture.status && f.fixture.status.short;
+          if (!FINISHED[s]) return; // solo terminados
+          // Todas las ligas configuradas — no solo CONMEBOL
+          var cfg = LEAGUE_CONFIG[f.league && f.league.id];
+          if (!cfg) return;
+          var lname = (f.league.name || '').toLowerCase();
+          if (lname.includes('u19') || lname.includes('u20') || lname.includes('reserva') || lname.includes('women')) return;
+          allResults.push({
+            home:       f.teams.home.name,
+            away:       f.teams.away.name,
+            homeG:      f.goals && f.goals.home != null ? f.goals.home : '?',
+            awayG:      f.goals && f.goals.away != null ? f.goals.away : '?',
+            leagueName: cfg.name,
+            status:     s,
+            date:       new Date(f.fixture.date).toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' }),
+            priority:   cfg.priority,
+          });
+        });
+      } catch(e) {}
+    }
+
+    if (!allResults.length) {
+      list.innerHTML = '<div style="padding:10px;text-align:center;font-size:11px;color:var(--t3);">No hay resultados en los últimos 2 días.</div>';
+      section.style.display = '';
+      return;
+    }
+
+    // Ordenar por liga
+    allResults.sort(function(a, b) { return (a.priority || 99) - (b.priority || 99); });
+
+    var sh = function(n) { return n && n.length > 12 ? n.slice(0, 12) : (n || ''); };
+    list.innerHTML = allResults.map(function(r) {
+      return '<div class="result-card">' +
+        '<div class="result-card-top">' +
+          '<span class="result-league">' + r.leagueName + '</span>' +
+          '<span class="result-date">' + r.date + '</span>' +
+        '</div>' +
+        '<div class="result-teams">' +
+          '<span class="result-team">' + sh(r.home) + '</span>' +
+          '<div>' +
+            '<div class="result-score ft">' + r.homeG + ' — ' + r.awayG + '</div>' +
+            '<div class="result-status">Final</div>' +
+          '</div>' +
+          '<span class="result-team away">' + sh(r.away) + '</span>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+
+    section.style.display = '';
+    _resultsLoaded = true;
+  }
+
+  function toggleResults() {
+    var list = document.getElementById('bets-results-list');
+    var btn  = document.getElementById('bets-results-toggle');
+    if (!list) return;
+    _resultsOpen = !_resultsOpen;
+    list.style.display = _resultsOpen ? '' : 'none';
+    if (btn) btn.textContent = _resultsOpen ? '▲ Ocultar' : '▼ Ver';
+    if (_resultsOpen && !_resultsLoaded) _loadRecentResults();
+  }
+
   // Fallback al proxy si el cache no tiene datos aún
   const FD_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/football-proxy';
   const FIXTURES_PROXY = 'https://jtxvwzcolsbdviskhxpj.supabase.co/functions/v1/fixtures-proxy';
@@ -6790,11 +6905,16 @@ const BetsModule = (() => {
           // Leer del cache primero, fallback al proxy si no hay datos
           var cached = await _cacheRead('fixtures_fd_' + comp.code);
           const j = cached || await _fdFetch('/competitions/' + comp.code + '/matches?status=SCHEDULED');
-          (j.matches || []).slice(0, 3).forEach(function(m) {
+          (j.matches || []).slice(0, 10).forEach(function(m) {
             const kickoff = new Date(m.utcDate);
+            // Filtrar partidos que ya pasaron — solo mostrar desde hoy en adelante
+            const kickoffDate = kickoff.toISOString().slice(0, 10);
+            if (kickoffDate < today) return;
+            // Filtrar por status — no mostrar terminados ni en juego (se muestran por api-football)
+            if (m.status && (m.status === 'FINISHED' || m.status === 'IN_PLAY' || m.status === 'PAUSED')) return;
             const timeStr = kickoff.toLocaleTimeString('es-AR', { hour:'2-digit', minute:'2-digit', timeZone:'America/Argentina/Buenos_Aires' });
             const dateStr = kickoff.toLocaleDateString('es-AR', { weekday:'short', day:'numeric', month:'short', timeZone:'America/Argentina/Buenos_Aires' });
-            const isToday = kickoff.toISOString().slice(0,10) === today;
+            const isToday = kickoffDate === today;
             const homeName = (m.homeTeam && (m.homeTeam.name || m.homeTeam.shortName)) || 'TBD';
             const awayName = (m.awayTeam && (m.awayTeam.name || m.awayTeam.shortName)) || 'TBD';
             allMatches.push({
@@ -6834,6 +6954,9 @@ const BetsModule = (() => {
             if (lname.includes('u19') || lname.includes('u20') || lname.includes('reserva') || lname.includes('women')) return;
             const s = f.fixture.status.short;
             if (s === 'FT' || s === 'AET' || s === 'PEN') return;
+            // Filtrar también por fecha — el cache puede tener datos de días anteriores
+            const fixtureDate = new Date(f.fixture.date).toISOString().slice(0, 10);
+            if (fixtureDate < today) return;
             const cfg = LEAGUE_CONFIG[f.league.id];
             if (!cfg) return;
             const kickoff = new Date(f.fixture.date);
@@ -6998,6 +7121,12 @@ const BetsModule = (() => {
     if (!_apiLoaded) _loadRealFixtures();
     // Cargar historial desde Supabase
     _loadHistory().then(function() { _startPoller(); });
+  }
+
+  function _loadRecentResultsIfNeeded() {
+    // Solo mostrar el header de la sección — el contenido se carga al expandir
+    var section = document.getElementById('bets-results-section');
+    if (section) section.style.display = '';
   }
 
   function refreshWallet() {
@@ -8121,7 +8250,7 @@ const BetsModule = (() => {
     }, 150);
   }
 
-  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip, scrollLeagues };
+  return { refresh, refreshWallet, refreshLiveList, setLeague, setStake, pickOdd, addMarketPick, removePick, confirm, toggleDetail, switchDetailTab, scrollToSlip, scrollLeagues, toggleResults };
 })();
 
 /* ═══ BOOT ═══════════════════════════════════════════════════ */
