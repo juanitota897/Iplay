@@ -1986,6 +1986,8 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .club-btn-create{width:100%;padding:13px;border:none;border-radius:var(--r-md);background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.5px;cursor:pointer;}
 .club-btn-join{width:100%;padding:12px;border:1px solid rgba(255,255,255,.1);border-radius:var(--r-md);background:rgba(255,255,255,.04);color:var(--t2);font-family:'Barlow Condensed',sans-serif;font-size:14px;font-weight:700;cursor:pointer;}
 .club-locked-lbl{font-size:10px;color:var(--t3);margin-top:2px;}
+.club-tour-btn{width:100%;padding:9px;border:1px solid rgba(255,255,255,.07);border-radius:var(--r-md);background:none;color:var(--t3);font-size:11px;font-family:'Barlow Condensed',sans-serif;font-weight:700;letter-spacing:.4px;cursor:pointer;margin-top:4px;transition:color .15s,border-color .15s;}
+.club-tour-btn:hover{color:var(--t2);border-color:rgba(255,255,255,.14);}
 
 /* Header del club */
 .club-hdr-card{background:linear-gradient(135deg,rgba(212,175,55,.08),rgba(212,175,55,.02));border:1px solid rgba(212,175,55,.25);border-radius:var(--r-lg);padding:14px;}
@@ -9403,10 +9405,10 @@ const ClubsModule = (() => {
       await _renderWithClub();
     } else {
       _renderNoClub();
-      // Mostrar onboarding la primera vez que entra a Clubs sin tener club
-      if (typeof ClubsOnboarding !== 'undefined') {
-        setTimeout(function() { ClubsOnboarding.tryShow(); }, 400);
-      }
+    }
+    // Mostrar onboarding la primera vez — independientemente de si tiene club o no
+    if (typeof ClubsOnboarding !== 'undefined') {
+      setTimeout(function() { ClubsOnboarding.tryShow(); }, 500);
     }
   }
 
@@ -9436,6 +9438,7 @@ const ClubsModule = (() => {
           '</button>' +
           (canCreate ? '' : '<div class="club-locked-lbl">Llegá al Nivel 2 para crear un club. Podés unirte desde ya.</div>') +
           '<button class="club-btn-join" onclick="ClubsModule.showJoinModal()">Unirse con código</button>' +
+          '<button class="club-tour-btn" onclick="ClubsOnboarding.forceShow()">📖 Ver tour de Clubes</button>' +
         '</div>' +
       '</div>';
   }
@@ -9578,6 +9581,7 @@ const ClubsModule = (() => {
         membersHtml +
         '<div class="club-leader-actions">' +
           '<button class="club-leave-btn" onclick="ClubsModule.confirmLeave()">' + (isOwner ? '🗑️ Disolver Club' : '🚪 Salir del Club') + '</button>' +
+          '<button class="club-tour-btn" onclick="ClubsOnboarding.forceShow()">📖 Ver tour de Clubes</button>' +
         '</div>' +
       '</div>';
 
@@ -10058,7 +10062,18 @@ const ClubsOnboarding = (() => {
     }
   }
 
-  return { tryShow, skip, next, prev };
+  // Fuerza el tour sin marcar como visto en Supabase — para el botón manual
+  function forceShow() {
+    _step = 0;
+    _active = true;
+    var ov = document.getElementById('club-ob-overlay');
+    if (!ov) return;
+    _buildDots();
+    _render();
+    ov.classList.add('active');
+  }
+
+  return { tryShow, forceShow, skip, next, prev };
 })();
 window.ClubsOnboarding = ClubsOnboarding;
 
