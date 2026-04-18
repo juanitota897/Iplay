@@ -559,6 +559,39 @@ body.light-mode .match-team-name{color:#0A0E1A;}
 .bet-result-bar-amt.lost{color:var(--red);}
 .bet-result-bar-amt.pending{color:var(--gold);}
 
+
+/* ── CLUBS ONBOARDING ───────────────────────────────────────── */
+#club-ob-overlay{
+  position:absolute;inset:0;z-index:350;
+  background:rgba(4,4,12,.92);backdrop-filter:blur(6px);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .3s;
+}
+#club-ob-overlay.active{opacity:1;pointer-events:all;}
+#club-ob-card{
+  width:100%;max-width:430px;
+  background:var(--bg2);
+  border:1px solid var(--border-b);
+  border-radius:24px 24px 0 0;
+  padding:24px 20px 32px;
+  transform:translateY(40px);
+  transition:transform .35s cubic-bezier(.34,1.56,.64,1);
+}
+#club-ob-overlay.active #club-ob-card{transform:translateY(0);}
+.club-ob-handle{width:36px;height:3px;background:rgba(255,255,255,.12);border-radius:2px;margin:0 auto 20px;}
+.club-ob-steps{display:flex;gap:6px;justify-content:center;margin-bottom:20px;}
+.club-ob-dot{width:6px;height:6px;border-radius:50%;background:var(--bg5);transition:all .25s;}
+.club-ob-dot.active{width:18px;border-radius:3px;background:var(--gold);}
+.club-ob-dot.done{background:var(--gold-d);}
+.club-ob-ico{font-size:44px;text-align:center;margin-bottom:12px;line-height:1;}
+.club-ob-title{font-family:'Barlow Condensed',sans-serif;font-size:22px;font-weight:800;color:var(--t1);letter-spacing:.3px;text-align:center;margin-bottom:8px;}
+.club-ob-text{font-size:13px;color:var(--t2);line-height:1.6;text-align:center;margin-bottom:20px;min-height:52px;}
+.club-ob-actions{display:flex;align-items:center;gap:8px;}
+.club-ob-skip{flex:0 0 auto;background:none;border:none;color:var(--t3);font-size:12px;cursor:pointer;padding:8px 4px;}
+.club-ob-next{flex:1;padding:13px;border:none;border-radius:12px;background:linear-gradient(135deg,var(--gold-d),var(--gold));color:#000;font-family:'Barlow Condensed',sans-serif;font-size:15px;font-weight:800;letter-spacing:.3px;cursor:pointer;transition:opacity .15s;}
+.club-ob-next:active{opacity:.85;}
+.club-ob-prev{flex:0 0 auto;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);border-radius:10px;color:var(--t2);font-size:12px;font-weight:600;cursor:pointer;padding:8px 12px;}
+
 /* ── FEED GLOBAL PANEL ── */
 #global-feed-btn{
   position:fixed;
@@ -3726,6 +3759,22 @@ const AuthUI = (() => {
           <button id="ob-prev" onclick="Onboarding.prev()">← Anterior</button>
           <button id="ob-next" onclick="Onboarding.next()">Siguiente →</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CLUBS ONBOARDING OVERLAY ── -->
+  <div id="club-ob-overlay">
+    <div id="club-ob-card">
+      <div class="club-ob-handle"></div>
+      <div class="club-ob-steps" id="club-ob-steps"></div>
+      <div class="club-ob-ico" id="club-ob-ico">⚔️</div>
+      <div class="club-ob-title" id="club-ob-title"></div>
+      <div class="club-ob-text" id="club-ob-text"></div>
+      <div class="club-ob-actions">
+        <button class="club-ob-skip" onclick="ClubsOnboarding.skip()">Omitir</button>
+        <button class="club-ob-prev" id="club-ob-prev" onclick="ClubsOnboarding.prev()">← Atrás</button>
+        <button class="club-ob-next" id="club-ob-next" onclick="ClubsOnboarding.next()">Siguiente →</button>
       </div>
     </div>
   </div>
@@ -9354,6 +9403,10 @@ const ClubsModule = (() => {
       await _renderWithClub();
     } else {
       _renderNoClub();
+      // Mostrar onboarding la primera vez que entra a Clubs sin tener club
+      if (typeof ClubsOnboarding !== 'undefined') {
+        setTimeout(function() { ClubsOnboarding.tryShow(); }, 400);
+      }
     }
   }
 
@@ -9871,6 +9924,143 @@ const ClubsModule = (() => {
     _doCreate, _doJoin, _pickEmoji, _closeModal
   };
 })();
+
+
+/* ── CLUBS ONBOARDING MODULE ────────────────────────────────── */
+const ClubsOnboarding = (() => {
+  const STORAGE_KEY = 'glayer_clubs_ob_seen';
+  const STEPS = [
+    {
+      ico:   '⚔️',
+      title: '¿Qué son los Clubes?',
+      text:  'Un Club es tu equipo en G-Layer. Juntos acumulan puntos, abren la Bóveda grupal y compiten en el ranking de Clubes.',
+    },
+    {
+      ico:   '🏦',
+      title: 'Bóveda del Club',
+      text:  'Cada apuesta, micro-apuesta y ronda de Crash que haga cualquier miembro suma combustible. Al llegar a la meta, todos cobran.',
+    },
+    {
+      ico:   '🌐',
+      title: 'Feed en tiempo real',
+      text:  'Ves la actividad de tus compañeros al instante. Cada apuesta, cada ganancia, cada logro aparece en el feed del Club.',
+    },
+    {
+      ico:   '🚀',
+      title: '¡Empezá ahora!',
+      text:  'Creá tu propio Club o unite al de un amigo con un código. Los primeros 50 miembros de cada Club arrancan con bonus de fundador.',
+      final: true,
+    },
+  ];
+
+  let _step = 0;
+  let _active = false;
+
+  // ── Verificar si ya lo vio ────────────────────────────────────
+  async function shouldShow() {
+    try {
+      // Supabase es la fuente de verdad — igual que el onboarding principal
+      if (Auth.isLoggedIn()) {
+        var { data } = await _sb.from('profiles')
+          .select('clubs_onboarding_seen')
+          .eq('id', Auth.getUser().id)
+          .single();
+        // Si la columna no existe todavía en profiles, usa localStorage como fallback
+        if (data && data.clubs_onboarding_seen != null) {
+          return !data.clubs_onboarding_seen;
+        }
+      }
+    } catch(e) {}
+    // Fallback a localStorage
+    try { return !localStorage.getItem(STORAGE_KEY); } catch(e) { return false; }
+  }
+
+  // ── Marcar como visto ─────────────────────────────────────────
+  function _markSeen() {
+    try { localStorage.setItem(STORAGE_KEY, '1'); } catch(e) {}
+    try {
+      if (Auth.isLoggedIn()) {
+        _sb.from('profiles')
+          .update({ clubs_onboarding_seen: true, updated_at: new Date().toISOString() })
+          .eq('id', Auth.getUser().id);
+      }
+    } catch(e) {}
+  }
+
+  // ── Mostrar si corresponde (llamar al entrar a la tab Clubs) ──
+  async function tryShow() {
+    if (_active) return;
+    if (!(await shouldShow())) return;
+    _start();
+  }
+
+  function _start() {
+    _step = 0;
+    _active = true;
+    var ov = document.getElementById('club-ob-overlay');
+    if (!ov) return;
+    _buildDots();
+    _render();
+    ov.classList.add('active');
+  }
+
+  function _buildDots() {
+    var el = document.getElementById('club-ob-steps');
+    if (!el) return;
+    el.innerHTML = STEPS.map(function(_, i) {
+      return '<span class="club-ob-dot" data-i="' + i + '"></span>';
+    }).join('');
+  }
+
+  function _render() {
+    var s = STEPS[_step];
+    var g = function(id) { return document.getElementById(id); };
+    if (g('club-ob-ico'))   g('club-ob-ico').textContent   = s.ico;
+    if (g('club-ob-title')) g('club-ob-title').textContent = s.title;
+    if (g('club-ob-text'))  g('club-ob-text').textContent  = s.text;
+    // Dots
+    document.querySelectorAll('.club-ob-dot').forEach(function(d, i) {
+      d.classList.toggle('active', i === _step);
+      d.classList.toggle('done',   i < _step);
+    });
+    // Botones
+    var prev = g('club-ob-prev');
+    var next = g('club-ob-next');
+    if (prev) prev.style.display = _step === 0 ? 'none' : '';
+    if (next) next.textContent = s.final ? '¡Entendido! →' : 'Siguiente →';
+  }
+
+  function next() {
+    if (!_active) return;
+    if (_step >= STEPS.length - 1) { _finish(); return; }
+    _step++;
+    _render();
+  }
+
+  function prev() {
+    if (!_active || _step === 0) return;
+    _step--;
+    _render();
+  }
+
+  function skip() { _finish(); }
+
+  function _finish() {
+    _active = false;
+    _markSeen();
+    var ov = document.getElementById('club-ob-overlay');
+    if (ov) {
+      ov.style.opacity = '0';
+      setTimeout(function() {
+        ov.classList.remove('active');
+        ov.style.opacity = '';
+      }, 300);
+    }
+  }
+
+  return { tryShow, skip, next, prev };
+})();
+window.ClubsOnboarding = ClubsOnboarding;
 
 /* ── PUBLIC PROFILE MODULE ──────────────────────────────────── */
 const PublicProfile = (() => {
