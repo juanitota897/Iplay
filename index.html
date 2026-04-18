@@ -8018,17 +8018,31 @@ const Tutorial = (() => {
     // Chequear primero en Supabase (por perfil), fallback a localStorage
     try {
       if (Auth.isLoggedIn()) {
-        var { data } = await _sb.from('profiles')
+        var userId = Auth.getUser().id;
+        var { data, error } = await _sb.from('profiles')
           .select('tutorial_seen')
-          .eq('id', Auth.getUser().id)
+          .eq('id', userId)
           .single();
-        if (data && data.tutorial_seen) return;
+        console.log('[Tutorial] start check — userId:', userId, 'data:', data, 'error:', error);
+        if (data && data.tutorial_seen) {
+          console.log('[Tutorial] ya visto en Supabase, no mostrar');
+          return;
+        }
+        // También chequear localStorage como doble seguro
+        if (localStorage.getItem(STORAGE_KEY)) {
+          console.log('[Tutorial] ya visto en localStorage, no mostrar');
+          // Sincronizar a Supabase si no estaba
+          _sb.from('profiles').update({ tutorial_seen: true }).eq('id', userId);
+          return;
+        }
       } else {
         if (localStorage.getItem(STORAGE_KEY)) return;
       }
     } catch(e) {
+      console.warn('[Tutorial] start error:', e.message);
       if (localStorage.getItem(STORAGE_KEY)) return;
     }
+    console.log('[Tutorial] lanzando tutorial');
     _launch();
   }
 
