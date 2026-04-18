@@ -2260,7 +2260,24 @@ const SupaStore = (() => {
       .subscribe();
   }
 
-  return { loadProfile, syncAction, syncProfile, getLeaderboard, getLeaderboardGCoins, subscribeLeaderboard };
+  // Sync inmediato sin debounce — para microbets donde cada centavo cuenta
+  async function syncProfileImmediate() {
+    const user = Auth.getUser();
+    if (!user) return;
+    const S = Store.get();
+    const { error } = await _sb.from('profiles').update({
+      xp:             S.xp,
+      g_coins:        S.gcoins,
+      energy:         S.energy,
+      streak:         S.streak,
+      vault_fuel:     S.vault.fuel,
+      rescue_used:    S.rescue?.used || 0,
+      updated_at:     new Date().toISOString(),
+    }).eq('id', user.id);
+    if (error) console.warn('[SupaStore] syncProfileImmediate error:', error.message);
+  }
+
+  return { loadProfile, syncAction, syncProfile, syncProfileImmediate, getLeaderboard, getLeaderboardGCoins, subscribeLeaderboard };
 })();
 
 // ── AUTH UI ──────────────────────────────────────────────────────
@@ -4914,8 +4931,17 @@ const MicroBet = (() => {
       var fixtureId     = ev.fixtureId || null;
       var minuteAtStart = ev.minuteAtStart || 0;
       var eventType     = def.type || '';
-      // La ventana real es desde el minuto de inicio hasta + durMax del evento
-      var minuteWindow  = minuteAtStart + Math.ceil((def.durMax || 18) / 60) + 1;
+      // Ventana real en MINUTOS DE PARTIDO según la pregunta de cada evento.
+      // durMax es en segundos de UI — no tiene relación con minutos reales.
+      var MB_WINDOW_MINUTES = {
+        '📐 Córner':    5,  // "¿hay otro córner en los próximos 4 min?"
+        '🎯 Penal':     90, // "¿hay otro penal antes que termine?" → resto del partido
+        '🎯 Tiro libre':6,  // "¿genera otro en 5 min?"
+        '🟨 Tarjeta':   10, // "¿otra tarjeta antes del min X?"
+        '⚽ Gol':       11, // "¿otro gol en 10 min?"
+        '🔄 Cambio':    6,  // "¿jugada peligrosa en 5 min?"
+      };
+      var minuteWindow = minuteAtStart + (MB_WINDOW_MINUTES[eventType] || 6);
 
       // Resolver: primero intentar contra datos reales, fallback a probabilidad
       var winA = def.winA != null ? def.winA : 0.50;
@@ -4942,6 +4968,8 @@ const MicroBet = (() => {
           Store.save();
           Store.addXP(MICRO_XP);
           Store.addGCoins(wonAmt);
+          // Sync inmediato — sin debounce para que el saldo no se pierda si hay actividad rápida
+          if (typeof SupaStore !== 'undefined') SupaStore.syncProfileImmediate();
           var resultLbl = usedRealData ? '✅ ¡Acertaste! (resultado real)' : '✅ ¡Acertaste!';
           _showResult('win', '✅', resultLbl + ' +' + MICRO_XP + ' XP · +' + wonAmt.toLocaleString('es-AR') + ' G');
           LootModule.refresh();
@@ -4950,6 +4978,8 @@ const MicroBet = (() => {
         } else {
           Store.save();
           Store.simulateLoss();
+          // Sync inmediato también en pérdida (fuel y energy cambiaron)
+          if (typeof SupaStore !== 'undefined') SupaStore.syncProfileImmediate();
           _showResult('loss', '❌', 'Perdiste ' + stake.toLocaleString('es-AR') + ' G · +' + MICRO_FUEL_LOSS + ' fuel');
           MissionsModule.checkTrigger('microbet', { won: false });
         }
@@ -6955,20 +6985,19 @@ const BetsModule = (() => {
             var alreadyCredited = _getCreditedIds().has(String(updated.id));
             if (!alreadyCredited) {
               _markCredited(updated.id);
+              // El bet-settler ya actualizó profiles.g_coins y profiles.xp directamente.
+              // Solo mostramos el toast y recargamos el perfil desde Supabase.
+              // No llamamos addXP/addGCoins local para evitar doble acreditación.
               if (updated.status === 'won') {
                 var winAmt = Math.round(updated.stake * updated.odd);
                 var matchLbl = updated.match_name || updated.label || '';
                 Store.showBetResultToast(true, winAmt, matchLbl);
-                Store.addXP(updated.xp_gain || 0);
-                HeaderModule.refresh();
               } else {
-                var consolXP = Math.round((updated.xp_gain || 0) * 0.25);
                 var matchLbl2 = updated.match_name || updated.label || '';
                 Store.showBetResultToast(false, 0, matchLbl2);
-                if (consolXP > 0) { Store.addXP(consolXP); HeaderModule.refresh(); }
               }
-              // Recargar saldo real desde Supabase para asegurarse de estar en sync
-              SupaStore.loadProfile();
+              // Recargar perfil desde Supabase — trae g_coins y xp ya actualizados por el settler
+              SupaStore.loadProfile().then(function() { HeaderModule.refresh(); });
             }
           }
         })
