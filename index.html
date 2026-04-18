@@ -2622,7 +2622,7 @@ const AuthUI = (() => {
 
       <div class="entry-connecting" id="entry-connecting">
         <div class="entry-spinner"></div>
-        <div class="entry-connecting-txt">Conectando con tu operador…</div>
+        <div class="entry-connecting-txt">Cargando G-Layer…</div>
       </div>
 
       <div class="entry-op-card" id="entry-op-card" style="display:none;">
@@ -2630,7 +2630,7 @@ const AuthUI = (() => {
         <div class="entry-op-row">
           <div class="entry-op-avatar">🏟️</div>
           <div class="entry-op-info">
-            <div class="entry-op-name" id="entry-op-name">BetArena AR</div>
+            <div class="entry-op-name" id="entry-op-name">G-Layer</div>
             <div class="entry-op-sub">Plataforma de apuestas · Región: AR</div>
           </div>
         </div>
@@ -2685,7 +2685,7 @@ const AuthUI = (() => {
             </div>
             <div class="home-hero-op">
               <span class="home-hero-op-dot"></span>
-              <span class="home-hero-op-lbl" id="home-hero-op-lbl">BetArena</span>
+              <span class="home-hero-op-lbl" id="home-hero-op-lbl">G-Layer</span>
             </div>
           </div>
           <button class="home-cta-btn" onclick="HomeModule.goLive()">⚡ IR EN VIVO →</button>
@@ -8268,7 +8268,7 @@ const HomeModule = (() => {
     if(g('home-hero-xp-val')) g('home-hero-xp-val').textContent = li.xp+' / '+li.next+' XP';
     if(g('home-hero-xp-bar')) g('home-hero-xp-bar').style.width = li.pct+'%';
     const hdrOp = g('hdr-op-name');
-    if(g('home-hero-op-lbl') && hdrOp) g('home-hero-op-lbl').textContent = hdrOp.textContent;
+    if(g('home-hero-op-lbl')) g('home-hero-op-lbl').textContent = 'G-Layer';
 
     // ── Live block: pull from LiveProvider if connected, else show placeholder ──
     const lv = LiveProvider.getState();
@@ -8479,17 +8479,11 @@ const HomeModule = (() => {
 
 /* ── ENTRY MODULE ───────────────────────────────────────────── */
 const EntryModule = (() => {
-  const OPERATORS = [
-    { name:'BetArena AR', ico:'🏟️', region:'AR' },
-    { name:'SportBet MX', ico:'🎰', region:'MX' },
-    { name:'WinZone BR',  ico:'⚽', region:'BR' },
-  ];
-  let _op = null;
+  let _op = { name:'G-Layer', ico:'🎮', region:'LATAM' };
 
   function init() {
-    _op = OPERATORS[Math.floor(Math.random()*OPERATORS.length)];
     var hdrOp = document.getElementById('hdr-op-name');
-    if(hdrOp) hdrOp.textContent = _op.name.split(' ')[0];
+    if(hdrOp) hdrOp.textContent = 'G-Layer';
 
     // Si hay sesión activa, entrar directo sin animación
     if (Auth.isLoggedIn()) {
@@ -8504,7 +8498,7 @@ const EntryModule = (() => {
       var nameEl = document.getElementById('entry-op-name');
       if(card)   card.style.display = 'block';
       if(conn)   conn.style.display = 'none';
-      if(nameEl) nameEl.textContent = _op.name;
+      if(nameEl) nameEl.textContent = 'G-Layer';
       if(btn) { btn.disabled = false; btn.textContent = 'Entrar a G-Layer →'; }
     }, 1800);
   }
@@ -9589,7 +9583,7 @@ const RankingModule = (() => {
       var valLabel, barW;
       if (mode === 'gcoins') {
         valLabel = 'NV' + row.level + ' · ' + (row.g_coins || 0).toLocaleString('es-AR') + ' G';
-        barW = Math.min(100, ((row.g_coins || 0) / 5000) * 100).toFixed(0);
+        barW = Math.min(100, ((row.g_coins || 0) / 10000) * 100).toFixed(0);
       } else {
         valLabel = 'NV' + row.level + ' · ' + row.xp.toLocaleString('es-AR') + ' XP';
         barW = Math.min(100, (row.xp / 3800) * 100).toFixed(0);
