@@ -426,6 +426,21 @@ body.light-mode #desktop-sidebar,body.light-mode #desktop-right{background:var(-
 .bet-ticket-total{display:flex;justify-content:space-between;align-items:center;padding:4px 11px 9px;font-size:10px;color:var(--t3);}
 .bet-ticket-total strong{font-family:'Barlow Condensed',sans-serif;font-size:13px;}
 
+/* ── FEED GLOBAL HOME ── */
+.home-feed{background:var(--bg1);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px;margin-top:10px;}
+.home-feed-title{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:700;color:var(--t2);letter-spacing:1.2px;text-transform:uppercase;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+.home-feed-dot{width:6px;height:6px;border-radius:50%;background:var(--neon);animation:blink 2s infinite;flex-shrink:0;}
+.home-feed-item{display:flex;align-items:center;gap:9px;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.04);animation:feedIn .35s ease;}
+.home-feed-item:last-child{border-bottom:none;padding-bottom:0;}
+@keyframes feedIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+.home-feed-ico{font-size:16px;flex-shrink:0;width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.04);display:flex;align-items:center;justify-content:center;}
+.home-feed-info{flex:1;min-width:0;}
+.home-feed-txt{font-size:11px;color:var(--t2);line-height:1.3;}
+.home-feed-txt strong{color:var(--t1);}
+.home-feed-ago{font-size:9px;color:var(--t3);margin-top:1px;}
+.home-feed-amount{font-family:'Barlow Condensed',sans-serif;font-size:12px;font-weight:800;color:var(--neon);flex-shrink:0;}
+.home-feed-empty{font-size:11px;color:var(--t3);text-align:center;padding:8px 0;}
+
 /* ── TOAST G-COINS ── */
 .toast-gcoin{top:120px;background:linear-gradient(135deg,var(--bg3),var(--bg2));border:1px solid var(--neon);box-shadow:0 8px 28px rgba(57,255,20,.12);}
 .toast-gcoin .toast-txt{color:var(--neon);}
@@ -3006,6 +3021,17 @@ const AuthUI = (() => {
           </div>
           <div style="margin-top:12px;padding:8px;background:rgba(212,175,55,.04);border:1px dashed rgba(212,175,55,.16);border-radius:var(--r-md);text-align:center;font-size:10px;color:var(--gold-d);">4 trofeos · Colección 50% completa · Fricción de salida: <strong style="color:var(--gold)">850 XP</strong></div>
         </div>
+        <!-- FEED GLOBAL -->
+        <div class="home-feed">
+          <div class="home-feed-title">
+            <span class="home-feed-dot"></span>
+            En vivo ahora
+          </div>
+          <div id="home-global-feed">
+            <div class="home-feed-empty">Cargando actividad…</div>
+          </div>
+        </div>
+
       </div>
     </div>
 
@@ -6443,13 +6469,50 @@ const BetsModule = (() => {
     }
   }
 
+  var _betsSub = null;
+
   function _startPoller() {
-    if (_pollerTimer) return;
-    // Chequear cada 2 min si hay apuestas pendientes
-    _pollerTimer = setInterval(async function() {
-      var hasPending = _sbHistory.some(function(b){ return b.status === 'pending'; });
-      if (hasPending) await _loadHistory();
-    }, 2 * 60 * 1000);
+    // Reemplazar polling por Supabase Realtime
+    // Cuando bet-settler actualiza una apuesta, llega instantáneo
+    if (_betsSub) return;
+    _sb.auth.getSession().then(function(res) {
+      var session = res.data.session;
+      if (!session) return;
+      var userId = session.user.id;
+
+      _betsSub = _sb.channel('bets-user-' + userId)
+        .on('postgres_changes', {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'bets',
+          filter: 'user_id=eq.' + userId,
+        }, async function(payload) {
+          var updated = payload.new;
+          if (!updated) return;
+
+          // Actualizar en el historial local
+          var idx = _sbHistory.findIndex(function(b) { return b.id === updated.id; });
+          if (idx >= 0) {
+            _sbHistory[idx] = updated;
+          } else {
+            _sbHistory.unshift(updated);
+          }
+          _renderHistory();
+
+          // Notificar resolución
+          if (updated.status === 'won') {
+            var winAmt = Math.round(updated.stake * updated.odd);
+            Store.showGCoinToast('🏆 ¡Apuesta ganada! +' + winAmt.toLocaleString('es-AR') + ' G-Coins');
+            Store.addXP(updated.xp_gain || 0);
+            HeaderModule.refresh();
+          } else if (updated.status === 'lost') {
+            var consolXP = Math.round((updated.xp_gain || 0) * 0.25);
+            Store.showVaultToast('❌ Apuesta perdida — +' + consolXP + ' XP de consolación');
+            if (consolXP > 0) { Store.addXP(consolXP); HeaderModule.refresh(); }
+          }
+        })
+        .subscribe();
+    });
   }
 
   // ── Confirmar apuesta ──────────────────────────────────────────
@@ -7364,6 +7427,90 @@ const HomeModule = (() => {
   function goLive() { Router.go('live'); }
 
   function getMatch() { return _match; }
+
+  // ── FEED GLOBAL DE ACTIVIDAD ──────────────────────────────────
+  var _feedSub = null;
+  var _feedItems = [];
+
+  var _feedIco = { microbet_win:'🎯', bet_placed:'🎲', crash_played:'🎰' };
+  var _feedTxt = {
+    microbet_win: 'ganó una microbet',
+    bet_placed:   'apostó en un partido',
+    crash_played: 'jugó una ronda de Crash',
+  };
+
+  function _timeAgo(ts) {
+    var s = Math.floor((Date.now() - new Date(ts).getTime()) / 1000);
+    if (s < 60)  return 'hace ' + s + 's';
+    if (s < 3600) return 'hace ' + Math.floor(s/60) + 'min';
+    return 'hace ' + Math.floor(s/3600) + 'h';
+  }
+
+  function _renderFeed() {
+    var el = document.getElementById('home-global-feed');
+    if (!el) return;
+    if (!_feedItems.length) {
+      el.innerHTML = '<div class="home-feed-empty">Sin actividad reciente</div>';
+      return;
+    }
+    el.innerHTML = _feedItems.slice(0, 8).map(function(item) {
+      var ico  = _feedIco[item.event_type] || '⚡';
+      var txt  = _feedTxt[item.event_type] || item.event_type;
+      var name = (item.profiles && item.profiles.username) || item.username || 'Jugador';
+      var ago  = _timeAgo(item.created_at);
+      var pts  = item.points_earned ? '+' + item.points_earned + ' pts' : '';
+      return '<div class="home-feed-item">' +
+        '<div class="home-feed-ico">' + ico + '</div>' +
+        '<div class="home-feed-info">' +
+          '<div class="home-feed-txt"><strong>' + name + '</strong> ' + txt + '</div>' +
+          '<div class="home-feed-ago">' + ago + '</div>' +
+        '</div>' +
+        (pts ? '<div class="home-feed-amount">' + pts + '</div>' : '') +
+      '</div>';
+    }).join('');
+  }
+
+  async function _loadFeed() {
+    try {
+      var { data } = await _sb.from('club_activity')
+        .select('*, profiles(username)')
+        .order('created_at', { ascending: false })
+        .limit(8);
+      if (data) {
+        _feedItems = data;
+        _renderFeed();
+      }
+    } catch(e) {
+      console.warn('[HomeModule] feed error:', e.message);
+    }
+  }
+
+  function _initFeedRealtime() {
+    if (_feedSub) return;
+    _feedSub = _sb.channel('home-global-feed')
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'club_activity',
+      }, function(payload) {
+        var item = payload.new;
+        if (!item) return;
+        // Agregar al inicio con animación
+        _feedItems.unshift(item);
+        if (_feedItems.length > 8) _feedItems = _feedItems.slice(0, 8);
+        _renderFeed();
+      })
+      .subscribe();
+  }
+
+  // Hook al refresh original
+  var _origRefresh = refresh;
+  function refresh() {
+    _origRefresh();
+    _loadFeed();
+    _initFeedRealtime();
+  }
+
   return { refresh, goLive, getMatch };
 })();
 
