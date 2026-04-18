@@ -5612,16 +5612,45 @@ const MissionsModule = (() => {
     var isNewDay = lastResetDateStr !== todayUTC;
 
     if (isNewDay) {
+      // ── Actualizar racha por día de calendario ──────────────────
+      // Comparamos fechas UTC — si el último reset fue "ayer", suma 1
+      // Si fue hace 2+ días, la racha se rompe
+      var hadActivity = (S.missions.totalDone > 0) ||
+                        (S.missions.daily && (
+                          (S.missions.daily.bets || 0) > 0 ||
+                          (S.missions.daily.crashRounds || 0) > 0 ||
+                          (S.missions.daily.microbets || 0) > 0
+                        ));
+      var lastDateStr = S.missions.lastResetUTC || ''; // "2026-04-17"
+      var yesterday   = new Date(Date.now() - 86400000).toISOString().slice(0, 10); // "2026-04-17"
+      var wasYesterday = lastDateStr === yesterday;
+
+      if (hadActivity && wasYesterday) {
+        // Jugó ayer → sumar 1 día a la racha
+        S.streak = (S.streak || 0) + 1;
+      } else if (!hadActivity && wasYesterday) {
+        // El día anterior existió pero no tuvo actividad → racha se rompe
+        S.streak = 0;
+      } else if (!wasYesterday && lastDateStr !== '') {
+        // Saltó un día o más → racha se rompe
+        S.streak = 0;
+      }
+      // Primer día con actividad → arrancar racha en 1
+      if (!lastDateStr && hadActivity) S.streak = 1;
+
       S.missions.completed  = [];
       S.missions.totalDone  = 0;
       S.missions.lastReset  = Date.now();
-      S.missions.lastResetUTC = todayUTC; // FIX: guardar fecha UTC
+      S.missions.lastResetUTC = todayUTC;
       S.missions.daily = {
         bets: 0, combos: 0, microbets: 0, microbetWins: 0,
         consecutiveWins: 0, crashRounds: 0, crashCashedBefore2x: 0,
-        fuelStart: S.vault.fuel, highOddWin: false, openedLoot: false,
+        crashAbove3x: 0, leaguesPlayed: {}, marketsPlayed: {},
+        fuelStart: S.vault.fuel, highOddBet: false, openedLoot: false,
       };
       Store.save();
+      // Pushear racha actualizada a Supabase
+      if (typeof SupaStore !== 'undefined') SupaStore.syncProfile();
       // FIX: verificar con servidor de forma asíncrona para detectar trampas
       _validateDailyResetWithServer(todayUTC);
     }
@@ -5629,7 +5658,8 @@ const MissionsModule = (() => {
       S.missions.daily = {
         bets: 0, combos: 0, microbets: 0, microbetWins: 0,
         consecutiveWins: 0, crashRounds: 0, crashCashedBefore2x: 0,
-        fuelStart: S.vault.fuel, highOddWin: false, openedLoot: false,
+        crashAbove3x: 0, leaguesPlayed: {}, marketsPlayed: {},
+        fuelStart: S.vault.fuel, highOddBet: false, openedLoot: false,
       };
       Store.save();
     }
