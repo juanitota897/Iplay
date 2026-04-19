@@ -7220,6 +7220,16 @@ const BetsModule = (() => {
       return;
     }
 
+    // Bloquear si ya hay un pick de Resultado Final (res_h/res_d/res_a) del mismo partido
+    var resIdx = _picks.findIndex(function(p) {
+      return p.matchId === matchId && p.marketName &&
+             (p.pick === 'res_h' || p.pick === 'res_d' || p.pick === 'res_a');
+    });
+    if (resIdx >= 0) {
+      Store.showVaultToast('Ya tenés Resultado Final de este partido — quitalo primero');
+      return;
+    }
+
     const existingIdx = _picks.findIndex(p => p.matchId === matchId);
     if (existingIdx >= 0) {
       // Si el mismo pick → toggle off; si diferente pick → reemplazar
@@ -8256,8 +8266,24 @@ const BetsModule = (() => {
     if (!m) return;
     if (odd < MIN_ODD) { Store.showVaultToast('Cuota mínima: ' + MIN_ODD.toFixed(2) + 'x'); return; }
 
+    // ── Bloquear duplicados entre 1x2 principal y mercado "Resultado Final" ──
+    // Si el mercado secundario es res_h/res_d/res_a (Resultado Final),
+    // es el mismo mercado que h/d/a del pickOdd principal — no se pueden combinar.
+    var PRIMARY_1X2 = { 'res_h': 'h', 'res_d': 'd', 'res_a': 'a' };
+    if (PRIMARY_1X2[side]) {
+      // Ver si ya hay un pick 1x2 principal de este partido
+      var primary1x2Idx = _picks.findIndex(function(p) {
+        return p.matchId === matchId && (p.pick === 'h' || p.pick === 'd' || p.pick === 'a') && !p.marketName;
+      });
+      if (primary1x2Idx >= 0) {
+        Store.showVaultToast('Ya tenés un pick 1x2 de este partido en el cupón');
+        return;
+      }
+    }
+    // Y viceversa — si hay un res_h/res_d/res_a, bloquear el 1x2 principal
+    // (esto se maneja en pickOdd)
+
     // Buscar si ya hay un pick de este partido + mercado
-    // El "mercado" está en el label antes de ":"
     var marketName = label.split(':')[0] || side;
     var existingIdx = _picks.findIndex(function(p){
       return p.matchId === matchId && p.marketName === marketName;
