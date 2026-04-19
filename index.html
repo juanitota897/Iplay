@@ -8004,21 +8004,11 @@ const BetsModule = (() => {
       } else {
         html +=
           '<div class="bmc-live-badge-inline"><span class="live-dot red"></span>EN VIVO · ' + (m.minute||'?') + "'" + '</div>' +
-          '<div class="bmc-market-title">Próximo en Anotar</div>' +
-          '<div class="bmc-market-row">' +
-            mBtn('nts_h', clamp(m.odds.h * 0.85, 1.40, 4.00), m.home.split(' ')[0], 'Próx. gol') +
-            mBtn('nts_n', 9.00, 'Sin gol', 'Próx. gol') +
-            mBtn('nts_a', clamp(m.odds.a * 0.85, 1.40, 4.00), m.away.split(' ')[0], 'Próx. gol') +
-          '</div>' +
-          '<div class="bmc-market-title">Próxima Tarjeta</div>' +
-          '<div class="bmc-market-row">' +
-            mBtn('nc_h', clamp(m.odds.h * 0.9, 1.50, 3.50), m.home.split(' ')[0], 'Próx. tarjeta') +
-            mBtn('nc_a', clamp(m.odds.a * 0.9, 1.50, 3.50), m.away.split(' ')[0], 'Próx. tarjeta') +
-          '</div>' +
-          '<div class="bmc-market-title">Próximo Córner</div>' +
-          '<div class="bmc-market-row">' +
-            mBtn('corn_h', clamp(m.odds.h * 0.88, 1.45, 3.20), m.home.split(' ')[0], 'Próx. córner') +
-            mBtn('corn_a', clamp(m.odds.a * 0.88, 1.45, 3.20), m.away.split(' ')[0], 'Próx. córner') +
+          '<div style="padding:16px;text-align:center;">' +
+            '<div style="font-size:28px;margin-bottom:8px;">⚡</div>' +
+            '<div style="font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:800;color:var(--gold);letter-spacing:.5px;margin-bottom:6px;">Mercados en vivo</div>' +
+            '<div style="font-size:11px;color:var(--t3);line-height:1.6;">Próximo en anotar, próxima tarjeta y córner están en desarrollo. Mientras tanto usá los micro-eventos en la sección En Vivo para apostar en el partido.</div>' +
+            '<button onclick="Router.go(\'live\')" style="margin-top:12px;padding:9px 18px;border:1px solid rgba(57,255,20,.3);background:rgba(57,255,20,.06);border-radius:10px;color:var(--neon);font-family:Barlow Condensed,sans-serif;font-size:13px;font-weight:800;cursor:pointer;">⚡ Ir a En Vivo</button>' +
           '</div>';
       }
     }
