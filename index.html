@@ -8253,6 +8253,52 @@ const BetsModule = (() => {
       return;
     }
 
+    // ── Validar contradicciones lógicas entre picks del mismo partido ────
+    var picksOfMatch = _picks.filter(function(p) { return p.matchId === matchId; });
+    var hasPick = function(s) { return picksOfMatch.some(function(p) { return p.pick === s; }); };
+
+    var contradictions = {
+      // Ambos marcan + menos de 1.5 goles → imposible (necesitás 2 goles mínimo)
+      'btts_y': ['un05', 'un15'],
+      // No ambos marcan + muchos goles → imposible
+      'btts_n': ['ov25', 'ov35', 'ov45', 'btts_y'],
+      // Over/Under del mismo umbral
+      'ov05': ['un05'],
+      'ov15': ['un15', 'un05'],
+      'ov25': ['un25', 'un15', 'un05', 'btts_n'],
+      'ov35': ['un35', 'un25', 'un15', 'un05', 'btts_n'],
+      'ov45': ['un45', 'un35', 'un25', 'un15', 'un05', 'btts_n'],
+      'un05': ['ov05', 'ov15', 'ov25', 'ov35', 'ov45', 'btts_y'],
+      'un15': ['ov15', 'ov25', 'ov35', 'ov45', 'btts_y'],
+      'un25': ['ov25', 'ov35', 'ov45'],
+      'un35': ['ov35', 'ov45'],
+      'un45': ['ov45'],
+      // Doble oportunidad vs resultado contrario
+      'dc1x': ['a'],   // local o empate + visitante gana → imposible
+      'dcx2': ['h'],   // empate o visitante + local gana → imposible
+      // HT resultado vs resultado final (no bloqueamos — pueden darse)
+    };
+
+    var conflicts = contradictions[side] || [];
+    for (var ci = 0; ci < conflicts.length; ci++) {
+      if (hasPick(conflicts[ci])) {
+        Store.showVaultToast('Pick contradictorio con uno que ya tenés 🚫');
+        return;
+      }
+    }
+    // También verificar en sentido inverso — si lo que agrego contradice algo existente
+    picksOfMatch.forEach(function(p) {
+      var revConflicts = contradictions[p.pick] || [];
+      if (revConflicts.indexOf(side) >= 0) {
+        // marcar como conflicto
+        conflicts.push(p.pick);
+      }
+    });
+    if (conflicts.length > 0 && picksOfMatch.some(function(p){ return (contradictions[p.pick]||[]).indexOf(side) >= 0; })) {
+      Store.showVaultToast('Pick contradictorio con uno que ya tenés 🚫');
+      return;
+    }
+
     // Buscar si ya hay un pick de este partido + mercado
     var marketName = label.split(':')[0] || side;
     var existingIdx = _picks.findIndex(function(p){
