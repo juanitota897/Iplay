@@ -7003,8 +7003,10 @@ const BetsModule = (() => {
         const fecha = d.toISOString().slice(0, 10);
         try {
           // Cache primero, fallback al proxy
+          // Si el cache está vacío (lista vacía por límite de API), ignorarlo y pedir directo
           var cachedApi = await _cacheRead('fixtures_api_' + fecha);
-          const j = cachedApi ? { response: cachedApi } : await _apiFetch('fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires');
+          var cachedValid = cachedApi && Array.isArray(cachedApi) && cachedApi.length > 0;
+          const j = cachedValid ? { response: cachedApi } : await _apiFetch('fixtures?date=' + fecha + '&timezone=America%2FArgentina%2FBuenos_Aires');
           (j.response || []).forEach(function(f) {
             if (!CONMEBOL_IDS[f.league.id]) return;
             const lname = (f.league.name || '').toLowerCase();
@@ -10282,14 +10284,15 @@ const ClubsModule = (() => {
 
   // ── REGISTRAR ACCIÓN DEL CLUB ─────────────────────────────────
   async function logAction(eventType) {
-    if (!_myClub || !Auth.isLoggedIn()) return;
+    if (!Auth.isLoggedIn()) return;
     var user = Auth.getUser();
     var pts = POINTS[eventType] || 0;
     if (!pts) return;
 
-    // Insertar en club_activity
+    // Insertar en club_activity — con o sin club (club_id puede ser null)
+    // Esto permite que el feed global muestre actividad de todos los usuarios
     await _sb.from('club_activity').insert({
-      club_id: _myClub.id,
+      club_id: _myClub ? _myClub.id : null,
       user_id: user.id,
       event_type: eventType,
       xp_contributed: 0,
@@ -10961,9 +10964,29 @@ const GlobalFeed = (() => {
     if (overlay) overlay.classList.remove('open');
   }
 
+  // Actualizar fechas cada minuto
+  var _ticker = null;
+  function _startTicker() {
+    if (_ticker) return;
+    _ticker = setInterval(function() {
+      if (_open) _render(); // refresca timestamps
+    }, 60000);
+  }
+
+  // Recargar desde Supabase cada 2 minutos aunque el panel esté cerrado
+  var _reloader = null;
+  function _startReloader() {
+    if (_reloader) return;
+    _reloader = setInterval(function() {
+      _load();
+    }, 120000);
+  }
+
   function init() {
     _load();
     _initRealtime();
+    _startTicker();
+    _startReloader();
   }
 
   return { toggle, open, close, init };
